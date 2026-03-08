@@ -3,6 +3,7 @@ package com.frota.checklist.exception;
 import com.frota.checklist.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
@@ -48,7 +50,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", List.of(), req.getRequestURI());
+        log.error("Erro interno em {} {}", req.getMethod(), req.getRequestURI(), ex);
+        String detail = ex.getClass().getSimpleName() + ": " + (ex.getMessage() == null ? "sem mensagem" : ex.getMessage());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", List.of(detail), req.getRequestURI());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String message, List<String> details, String path) {
