@@ -1,0 +1,288 @@
+﻿.checklist-card {
+  padding: 12px;
+  background: linear-gradient(165deg, #ffffff, #eef9f2);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #d8eadf;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #1b7a42;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.topbar h2 {
+  margin: 2px 0 0;
+  font-size: 1.22rem;
+}
+
+.progress-wrap {
+  margin: 12px 0;
+  border: 1px solid #d4e7da;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e9f2ec;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f8e56, #1fa34f);
+  transition: width 0.2s ease;
+}
+
+.spinner-wrap {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.success-view {
+  border: 1px solid #cfe7d8;
+  border-radius: 14px;
+  padding: 18px 14px;
+  background: #ffffff;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.success-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #1f9550;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.step-card {
+  border: 1px solid #d8e9dd;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.step-card h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.helper {
+  margin: 6px 0 12px;
+  color: #486150;
+  font-size: 0.9rem;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.photo-card,
+.panel-card {
+  border: 1px solid #d3e4d8;
+  border-radius: 12px;
+  background: #f8fcf9;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-card.done,
+.panel-card.done {
+  border-color: #2f9958;
+  box-shadow: 0 0 0 2px rgba(47, 153, 88, 0.15);
+}
+
+.photo-card h4,
+.panel-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.photo-card small,
+.panel-card small {
+  color: #5b7063;
+  font-size: 0.78rem;
+}
+
+.preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.empty {
+  border: 1px dashed #afc4b5;
+  border-radius: 10px;
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #5a7060;
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.review-box {
+  border: 1px solid #d6e8dc;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f7fcf8;
+}
+
+.review-box p {
+  margin: 0 0 4px;
+}
+
+.review-box p:last-child {
+  margin-bottom: 0;
+}
+
+.camera-note {
+  margin: 2px 0;
+  color: #536b5a;
+  font-size: 0.82rem;
+}
+
+.wizard-actions {
+  position: sticky;
+  bottom: 8px;
+  background: #ffffffeb;
+  border: 1px solid #d6e8dc;
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.big-btn,
+.wizard-actions button {
+  min-height: 46px;
+  font-weight: 700;
+}
+
+.camera-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 17, 11, 0.86);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.camera-card {
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.camera-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.camera-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.camera-card video {
+  width: 100%;
+  min-height: 280px;
+  max-height: calc(92vh - 140px);
+  object-fit: cover;
+  border-radius: 10px;
+  background: #0f1d13;
+}
+
+.camera-controls {
+  margin-top: 10px;
+}
+
+.camera-input-fallback {
+  display: none;
+}
+
+@media (min-width: 780px) {
+  .checklist-card {
+    padding: 20px;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .camera-overlay { padding: 20px; }
+}

@@ -1,0 +1,85 @@
+.admin-login-card {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  min-height: 460px;
+  background: linear-gradient(165deg, #ffffff, #eff3fc);
+}
+
+.hero {
+  background: linear-gradient(145deg, #173d8f, #235fc9);
+  color: #f2f7ff;
+  padding: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #dce8ff;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 2.1rem;
+}
+
+.hero p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.cred-box {
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.form {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+}
+
+.form h2 {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+}
+
+.form button {
+  min-height: 44px;
+  font-weight: 700;
+}
+
+.back-link {
+  text-align: center;
+  color: #1f3980;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .admin-login-card {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding: 20px;
+  }
+
+  .form {
+    padding: 18px;
+  }
+}

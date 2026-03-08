@@ -1,0 +1,90 @@
+﻿<section class="page-wrap">
+  <mat-card class="card-shell stats-shell">
+    <header class="stats-header">
+      <div>
+        <p class="eyebrow">Administracao</p>
+        <h2>Estatisticas de Missoes</h2>
+        <p class="subtitle">Analise de produtividade e tempo em missao por motorista.</p>
+      </div>
+      <button mat-stroked-button color="primary" type="button" (click)="voltar()">Voltar para checklists</button>
+    </header>
+
+    <form [formGroup]="form" class="filter-grid" (ngSubmit)="buscar()">
+      <mat-form-field appearance="outline">
+        <mat-label>Data inicial</mat-label>
+        <input matInput type="date" formControlName="dataInicial">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data final</mat-label>
+        <input matInput type="date" formControlName="dataFinal">
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" class="submit-btn">
+        Atualizar estatisticas
+      </button>
+    </form>
+
+    <div class="spinner-wrap" *ngIf="loading">
+      <mat-spinner diameter="34"></mat-spinner>
+    </div>
+
+    <section *ngIf="!loading && stats as s" class="stats-content">
+      <div class="kpi-grid">
+        <article class="kpi-card">
+          <h3>{{ s.totalMissoes }}</h3>
+          <p>Total de missoes</p>
+        </article>
+        <article class="kpi-card">
+          <h3>{{ formatHoras(s.totalHorasMissao) }}</h3>
+          <p>Tempo total em missao</p>
+        </article>
+        <article class="kpi-card">
+          <h3>{{ s.rankingPorMissoes.length }}</h3>
+          <p>Motoristas com missoes</p>
+        </article>
+      </div>
+
+      <div class="panels-grid" *ngIf="s.rankingPorMissoes.length; else semDados">
+        <mat-card class="panel-card">
+          <h3>Ranking por quantidade de missoes</h3>
+          <div class="rank-list">
+            <article class="rank-row" *ngFor="let item of s.rankingPorMissoes; let i = index">
+              <div class="rank-top">
+                <span class="position">#{{ i + 1 }}</span>
+                <strong>{{ item.motoristaNome }}</strong>
+                <span>{{ item.quantidadeMissoes }} missoes</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill bar-blue" [style.width]="barraMissoes(item)"></div>
+              </div>
+            </article>
+          </div>
+        </mat-card>
+
+        <mat-card class="panel-card">
+          <h3>Ranking por tempo total em missao</h3>
+          <div class="rank-list">
+            <article class="rank-row" *ngFor="let item of s.rankingPorTempo; let i = index">
+              <div class="rank-top">
+                <span class="position">#{{ i + 1 }}</span>
+                <strong>{{ item.motoristaNome }}</strong>
+                <span>{{ formatHoras(item.tempoTotalHoras) }}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill bar-green" [style.width]="barraHoras(item)"></div>
+              </div>
+            </article>
+          </div>
+        </mat-card>
+      </div>
+
+      <ng-template #semDados>
+        <article class="empty-card">
+          <h3>Nenhuma missao concluida</h3>
+          <p>Nao ha pares SAIDA/CHEGADA no periodo selecionado.</p>
+        </article>
+      </ng-template>
+    </section>
+  </mat-card>
+</section>

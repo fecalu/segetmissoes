@@ -1,0 +1,28 @@
+﻿<section class="page-wrap">
+  <mat-card class="card-shell report-shell">
+    <header class="report-header">
+      <div>
+        <p class="eyebrow">Administracao</p>
+        <h2>Geracao de Relatorio de Checklists</h2>
+        <p class="subtitle">Selecione o periodo e clique no botao para baixar o documento em PDF.</p>
+      </div>
+      <button mat-stroked-button color="primary" type="button" (click)="voltar()">Voltar para checklists</button>
+    </header>
+
+    <form [formGroup]="form" class="report-form" (ngSubmit)="gerarRelatorioPdf()">
+      <mat-form-field appearance="outline">
+        <mat-label>Data inicial</mat-label>
+        <input matInput type="date" formControlName="dataInicial">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data final</mat-label>
+        <input matInput type="date" formControlName="dataFinal">
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" type="submit" [disabled]="gerandoRelatorio" class="submit-btn">
+        {{ gerandoRelatorio ? 'Gerando PDF...' : 'Gerar relatorio em PDF' }}
+      </button>
+    </form>
+  </mat-card>
+</section>

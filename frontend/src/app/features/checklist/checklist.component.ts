@@ -1,0 +1,343 @@
+﻿import { CommonModule } from '@angular/common';
+import { AfterViewChecked, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { finalize } from 'rxjs';
+import { Veiculo } from '../../core/models/veiculo.model';
+import { ChecklistPayload, ChecklistService } from '../../core/services/checklist.service';
+import { VeiculoService } from '../../core/services/veiculo.service';
+import { AuthService } from '../../core/services/auth.service';
+
+type FotoKey = 'fotoPainel' | 'fotoEstepe' | 'fotoLateralEsq' | 'fotoLateralDir';
+
+@Component({
+  selector: 'app-checklist',
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule
+  ],
+  templateUrl: './checklist.component.html',
+  styleUrl: './checklist.component.css'
+})
+export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
+  veiculos: Veiculo[] = [];
+  loading = false;
+  sending = false;
+  currentStep = 1;
+  showSuccess = false;
+  lastChecklistId: number | null = null;
+
+  readonly externalPhotos: Array<{ key: FotoKey; label: string; hint: string }> = [
+    { key: 'fotoEstepe', label: 'Estepe', hint: 'Fotografe o estepe completo.' },
+    { key: 'fotoLateralEsq', label: 'Lateral esquerda', hint: 'Pegue a lateral inteira.' },
+    { key: 'fotoLateralDir', label: 'Lateral direita', hint: 'Pegue a lateral inteira.' }
+  ];
+
+  readonly panelPhoto = { key: 'fotoPainel' as FotoKey, label: 'Painel', hint: 'Fotografe o painel com quilometragem visivel.' };
+
+  previews: Record<FotoKey, string | null> = {
+    fotoPainel: null,
+    fotoEstepe: null,
+    fotoLateralEsq: null,
+    fotoLateralDir: null
+  };
+
+  files: Partial<Record<FotoKey, File>> = {};
+  supportsCameraApi = false;
+  activeCameraKey: FotoKey | null = null;
+  fallbackCaptureKey: FotoKey | null = null;
+  cameraError: string | null = null;
+  private cameraStream: MediaStream | null = null;
+  @ViewChild('cameraVideo') cameraVideo?: ElementRef<HTMLVideoElement>;
+  @ViewChild('fallbackInput') fallbackInput?: ElementRef<HTMLInputElement>;
+
+  readonly form;
+
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly router: Router,
+    private readonly veiculoService: VeiculoService,
+    private readonly checklistService: ChecklistService,
+    private readonly authService: AuthService,
+    private readonly snackBar: MatSnackBar
+  ) {
+    this.form = this.fb.nonNullable.group({
+      veiculoId: [0, [Validators.required, Validators.min(1)]],
+      tipoOperacao: ['SAIDA', [Validators.required]]
+    });
+  }
+
+  ngOnInit(): void {
+    this.supportsCameraApi = !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    this.loading = true;
+    this.veiculoService.listar()
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: data => (this.veiculos = data),
+        error: () => this.snackBar.open('Nao foi possivel carregar veiculos.', 'Fechar', { duration: 3000 })
+      });
+  }
+
+  ngAfterViewChecked(): void {
+    this.attachStreamToVideo();
+  }
+
+  ngOnDestroy(): void {
+    this.stopCamera();
+    this.revokeAllPreviews();
+  }
+
+  getDriverName(): string {
+    return this.authService.loggedName() || 'Motorista';
+  }
+
+  uploadedPhotosCount(): number {
+    return Object.values(this.files).filter(Boolean).length;
+  }
+
+  totalSteps(): number {
+    return 3;
+  }
+
+  stepProgressPercent(): number {
+    return Math.round((this.currentStep / this.totalSteps()) * 100);
+  }
+
+  canAdvanceFromStep1(): boolean {
+    return this.externalPhotos.every(photo => !!this.files[photo.key]);
+  }
+
+  canAdvanceFromStep2(): boolean {
+    return !!this.files.fotoPainel;
+  }
+
+  isReadyToSend(): boolean {
+    return this.form.valid && this.canAdvanceFromStep1() && this.canAdvanceFromStep2() && !this.sending;
+  }
+
+  goNext(): void {
+    if (this.currentStep === 1 && !this.canAdvanceFromStep1()) {
+      this.snackBar.open('Capture as 3 fotos externas para continuar.', 'Fechar', { duration: 2200 });
+      return;
+    }
+    if (this.currentStep === 2 && !this.canAdvanceFromStep2()) {
+      this.snackBar.open('Capture a foto do painel para continuar.', 'Fechar', { duration: 2200 });
+      return;
+    }
+    if (this.currentStep < this.totalSteps()) {
+      this.currentStep += 1;
+    }
+  }
+
+  goBack(): void {
+    if (this.currentStep === 1) {
+      this.router.navigate(['/inicio']);
+      return;
+    }
+    this.currentStep -= 1;
+  }
+
+  async openCamera(key: FotoKey): Promise<void> {
+    if (!this.supportsCameraApi) {
+      this.openFallbackCapture(key);
+      return;
+    }
+
+    this.stopCamera();
+    this.cameraError = null;
+    this.activeCameraKey = key;
+
+    try {
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+      this.attachStreamToVideo();
+    } catch {
+      this.closeCamera();
+      this.openFallbackCapture(key);
+    }
+  }
+
+  closeCamera(): void {
+    this.stopCamera();
+    this.activeCameraKey = null;
+  }
+
+  async captureFromCamera(): Promise<void> {
+    if (!this.activeCameraKey || !this.cameraVideo?.nativeElement) {
+      return;
+    }
+
+    const video = this.cameraVideo.nativeElement;
+    if (!video.videoWidth || !video.videoHeight) {
+      this.snackBar.open('Aguarde a camera iniciar.', 'Fechar', { duration: 1600 });
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      this.snackBar.open('Falha na captura.', 'Fechar', { duration: 1600 });
+      return;
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) {
+      this.snackBar.open('Falha ao gerar imagem.', 'Fechar', { duration: 1600 });
+      return;
+    }
+
+    const key = this.activeCameraKey;
+    const file = new File([blob], `${key}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    this.applyCapturedFile(key, file);
+
+    this.snackBar.open('Foto capturada com sucesso.', 'Fechar', { duration: 1500 });
+    this.closeCamera();
+  }
+
+  onFallbackFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const key = this.fallbackCaptureKey;
+
+    if (!file || !key) {
+      input.value = '';
+      return;
+    }
+
+    this.applyCapturedFile(key, file);
+    this.fallbackCaptureKey = null;
+    this.cameraError = null;
+    input.value = '';
+    this.snackBar.open('Foto capturada com sucesso.', 'Fechar', { duration: 1500 });
+  }
+
+  clearPhoto(key: FotoKey): void {
+    this.files[key] = undefined;
+    const oldPreview = this.previews[key];
+    if (oldPreview) {
+      URL.revokeObjectURL(oldPreview);
+    }
+    this.previews[key] = null;
+  }
+
+  getActivePhotoLabel(): string {
+    if (!this.activeCameraKey) {
+      return '';
+    }
+    if (this.activeCameraKey === 'fotoPainel') {
+      return this.panelPhoto.label;
+    }
+    return this.externalPhotos.find(p => p.key === this.activeCameraKey)?.label || '';
+  }
+
+  operationLabel(value: string): string {
+    return value === 'SAIDA' ? 'Estou saindo em missao' : 'Estou chegando da missao';
+  }
+
+  submit(): void {
+    if (!this.isReadyToSend()) {
+      this.snackBar.open('Complete todas as etapas antes do envio.', 'Fechar', { duration: 2200 });
+      return;
+    }
+
+    const raw = this.form.getRawValue();
+    const payload: ChecklistPayload = {
+      veiculoId: raw.veiculoId,
+      tipoOperacao: raw.tipoOperacao as 'SAIDA' | 'ENTRADA',
+      fotoPainel: this.files.fotoPainel!,
+      fotoEstepe: this.files.fotoEstepe!,
+      fotoLateralEsq: this.files.fotoLateralEsq!,
+      fotoLateralDir: this.files.fotoLateralDir!
+    };
+
+    this.sending = true;
+    this.checklistService.criar(payload)
+      .pipe(finalize(() => (this.sending = false)))
+      .subscribe({
+        next: res => {
+          this.lastChecklistId = res.id;
+          this.showSuccess = true;
+        },
+        error: () => this.snackBar.open('Falha ao enviar checklist.', 'Fechar', { duration: 3000 })
+      });
+  }
+
+  novoChecklist(): void {
+    this.form.patchValue({ veiculoId: 0, tipoOperacao: 'SAIDA' });
+    this.files = {};
+    this.revokeAllPreviews();
+    this.previews = { fotoPainel: null, fotoEstepe: null, fotoLateralEsq: null, fotoLateralDir: null };
+    this.currentStep = 1;
+    this.showSuccess = false;
+    this.lastChecklistId = null;
+  }
+
+  voltarInicio(): void {
+    this.router.navigate(['/inicio']);
+  }
+
+  private revokeAllPreviews(): void {
+    Object.values(this.previews).forEach(url => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    });
+  }
+
+  private openFallbackCapture(key: FotoKey): void {
+    this.stopCamera();
+    this.activeCameraKey = null;
+    this.fallbackCaptureKey = key;
+    this.cameraError = 'Captura direta indisponivel em HTTP. Abrindo camera nativa do aparelho.';
+    this.fallbackInput?.nativeElement.click();
+  }
+
+  private applyCapturedFile(key: FotoKey, file: File): void {
+    const oldPreview = this.previews[key];
+    if (oldPreview) {
+      URL.revokeObjectURL(oldPreview);
+    }
+    this.files[key] = file;
+    this.previews[key] = URL.createObjectURL(file);
+  }
+
+  private attachStreamToVideo(): void {
+    if (!this.cameraStream || !this.cameraVideo?.nativeElement) {
+      return;
+    }
+    const video = this.cameraVideo.nativeElement;
+    if (video.srcObject !== this.cameraStream) {
+      video.srcObject = this.cameraStream;
+      video.play().catch(() => undefined);
+    }
+  }
+
+  private stopCamera(): void {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => track.stop());
+      this.cameraStream = null;
+    }
+    if (this.cameraVideo?.nativeElement) {
+      this.cameraVideo.nativeElement.srcObject = null;
+    }
+  }
+}

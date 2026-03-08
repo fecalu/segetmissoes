@@ -1,0 +1,47 @@
+﻿<section class="page-wrap login-page">
+  <div class="login-wrapper">
+    <mat-card class="login-card">
+      <header class="brand-header">
+        <div class="logo-frame">
+          <img src="/gov.png" alt="Logo Governo do Maranhao" class="gov-logo">
+        </div>
+
+        <div class="brand-copy">
+          <p class="tag">SEGET</p>
+          <h1>Servicos Gerais e Transportes</h1>
+          <p>Sistema de checklist de veiculos para missao.</p>
+        </div>
+      </header>
+
+      <section class="form-area">
+        <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+          <h2>Entrar no sistema</h2>
+          <p class="tip">Digite seu login e sua senha para continuar.</p>
+
+          <mat-form-field appearance="outline" class="full-width input-field">
+            <mat-label>Login</mat-label>
+            <mat-icon matPrefix class="field-icon" fontSet="material-symbols-rounded">person</mat-icon>
+            <input matInput formControlName="login" placeholder="motorista1">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width input-field">
+            <mat-label>Senha</mat-label>
+            <mat-icon matPrefix class="field-icon" fontSet="material-symbols-rounded">lock</mat-icon>
+            <input matInput type="password" formControlName="senha" placeholder="******">
+          </mat-form-field>
+
+          <button mat-flat-button color="primary" class="full-width cta" [disabled]="loading">
+            {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
+          </button>
+
+          <div class="support-card">
+            <small>Acesso de teste</small>
+            <strong>motorista1 / 123456</strong>
+          </div>
+
+          <a routerLink="/admin/login" class="admin-link">Sou administrador</a>
+        </form>
+      </section>
+    </mat-card>
+  </div>
+</section>

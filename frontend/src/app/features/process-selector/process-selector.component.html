@@ -1,0 +1,41 @@
+<section class="page-wrap">
+  <mat-card class="card-shell selector-shell">
+    <header class="selector-header">
+      <div class="brand-text">
+        <h1>SEGET</h1>
+        <p>Servicos Gerais e Transportes</p>
+      </div>
+      <button mat-stroked-button color="primary" type="button" (click)="logout()">Sair</button>
+    </header>
+
+    <section class="welcome">
+      <h2>Escolha o tipo de processo</h2>
+      <p>Toque em uma opcao para continuar.</p>
+    </section>
+
+    <section class="options-grid">
+      <button mat-flat-button color="primary" class="option-card primary-card" type="button" (click)="iniciarChecklistMissao()">
+        <strong>Iniciar checklist de missao:</strong>
+        <span class="line-break">Fluxo principal</span>
+      </button>
+
+      <button mat-stroked-button class="option-card danger-card" type="button" (click)="abrirEmDesenvolvimento('Checklist de entrega de veiculo')">
+        <strong>Checklist de entrega de veiculo:</strong>
+        <span class="line-break">Em desenvolvimento</span>
+      </button>
+
+      <button mat-stroked-button class="option-card danger-card" type="button" (click)="abrirEmDesenvolvimento('Receber veiculo')">
+        <strong>Receber veiculo:</strong>
+        <span class="line-break">Em desenvolvimento</span>
+      </button>
+    </section>
+  </mat-card>
+</section>
+
+<section class="modal-overlay" *ngIf="showDevModal">
+  <article class="modal-card">
+    <h3>{{ devFeatureName }}</h3>
+    <p>Funcionalidade em desenvolvimento</p>
+    <button mat-flat-button color="primary" type="button" (click)="fecharModal()">Entendi</button>
+  </article>
+</section>

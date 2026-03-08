@@ -1,0 +1,152 @@
+﻿.login-page {
+  background:
+    radial-gradient(circle at 8% 10%, #d7e7ff, transparent 45%),
+    radial-gradient(circle at 92% 0%, #d9f7ea, transparent 38%),
+    #f4f8fb;
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.login-card {
+  border-radius: 20px;
+  border: 1px solid #d8e3ef;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.brand-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 14px;
+  background: linear-gradient(130deg, #f9fcff, #edf3fb);
+  border-bottom: 1px solid #dbe5f2;
+}
+
+.logo-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #dce6f2;
+  border-radius: 10px;
+  width: fit-content;
+  padding: 2px 6px;
+  margin: 0 auto 10px;
+}
+
+.gov-logo {
+  width: auto;
+  max-width: 285px;
+  max-height: 112px;
+  height: auto;
+}
+
+.brand-copy .tag {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1f4f9b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.brand-copy h1 {
+  margin: 4px 0;
+  font-size: 1.32rem;
+  line-height: 1.2;
+  color: #0f2f57;
+}
+
+.brand-copy p {
+  margin: 0;
+  color: #3a4f65;
+  font-size: 0.95rem;
+}
+
+.form-area {
+  padding: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form h2 {
+  margin: 0;
+  font-size: 1.38rem;
+  color: #102a43;
+}
+
+.tip {
+  margin: 0 0 2px;
+  color: #425b76;
+  font-size: 0.96rem;
+}
+
+.field-icon {
+  color: #4f6b88;
+  margin-right: 6px;
+}
+
+.form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+.form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+.form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+  border-color: #0e69c8 !important;
+  border-width: 2px !important;
+}
+
+.cta {
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 1.04rem;
+  font-weight: 700;
+  box-shadow: 0 10px 18px rgba(18, 90, 173, 0.26);
+}
+
+.support-card {
+  border: 1px solid #dce6f3;
+  border-radius: 10px;
+  background: #f6f9fd;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.support-card small {
+  color: #51637c;
+}
+
+.support-card strong {
+  color: #102a43;
+}
+
+.admin-link {
+  text-align: center;
+  color: #1f56a5;
+  font-weight: 700;
+  text-decoration: none;
+  margin-top: 2px;
+  font-size: 0.93rem;
+}
+
+@media (min-width: 760px) {
+  .brand-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .form-area {
+    padding: 20px;
+  }
+}

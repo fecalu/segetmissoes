@@ -1,0 +1,156 @@
+﻿<section class="page-wrap">
+  <mat-card class="card-shell checklist-card">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Checklist guiado</p>
+        <h2>Ola, {{ getDriverName() }}</h2>
+      </div>
+    </header>
+
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <strong>Etapa {{ currentStep }} de {{ totalSteps() }}</strong>
+        <span>{{ uploadedPhotosCount() }}/4 fotos capturadas</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="stepProgressPercent()"></div>
+      </div>
+    </div>
+
+    <div class="spinner-wrap" *ngIf="loading">
+      <mat-spinner diameter="34"></mat-spinner>
+    </div>
+
+    <section *ngIf="showSuccess" class="success-view">
+      <div class="success-icon">OK</div>
+      <h3>Checklist enviado com sucesso</h3>
+      <p>Registro #{{ lastChecklistId }}</p>
+      <button mat-flat-button color="primary" class="big-btn" type="button" (click)="novoChecklist()">Novo Checklist</button>
+      <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">Voltar para escolha de processo</button>
+    </section>
+
+    <form *ngIf="!loading && !showSuccess" [formGroup]="form" (ngSubmit)="submit()" class="wizard">
+      <section class="step-card" *ngIf="currentStep === 1">
+        <h3>Etapa 1 - Fotos externas</h3>
+        <p class="helper">Capture primeiro estepe e laterais do veiculo.</p>
+
+        <div class="photo-grid">
+          <article class="photo-card" *ngFor="let photo of externalPhotos" [class.done]="previews[photo.key]">
+            <h4>{{ photo.label }}</h4>
+            <small>{{ photo.hint }}</small>
+
+            <div class="preview" *ngIf="previews[photo.key] as src; else emptyExt">
+              <img [src]="src" [alt]="'Preview ' + photo.label">
+            </div>
+            <ng-template #emptyExt>
+              <div class="empty">CAMERA<br>nao capturada</div>
+            </ng-template>
+
+            <div class="actions">
+              <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(photo.key)">
+                {{ previews[photo.key] ? 'Refazer' : 'Capturar' }}
+              </button>
+              <button mat-stroked-button type="button" *ngIf="previews[photo.key]" (click)="clearPhoto(photo.key)">Limpar</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="step-card" *ngIf="currentStep === 2">
+        <h3>Etapa 2 - Foto final do painel</h3>
+        <p class="helper">Agora entre no veiculo e fotografe o painel com a quilometragem visivel.</p>
+
+        <article class="panel-card" [class.done]="previews[panelPhoto.key]">
+          <h4>{{ panelPhoto.label }}</h4>
+          <small>{{ panelPhoto.hint }}</small>
+
+          <div class="preview" *ngIf="previews[panelPhoto.key] as src; else emptyPanel">
+            <img [src]="src" alt="Preview painel">
+          </div>
+          <ng-template #emptyPanel>
+            <div class="empty">CAMERA<br>nao capturada</div>
+          </ng-template>
+
+          <div class="actions">
+            <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(panelPhoto.key)">
+              {{ previews[panelPhoto.key] ? 'Refazer' : 'Capturar painel' }}
+            </button>
+            <button mat-stroked-button type="button" *ngIf="previews[panelPhoto.key]" (click)="clearPhoto(panelPhoto.key)">Limpar</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="step-card" *ngIf="currentStep === 3">
+        <h3>Etapa 3 - Dados da operacao</h3>
+        <p class="helper">Confira os dados finais e envie o checklist.</p>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de operacao</mat-label>
+            <mat-select formControlName="tipoOperacao">
+              <mat-option value="SAIDA">Estou saindo em missao</mat-option>
+              <mat-option value="ENTRADA">Estou chegando da missao</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Veiculo</mat-label>
+            <mat-select formControlName="veiculoId">
+              <mat-option [value]="0" disabled>Selecione</mat-option>
+              <mat-option *ngFor="let veiculo of veiculos" [value]="veiculo.id">
+                {{ veiculo.placa }} - {{ veiculo.modelo }} / {{ veiculo.marca }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="review-box">
+          <p><strong>Fotos prontas:</strong> {{ uploadedPhotosCount() }}/4</p>
+          <p><strong>Operacao:</strong> {{ operationLabel(form.getRawValue().tipoOperacao) }}</p>
+          <p><strong>Quilometragem:</strong> sera validada pela foto do painel.</p>
+        </div>
+      </section>
+
+      <p class="camera-note" *ngIf="!supportsCameraApi">
+        Navegador sem suporte a camera direta. Recomendado usar Chrome Android ou Safari iOS atualizados.
+      </p>
+      <p class="camera-note" *ngIf="cameraError">{{ cameraError }}</p>
+
+      <footer class="wizard-actions">
+        <button mat-stroked-button type="button" (click)="goBack()">Voltar</button>
+
+        <button mat-flat-button color="primary" type="button" *ngIf="currentStep < totalSteps()" (click)="goNext()">
+          Proximo
+        </button>
+
+        <button mat-flat-button color="primary" *ngIf="currentStep === totalSteps()" [disabled]="!isReadyToSend()">
+          {{ sending ? 'Enviando...' : 'Enviar Checklist' }}
+        </button>
+      </footer>
+    </form>
+  </mat-card>
+</section>
+
+<input
+  #fallbackInput
+  type="file"
+  accept="image/*"
+  capture="environment"
+  (change)="onFallbackFileChange($event)"
+  class="camera-input-fallback"
+>
+
+<section class="camera-overlay" *ngIf="activeCameraKey">
+  <article class="camera-card">
+    <header>
+      <h3>Capturar: {{ getActivePhotoLabel() }}</h3>
+      <button mat-stroked-button type="button" (click)="closeCamera()">Fechar</button>
+    </header>
+
+    <video #cameraVideo autoplay playsinline muted></video>
+
+    <div class="camera-controls">
+      <button mat-flat-button color="primary" type="button" class="big-btn" (click)="captureFromCamera()">Tirar foto</button>
+    </div>
+  </article>
+</section>

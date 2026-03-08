@@ -1,0 +1,149 @@
+﻿<section class="page-wrap">
+  <mat-card class="card-shell admin-shell">
+    <header class="admin-header">
+      <div>
+        <p class="eyebrow">Administracao</p>
+        <h2>Painel de Frota</h2>
+      </div>
+      <button mat-stroked-button color="primary" type="button" *ngIf="activeMenu === 'dashboard'" (click)="logout()">Sair</button>
+    </header>
+
+    <nav class="admin-menu">
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'dashboard'" (click)="setMenu('dashboard')">Dashboard</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'veiculos'" (click)="setMenu('veiculos')">Veiculos</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'motoristas'" (click)="setMenu('motoristas')">Motoristas</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'checklists'" (click)="setMenu('checklists')">Checklists</button>
+      <button mat-stroked-button type="button" (click)="abrirTelaEstatisticas()">Estatisticas</button>
+    </nav>
+
+    <section class="content" *ngIf="activeMenu === 'dashboard'">
+      <div class="kpi-grid">
+        <article class="kpi"><h3>{{ motoristas.length }}</h3><p>Motoristas</p></article>
+        <article class="kpi"><h3>{{ veiculos.length }}</h3><p>Veiculos</p></article>
+        <article class="kpi"><h3>{{ totalVeiculosAtivos() }}</h3><p>Veiculos ativos</p></article>
+        <article class="kpi"><h3>{{ checklists.length }}</h3><p>Checklists</p></article>
+      </div>
+    </section>
+
+    <section class="content" *ngIf="activeMenu === 'veiculos'">
+      <mat-card class="panel-card">
+        <h3>Cadastro de veiculos</h3>
+        <form [formGroup]="veiculoForm" (ngSubmit)="salvarVeiculo()" class="form-grid">
+          <mat-form-field appearance="outline"><mat-label>Placa</mat-label><input matInput formControlName="placa" placeholder="ABC1D23"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Modelo</mat-label><input matInput formControlName="modelo"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Marca</mat-label><input matInput formControlName="marca"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select formControlName="status"><mat-option value="ATIVO">ATIVO</mat-option><mat-option value="INATIVO">INATIVO</mat-option></mat-select></mat-form-field>
+          <div class="row-actions">
+            <button mat-flat-button color="primary">{{ editingVeiculoId ? 'Atualizar' : 'Criar' }}</button>
+            <button mat-stroked-button type="button" (click)="cancelarEdicaoVeiculo()">Limpar</button>
+          </div>
+        </form>
+
+        <div class="search-line">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Buscar por placa</mat-label>
+            <input matInput [(ngModel)]="veiculoBusca" [ngModelOptions]="{standalone: true}">
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="buscarVeiculos()">Buscar</button>
+        </div>
+
+        <div class="list-header"><strong>Lista de veiculos</strong><span *ngIf="loadingVeiculos">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row" *ngFor="let v of veiculos">
+            <div><strong>{{ v.placa }}</strong><p>{{ v.marca }} {{ v.modelo }} · {{ v.status }}</p></div>
+            <div class="inline-buttons">
+              <button mat-stroked-button type="button" (click)="editarVeiculo(v)">Editar</button>
+              <button mat-stroked-button type="button" (click)="excluirVeiculo(v.id)">Excluir</button>
+            </div>
+          </article>
+        </div>
+      </mat-card>
+    </section>
+
+    <section class="content" *ngIf="activeMenu === 'motoristas'">
+      <mat-card class="panel-card">
+        <h3>Cadastro de motoristas e administradores</h3>
+        <form [formGroup]="motoristaForm" (ngSubmit)="salvarMotorista()" class="form-grid">
+          <mat-form-field appearance="outline"><mat-label>Nome</mat-label><input matInput formControlName="nome"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Login</mat-label><input matInput formControlName="login"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>CPF</mat-label><input matInput formControlName="cpf"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Senha</mat-label><input matInput type="password" formControlName="senha"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Perfil</mat-label><mat-select formControlName="perfil"><mat-option value="MOTORISTA">MOTORISTA</mat-option><mat-option value="ADMIN">ADMIN</mat-option></mat-select></mat-form-field>
+          <div class="row-actions">
+            <button mat-flat-button color="primary">{{ editingMotoristaId ? 'Atualizar' : 'Criar' }}</button>
+            <button mat-stroked-button type="button" (click)="cancelarEdicaoMotorista()">Limpar</button>
+          </div>
+        </form>
+
+        <div class="search-line">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Buscar por nome/login/CPF</mat-label>
+            <input matInput [(ngModel)]="motoristaBusca" [ngModelOptions]="{standalone: true}">
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="buscarMotoristas()">Buscar</button>
+        </div>
+
+        <div class="list-header"><strong>Lista de usuarios</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row" *ngFor="let m of motoristas">
+            <div><strong>{{ m.nome }}</strong><p>{{ m.login }} · {{ m.cpf }} · {{ m.perfil }}</p></div>
+            <div class="inline-buttons">
+              <button mat-stroked-button type="button" (click)="editarMotorista(m)">Editar</button>
+              <button mat-stroked-button type="button" (click)="excluirMotorista(m.id)">Excluir</button>
+            </div>
+          </article>
+        </div>
+      </mat-card>
+    </section>
+
+    <section class="content" *ngIf="activeMenu === 'checklists'">
+      <mat-card class="panel-card">
+        <div class="checklist-topline">
+          <h3>Consulta de checklists</h3>
+          <div class="checklist-actions">
+            <button mat-flat-button color="primary" type="button" (click)="abrirTelaRelatorio()">Relatorio PDF</button>
+            <button mat-stroked-button type="button" (click)="toggleFiltros()">
+              {{ filtrosAbertos ? 'Ocultar filtros' : 'Filtros' }}
+            </button>
+          </div>
+        </div>
+
+        <section class="filters-panel" *ngIf="filtrosAbertos">
+          <form [formGroup]="filtroForm" class="filter-grid">
+            <mat-form-field appearance="outline"><mat-label>Busca (placa, nome, CPF)</mat-label><input matInput formControlName="busca"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Motorista</mat-label><mat-select formControlName="motoristaId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let m of motoristas" [value]="m.id">{{ m.nome }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Veiculo</mat-label><mat-select formControlName="veiculoId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let v of veiculos" [value]="v.id">{{ v.placa }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Operacao</mat-label><mat-select formControlName="tipoOperacao"><mat-option value="">Todas</mat-option><mat-option value="SAIDA">SAIDA</mat-option><mat-option value="ENTRADA">CHEGADA</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data inicio</mat-label><input matInput type="date" formControlName="dataInicio"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data fim</mat-label><input matInput type="date" formControlName="dataFim"></mat-form-field>
+            <div class="row-actions"><button mat-flat-button color="primary" type="button" (click)="buscarChecklists()">Filtrar</button><button mat-stroked-button type="button" (click)="limparFiltros()">Limpar</button></div>
+          </form>
+        </section>
+
+        <div class="list-header"><strong>Resultados</strong><span *ngIf="loadingChecklists">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row" *ngFor="let c of checklists">
+            <div><strong>#{{ c.id }} · {{ tipoOperacaoLabel(c.tipoOperacao) }}</strong><p>{{ c.motoristaNome }} · {{ c.veiculoPlaca }} · {{ c.dataHora | date:'dd/MM/yyyy HH:mm' }}</p></div>
+            <button mat-stroked-button type="button" (click)="abrirChecklist(c)">Fotos</button>
+          </article>
+        </div>
+      </mat-card>
+    </section>
+  </mat-card>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedChecklist">
+  <article class="detail-card">
+    <header><h3>Checklist #{{ selectedChecklist.id }}</h3><button mat-stroked-button type="button" (click)="fecharChecklist()">Fechar</button></header>
+    <p><strong>Motorista:</strong> {{ selectedChecklist.motoristaNome }}</p>
+    <p><strong>Veiculo:</strong> {{ selectedChecklist.veiculoPlaca }}</p>
+    <p><strong>Operacao:</strong> {{ tipoOperacaoLabel(selectedChecklist.tipoOperacao) }}</p>
+    <p><strong>Data:</strong> {{ selectedChecklist.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
+    <div class="photo-grid">
+      <figure *ngFor="let foto of selectedChecklist.fotos">
+        <img [src]="fotoUrl(foto.caminhoArquivo)" [alt]="foto.tipoFoto">
+        <figcaption>{{ foto.tipoFoto }}</figcaption>
+      </figure>
+    </div>
+  </article>
+</section>
