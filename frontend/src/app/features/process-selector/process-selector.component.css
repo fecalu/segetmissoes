@@ -48,18 +48,57 @@
   font-size: 0.95rem;
 }
 
+.active-mission-alert {
+  margin-top: 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  background: #fff7ed;
+  padding: 10px;
+}
+
+.active-mission-alert strong {
+  display: block;
+  color: #9a3412;
+  font-size: 0.95rem;
+}
+
+.active-mission-alert p {
+  margin: 4px 0 0;
+  color: #7c2d12;
+  font-size: 0.92rem;
+}
+
 .options-grid {
   margin-top: 14px;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  flex: 1;
+}
+
+.flow-shell {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.flow-shell.expanded {
+  transform: translateY(-1px);
+}
+
+.primary-shell.expanded {
+  box-shadow: 0 0 0 3px rgba(32, 128, 72, 0.24);
+  border-color: #1f8a4d;
+}
+
+.secondary-shell.expanded {
+  box-shadow: 0 0 0 3px rgba(24, 94, 239, 0.24);
+  border-color: #155eef;
 }
 
 .option-card {
-  min-height: 112px;
-  height: 100%;
+  width: 100%;
+  min-height: 98px;
   border-radius: 14px;
   display: flex;
   flex-direction: column;
@@ -76,8 +115,12 @@
 }
 
 .option-card span {
-  font-size: 1rem;
+  font-size: 0.96rem;
   opacity: 0.95;
+}
+
+.option-card:disabled {
+  opacity: 0.65;
 }
 
 .line-break {
@@ -97,6 +140,98 @@
 .primary-card {
   background: linear-gradient(135deg, #1c7c45, #2d9a5a);
   color: #fff !important;
+}
+
+.secondary-card {
+  background: linear-gradient(135deg, #155eef, #3b82f6);
+  color: #fff !important;
+}
+
+.warning-card {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff !important;
+}
+
+.fluxo-grid {
+  grid-template-columns: 1fr;
+}
+
+.embedded-actions {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.primary-shell .embedded-actions {
+  background: linear-gradient(180deg, #e7f7ee, #f0fbf4);
+}
+
+.secondary-shell .embedded-actions {
+  background: linear-gradient(180deg, #e9f1ff, #f1f6ff);
+}
+
+.decision-btn {
+  min-height: 84px;
+  border-radius: 12px;
+  text-align: left;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+}
+
+:host ::ng-deep .decision-btn .mdc-button__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  text-transform: none;
+  text-align: left;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.decision-btn strong {
+  font-size: 1.08rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.decision-btn span {
+  font-size: 0.92rem;
+  line-height: 1.25;
+  opacity: 0.95;
+}
+
+.recommended-card {
+  background: linear-gradient(135deg, #1f8a4d, #2ea65f);
+  color: #fff !important;
+  border: 1px solid #18733f;
+}
+
+.recommended-card .mdc-button__label {
+  color: #fff !important;
+}
+
+:host ::ng-deep .recommended-card .mdc-button__label,
+:host ::ng-deep .warning-card .mdc-button__label {
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.decision-btn.warning-card {
+  border-color: #c56d09;
+}
+
+.future-grid {
+  margin-top: 12px;
+  grid-template-columns: 1fr;
 }
 
 .modal-overlay {
@@ -133,8 +268,15 @@
     grid-template-columns: 1fr auto;
   }
 
-  .options-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: 1fr;
+  .fluxo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .embedded-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .future-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

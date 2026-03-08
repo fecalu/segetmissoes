@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { ChecklistResponse, TipoOperacao } from '../models/checklist.model';
 import { EstatisticasMissoesResponse } from '../models/estatisticas-missoes.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
-import { StatusVeiculo, Veiculo } from '../models/veiculo.model';
+import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, Veiculo } from '../models/veiculo.model';
 import { environment } from '../../../environments/environment';
 
 export interface ChecklistFiltro {
@@ -82,15 +82,38 @@ export class AdminService {
     return this.http.get<Veiculo[]>(this.veiculoUrl, { params });
   }
 
-  criarVeiculo(payload: { placa: string; modelo: string; marca: string; status: StatusVeiculo }): Observable<Veiculo> {
+  criarVeiculo(payload: { placa: string; modelo: string; marca: string }): Observable<Veiculo> {
     return this.http.post<Veiculo>(this.veiculoUrl, payload);
   }
 
-  editarVeiculo(id: number, payload: { placa: string; modelo: string; marca: string; status: StatusVeiculo }): Observable<Veiculo> {
+  editarVeiculo(id: number, payload: { placa: string; modelo: string; marca: string }): Observable<Veiculo> {
     return this.http.put<Veiculo>(`${this.veiculoUrl}/${id}`, payload);
+  }
+
+  atualizarStatusAdministrativoVeiculo(id: number, statusAdministrativo: StatusAdministrativoVeiculo | null): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo });
+  }
+
+  listarHistoricoStatusVeiculo(id: number): Observable<HistoricoStatusVeiculo[]> {
+    return this.http.get<HistoricoStatusVeiculo[]>(`${this.veiculoUrl}/${id}/historico-status`);
+  }
+
+  desativarVeiculo(id: number): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/desativar`, {});
+  }
+
+  reativarVeiculo(id: number): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/reativar`, {});
   }
 
   excluirVeiculo(id: number): Observable<void> {
     return this.http.delete<void>(`${this.veiculoUrl}/${id}`);
+  }
+
+  excluirVeiculoDefinitivamente(id: number, senhaAdmin: string, justificativa: string): Observable<void> {
+    return this.http.post<void>(`${this.veiculoUrl}/${id}/exclusao-definitiva`, {
+      senhaAdmin,
+      justificativa
+    });
   }
 }

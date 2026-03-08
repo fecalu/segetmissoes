@@ -5,10 +5,19 @@ import { Observable, tap } from 'rxjs';
 import { LoginRequest, LoginResponse, Perfil } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 
+type AccessScope = 'motorista' | 'admin';
+
+interface SavedAccessCredentials {
+  login: string;
+  senha: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly baseUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly rememberAccessKeyPrefix = 'rememberAccess:';
   readonly loggedName = signal<string | null>(localStorage.getItem('nomeMotorista'));
+  readonly loggedMotoristaId = signal<number | null>(this.readMotoristaId());
   readonly perfil = signal<Perfil | null>((localStorage.getItem('perfil') as Perfil | null));
 
   constructor(private readonly http: HttpClient, private readonly router: Router) {}
@@ -17,8 +26,10 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${this.baseUrl}/login`, payload).pipe(
       tap(res => {
         localStorage.setItem('token', res.token);
+        localStorage.setItem('motoristaId', String(res.motoristaId));
         localStorage.setItem('nomeMotorista', res.nome);
         localStorage.setItem('perfil', res.perfil);
+        this.loggedMotoristaId.set(res.motoristaId);
         this.loggedName.set(res.nome);
         this.perfil.set(res.perfil);
       })
@@ -27,8 +38,10 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('token');
+    localStorage.removeItem('motoristaId');
     localStorage.removeItem('nomeMotorista');
     localStorage.removeItem('perfil');
+    this.loggedMotoristaId.set(null);
     this.loggedName.set(null);
     this.perfil.set(null);
     this.router.navigate(['/login']);
@@ -44,5 +57,45 @@ export class AuthService {
 
   hasRole(role: Perfil): boolean {
     return this.perfil() === role;
+  }
+
+  getRememberedAccess(scope: AccessScope): SavedAccessCredentials | null {
+    const raw = localStorage.getItem(this.getRememberAccessKey(scope));
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as SavedAccessCredentials;
+      if (!parsed.login || !parsed.senha) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  saveRememberedAccess(scope: AccessScope, credentials: SavedAccessCredentials, remember: boolean): void {
+    const key = this.getRememberAccessKey(scope);
+    if (!remember) {
+      localStorage.removeItem(key);
+      return;
+    }
+
+    localStorage.setItem(key, JSON.stringify(credentials));
+  }
+
+  private getRememberAccessKey(scope: AccessScope): string {
+    return `${this.rememberAccessKeyPrefix}${scope}`;
+  }
+
+  private readMotoristaId(): number | null {
+    const raw = localStorage.getItem('motoristaId');
+    if (!raw) {
+      return null;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 }

@@ -31,6 +31,9 @@ public class ChecklistService {
     private final VeiculoRepository veiculoRepository;
     private final MotoristaRepository motoristaRepository;
     private final FileStorageService fileStorageService;
+    private final VeiculoStatusResolver veiculoStatusResolver;
+    private final MissaoExcecaoService missaoExcecaoService;
+    private final MissaoAtivaValidatorService missaoAtivaValidatorService;
 
     @Transactional
     public ChecklistResponse criarChecklist(
@@ -48,8 +51,23 @@ public class ChecklistService {
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        if (veiculo.getStatus() != StatusVeiculo.ATIVO) {
-            throw new BusinessException("Veiculo inativo nao pode receber checklist");
+        if (Boolean.TRUE.equals(veiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode receber checklist");
+        }
+        if (tipoOperacao == TipoOperacao.SAIDA) {
+            missaoAtivaValidatorService.validarMotoristaSemMissaoAtiva(motoristaId);
+        }
+
+        VeiculoStatusSnapshot statusSnapshot = veiculoStatusResolver.resolver(veiculo);
+        if (tipoOperacao == TipoOperacao.SAIDA && statusSnapshot.statusAtual() != StatusVeiculo.BASE_JOAO_GOULART) {
+            throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusSnapshot.statusAtual());
+        }
+        if (tipoOperacao == TipoOperacao.ENTRADA && statusSnapshot.statusAutomatico() != StatusVeiculo.CIRCULANDO) {
+            throw new BusinessException("Nao existe missao em aberto para registrar chegada deste veiculo");
+        }
+        if (tipoOperacao == TipoOperacao.ENTRADA
+                && (statusSnapshot.motoristaAtualId() == null || !statusSnapshot.motoristaAtualId().equals(motoristaId))) {
+            throw new BusinessException("Checklist de chegada permitido somente para o motorista que iniciou a missao do veiculo");
         }
 
         Checklist checklist = new Checklist();
@@ -75,6 +93,7 @@ public class ChecklistService {
         }
 
         Checklist saved = checklistRepository.save(checklist);
+        missaoExcecaoService.regularizarPorChecklistChegada(saved);
         return toResponse(saved);
     }
 

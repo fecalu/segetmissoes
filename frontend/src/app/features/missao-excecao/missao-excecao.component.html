@@ -1,0 +1,123 @@
+<section class="page-wrap">
+  <mat-card class="card-shell excecao-card">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Modo de excecao</p>
+        <h2>{{ tituloOperacao() }}</h2>
+      </div>
+      <button mat-stroked-button type="button" (click)="voltarInicio()">Voltar</button>
+    </header>
+
+    <div class="loading-wrap" *ngIf="loading">
+      <mat-spinner diameter="34"></mat-spinner>
+    </div>
+
+    <section *ngIf="sucesso" class="success-view">
+      <div class="success-icon">OK</div>
+      <h3 *ngIf="operacao === 'SAIDA'">Missao iniciada em excecao</h3>
+      <h3 *ngIf="operacao === 'ENTRADA'">Missao finalizada sem checklist</h3>
+      <p>Registro #{{ missaoId }}</p>
+      <p class="helper">
+        <ng-container *ngIf="operacao === 'SAIDA'">
+          A regularizacao deve ocorrer em ate 12 horas com checklist de chegada
+          ou encerramento administrativo.
+        </ng-container>
+        <ng-container *ngIf="operacao === 'ENTRADA'">
+          Encerramento registrado com responsabilidade e justificativa.
+        </ng-container>
+      </p>
+      <button mat-flat-button color="primary" class="big-btn" type="button" (click)="irChecklistChegada()" *ngIf="operacao === 'SAIDA'">
+        Ir para checklist
+      </button>
+      <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">
+        Voltar para inicio
+      </button>
+    </section>
+
+    <form *ngIf="!loading && !sucesso" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="warning-box">
+        <strong>Aviso de responsabilidade</strong>
+        <p>{{ descricaoResponsabilidade() }}</p>
+      </div>
+
+      <section class="panel">
+        <h3 *ngIf="operacao === 'SAIDA'">1. Selecione o veiculo</h3>
+        <h3 *ngIf="operacao === 'ENTRADA'">1. Selecione a missao para finalizar</h3>
+        <p class="helper" *ngIf="semVeiculoDisponivel()">
+          <ng-container *ngIf="operacao === 'SAIDA'">
+            Nenhum veiculo disponivel no momento para iniciar missao sem checklist.
+          </ng-container>
+          <ng-container *ngIf="operacao === 'ENTRADA'">
+            Voce nao possui missao ativa para finalizar sem checklist.
+          </ng-container>
+        </p>
+        <div class="vehicle-grid">
+          <article
+            class="vehicle-card"
+            *ngFor="let veiculo of veiculosVisiveis()"
+            [class.selected]="isVeiculoSelecionado(veiculo)"
+            [class.disabled]="!canSelectVeiculo(veiculo)"
+            (click)="selecionarVeiculo(veiculo)"
+          >
+            <header>
+              <strong>{{ veiculo.placa }}</strong>
+              <span class="status-pill" [ngClass]="statusClass(veiculo.statusAtual)">
+                {{ statusLabel(veiculo.statusAtual) }}
+              </span>
+            </header>
+            <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>
+            <p><strong>Motorista atual:</strong> {{ veiculo.motoristaAtualNome || '-' }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>2. Informe o motivo</h3>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Motivo da excecao</mat-label>
+          <mat-select formControlName="motivo">
+            <mat-option *ngFor="let item of motivos" [value]="item.value">{{ item.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Justificativa</mat-label>
+          <textarea
+            matInput
+            rows="3"
+            maxlength="700"
+            formControlName="justificativa"
+            placeholder="Explique rapidamente o contexto da excecao"
+          ></textarea>
+          <mat-hint align="end">{{ form.controls.justificativa.value.length }}/700</mat-hint>
+          <mat-error *ngIf="form.controls.justificativa.hasError('required')">
+            Justificativa obrigatoria para "Outros motivos".
+          </mat-error>
+          <mat-error *ngIf="form.controls.justificativa.hasError('minlength')">
+            Use pelo menos 10 caracteres.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Localizacao (opcional)</mat-label>
+          <input matInput formControlName="localizacao" maxlength="140">
+        </mat-form-field>
+      </section>
+
+      <section class="panel">
+        <h3>3. Confirmacao</h3>
+        <mat-checkbox formControlName="aceiteResponsabilidade">
+          Declaro que estou ciente e assumo responsabilidade pela missao sem checklist.
+        </mat-checkbox>
+      </section>
+
+      <footer class="actions">
+        <button mat-stroked-button type="button" (click)="voltarInicio()">Cancelar</button>
+        <button mat-flat-button color="warn" [disabled]="sending || semVeiculoDisponivel()">
+          <ng-container *ngIf="operacao === 'SAIDA'">{{ sending ? 'Iniciando...' : 'Iniciar missao sem checklist' }}</ng-container>
+          <ng-container *ngIf="operacao === 'ENTRADA'">{{ sending ? 'Finalizando...' : 'Finalizar missao sem checklist' }}</ng-container>
+        </button>
+      </footer>
+    </form>
+  </mat-card>
+</section>

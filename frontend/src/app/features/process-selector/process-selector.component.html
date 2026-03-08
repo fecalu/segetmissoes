@@ -11,14 +11,65 @@
     <section class="welcome">
       <h2>Escolha o tipo de processo</h2>
       <p>Toque em uma opcao para continuar.</p>
+      <article class="active-mission-alert" *ngIf="missaoAtivaMotorista as missao">
+        <strong>Missao ativa detectada</strong>
+        <p>Voce ja iniciou missao no veiculo {{ missao.placa }}.</p>
+        <p>Finalize essa missao para iniciar uma nova.</p>
+      </article>
     </section>
 
-    <section class="options-grid">
-      <button mat-flat-button color="primary" class="option-card primary-card" type="button" (click)="iniciarChecklistMissao()">
-        <strong>Iniciar checklist de missao:</strong>
-        <span class="line-break">Fluxo principal</span>
-      </button>
+    <section class="options-grid fluxo-grid">
+      <article class="flow-shell primary-shell" [class.expanded]="selectedFluxo === 'INICIAR'">
+        <button
+          mat-flat-button
+          class="option-card primary-card"
+          [class.selected]="selectedFluxo === 'INICIAR'"
+          [disabled]="hasMissaoAtiva()"
+          type="button"
+          (click)="selecionarFluxo('INICIAR')"
+        >
+          <strong>Iniciar Missao</strong>
+          <span class="line-break">Estou saindo em missao</span>
+        </button>
 
+        <div class="embedded-actions" *ngIf="selectedFluxo === 'INICIAR'">
+          <button mat-flat-button class="decision-btn recommended-card" type="button" [disabled]="hasMissaoAtiva()" (click)="irComChecklist()">
+            <strong>Com checklist</strong>
+            <span class="line-break">Fluxo recomendado</span>
+          </button>
+          <button mat-flat-button class="decision-btn warning-card" type="button" [disabled]="hasMissaoAtiva()" (click)="irSemChecklist()">
+            <strong>Sem checklist</strong>
+            <span class="line-break">Somente emergencia operacional</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="flow-shell secondary-shell" [class.expanded]="selectedFluxo === 'FINALIZAR'">
+        <button
+          mat-flat-button
+          class="option-card secondary-card"
+          [class.selected]="selectedFluxo === 'FINALIZAR'"
+          type="button"
+          (click)="selecionarFluxo('FINALIZAR')"
+        >
+          <strong>Finalizar Missao</strong>
+          <span class="line-break">Estou chegando da missao</span>
+        </button>
+
+        <div class="embedded-actions" *ngIf="selectedFluxo === 'FINALIZAR'">
+          <button mat-flat-button class="decision-btn recommended-card" type="button" (click)="irComChecklist()">
+            <strong>Com checklist</strong>
+            <span class="line-break">Fluxo recomendado</span>
+          </button>
+          <button mat-flat-button class="decision-btn warning-card" type="button" (click)="irSemChecklist()">
+            <strong>Sem checklist</strong>
+            <span class="line-break">Somente emergencia operacional</span>
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <section class="options-grid future-grid">
       <button mat-stroked-button class="option-card danger-card" type="button" (click)="abrirEmDesenvolvimento('Checklist de entrega de veiculo')">
         <strong>Checklist de entrega de veiculo:</strong>
         <span class="line-break">Em desenvolvimento</span>

@@ -1,0 +1,197 @@
+.page-wrap {
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(180deg, #eef4ff 0%, #f7fafc 100%);
+}
+
+.excecao-card {
+  width: min(960px, 100%);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5b6472;
+}
+
+h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: #0b1630;
+}
+
+.loading-wrap {
+  padding: 28px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.warning-box {
+  margin-top: 14px;
+  border: 1px solid #f7c47f;
+  background: #fff8ef;
+  color: #5f3c00;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.warning-box p {
+  margin: 8px 0 0;
+}
+
+.panel {
+  margin-top: 14px;
+  border: 1px solid #d7dfec;
+  border-radius: 14px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: #17213a;
+}
+
+.vehicle-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.vehicle-card {
+  border: 1px solid #cad5e7;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  background: #f9fbff;
+}
+
+.vehicle-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.vehicle-card p {
+  margin: 6px 0 0;
+  color: #384056;
+  font-size: 0.9rem;
+}
+
+.vehicle-card.selected {
+  border-color: #145ad2;
+  box-shadow: 0 0 0 2px #d4e2ff;
+  background: #eef4ff;
+}
+
+.vehicle-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.status-circulando {
+  background: #1f9d55;
+}
+
+.status-base_joao_goulart {
+  background: #155eef;
+}
+
+.status-no_patio {
+  background: #5f6c7b;
+}
+
+.status-oficina {
+  background: #f59e0b;
+}
+
+.status-em_viagem {
+  background: #0f766e;
+}
+
+.status-manutencao {
+  background: #ea580c;
+}
+
+.status-bloqueado {
+  background: #dc2626;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.success-view {
+  margin-top: 14px;
+  border: 1px solid #d2e8da;
+  background: #f2fbf5;
+  border-radius: 16px;
+  padding: 20px 14px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #fff;
+  background: #1f9d55;
+}
+
+.success-view h3 {
+  margin: 0 0 6px;
+}
+
+.helper {
+  margin: 0 0 12px;
+  color: #51607a;
+}
+
+.big-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+@media (min-width: 760px) {
+  .page-wrap {
+    padding: 22px;
+  }
+
+  .vehicle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

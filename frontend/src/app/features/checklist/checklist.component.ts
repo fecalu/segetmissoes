@@ -1,16 +1,17 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AfterViewChecked, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { finalize } from 'rxjs';
-import { Veiculo } from '../../core/models/veiculo.model';
+import { StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { ChecklistPayload, ChecklistService } from '../../core/services/checklist.service';
 import { VeiculoService } from '../../core/services/veiculo.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -27,6 +28,7 @@ type FotoKey = 'fotoPainel' | 'fotoEstepe' | 'fotoLateralEsq' | 'fotoLateralDir'
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    MatIconModule,
     MatSnackBarModule,
     MatProgressSpinnerModule
   ],
@@ -66,10 +68,12 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild('fallbackInput') fallbackInput?: ElementRef<HTMLInputElement>;
 
   readonly form;
+  operacaoBloqueada: 'SAIDA' | 'ENTRADA' | null = null;
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly veiculoService: VeiculoService,
     private readonly checklistService: ChecklistService,
     private readonly authService: AuthService,
@@ -83,13 +87,24 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   ngOnInit(): void {
     this.supportsCameraApi = !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const operacao = this.route.snapshot.queryParamMap.get('operacao');
+    if (operacao === 'SAIDA' || operacao === 'ENTRADA') {
+      this.operacaoBloqueada = operacao;
+      this.form.controls.tipoOperacao.setValue(operacao);
+    }
+
     this.loading = true;
     this.veiculoService.listar()
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
-        next: data => (this.veiculos = data),
+        next: data => {
+          this.veiculos = data;
+          this.garantirVeiculoSelecionadoValido();
+        },
         error: () => this.snackBar.open('Nao foi possivel carregar veiculos.', 'Fechar', { duration: 3000 })
       });
+
+    this.form.controls.tipoOperacao.valueChanges.subscribe(() => this.garantirVeiculoSelecionadoValido());
   }
 
   ngAfterViewChecked(): void {
@@ -149,6 +164,57 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       return;
     }
     this.currentStep -= 1;
+  }
+
+  selecionarVeiculo(veiculo: Veiculo): void {
+    if (!this.canSelectVeiculo(veiculo)) {
+      return;
+    }
+    this.form.controls.veiculoId.setValue(veiculo.id);
+  }
+
+  isVeiculoSelecionado(veiculo: Veiculo): boolean {
+    return this.form.controls.veiculoId.value === veiculo.id;
+  }
+
+  canSelectVeiculo(veiculo: Veiculo): boolean {
+    const tipoOperacao = this.form.controls.tipoOperacao.value;
+    if (tipoOperacao === 'SAIDA') {
+      return veiculo.statusAtual === 'BASE_JOAO_GOULART';
+    }
+    return veiculo.statusAutomatico === 'CIRCULANDO' && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
+  }
+
+  veiculosVisiveis(): Veiculo[] {
+    if (this.form.controls.tipoOperacao.value === 'ENTRADA') {
+      return this.veiculos.filter(v => v.statusAutomatico === 'CIRCULANDO' && v.motoristaAtualId === this.authService.loggedMotoristaId());
+    }
+    return this.veiculos;
+  }
+
+  semVeiculoParaChegada(): boolean {
+    return this.form.controls.tipoOperacao.value === 'ENTRADA' && this.veiculosVisiveis().length === 0;
+  }
+
+  statusLabel(status: StatusVeiculo): string {
+    const labels: Record<StatusVeiculo, string> = {
+      CIRCULANDO: 'NA RUA (MISSAO)',
+      BASE_JOAO_GOULART: 'DISPONIVEL',
+      NO_PATIO: 'NO PATIO',
+      OFICINA: 'OFICINA',
+      EM_VIAGEM: 'EM VIAGEM',
+      MANUTENCAO: 'MANUTENCAO',
+      BLOQUEADO: 'BLOQUEADO'
+    };
+    return labels[status];
+  }
+
+  statusClass(status: StatusVeiculo): string {
+    return `status-${status.toLowerCase()}`;
+  }
+
+  exibeMotoristaAtual(veiculo: Veiculo): boolean {
+    return veiculo.statusAutomatico === 'CIRCULANDO' && !!veiculo.motoristaAtualNome;
   }
 
   async openCamera(key: FotoKey): Promise<void> {
@@ -253,6 +319,10 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     return value === 'SAIDA' ? 'Estou saindo em missao' : 'Estou chegando da missao';
   }
 
+  operationTitle(): string {
+    return this.form.controls.tipoOperacao.value === 'SAIDA' ? 'Iniciar Missao' : 'Finalizar Missao';
+  }
+
   submit(): void {
     if (!this.isReadyToSend()) {
       this.snackBar.open('Complete todas as etapas antes do envio.', 'Fechar', { duration: 2200 });
@@ -277,7 +347,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
           this.lastChecklistId = res.id;
           this.showSuccess = true;
         },
-        error: () => this.snackBar.open('Falha ao enviar checklist.', 'Fechar', { duration: 3000 })
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao enviar checklist.', 'Fechar', { duration: 3200 })
       });
   }
 
@@ -293,6 +363,17 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   voltarInicio(): void {
     this.router.navigate(['/inicio']);
+  }
+
+  private garantirVeiculoSelecionadoValido(): void {
+    const selectedId = this.form.controls.veiculoId.value;
+    if (!selectedId) {
+      return;
+    }
+    const selected = this.veiculos.find(v => v.id === selectedId);
+    if (!selected || !this.canSelectVeiculo(selected)) {
+      this.form.controls.veiculoId.setValue(0);
+    }
   }
 
   private revokeAllPreviews(): void {

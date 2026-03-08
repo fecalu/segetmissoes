@@ -4,23 +4,23 @@
       <p class="eyebrow">Area Administrativa</p>
       <h1>Gestao de Frota</h1>
       <p>Gerencie motoristas e acompanhe os checklists enviados em campo.</p>
-      <div class="cred-box">
-        <small>Acesso admin</small>
-        <strong>admin / admin123</strong>
-      </div>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="off">
       <h2>Entrar como administrador</h2>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Login</mat-label>
-        <input matInput formControlName="login" placeholder="admin">
+        <input matInput formControlName="login" autocomplete="off" autocapitalize="off" spellcheck="false">
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Senha</mat-label>
-        <input matInput type="password" formControlName="senha" placeholder="******">
+        <input matInput type="password" formControlName="senha" autocomplete="new-password">
       </mat-form-field>
+
+      <mat-checkbox color="primary" formControlName="lembrarAcesso" class="remember-option">
+        Salvar login e senha neste aparelho
+      </mat-checkbox>
 
       <button mat-flat-button color="primary" class="full-width" [disabled]="loading">
         {{ loading ? 'Entrando...' : 'Entrar' }}

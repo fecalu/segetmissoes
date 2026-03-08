@@ -1,4 +1,4 @@
-﻿<section class="page-wrap">
+<section class="page-wrap">
   <mat-card class="card-shell checklist-card">
     <header class="topbar">
       <div>
@@ -85,23 +85,31 @@
         <p class="helper">Confira os dados finais e envie o checklist.</p>
 
         <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Tipo de operacao</mat-label>
-            <mat-select formControlName="tipoOperacao">
-              <mat-option value="SAIDA">Estou saindo em missao</mat-option>
-              <mat-option value="ENTRADA">Estou chegando da missao</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <article class="operation-chip">
+            <strong>{{ operationTitle() }}</strong>
+            <p>{{ operationLabel(form.getRawValue().tipoOperacao) }}</p>
+          </article>
+        </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Veiculo</mat-label>
-            <mat-select formControlName="veiculoId">
-              <mat-option [value]="0" disabled>Selecione</mat-option>
-              <mat-option *ngFor="let veiculo of veiculos" [value]="veiculo.id">
-                {{ veiculo.placa }} - {{ veiculo.modelo }} / {{ veiculo.marca }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+        <div class="vehicle-grid">
+          <p class="camera-note" *ngIf="semVeiculoParaChegada()">
+            Nenhuma missao aberta encontrada para voce finalizar com checklist de chegada.
+          </p>
+          <article
+            class="vehicle-card"
+            *ngFor="let veiculo of veiculosVisiveis()"
+            [class.selected]="isVeiculoSelecionado(veiculo)"
+            [class.disabled]="!canSelectVeiculo(veiculo)"
+            (click)="selecionarVeiculo(veiculo)"
+          >
+            <header>
+              <strong>{{ veiculo.placa }}</strong>
+              <span class="status-pill" [ngClass]="statusClass(veiculo.statusAtual)">{{ statusLabel(veiculo.statusAtual) }}</span>
+            </header>
+            <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>
+            <p *ngIf="exibeMotoristaAtual(veiculo)"><strong>Motorista:</strong> {{ veiculo.motoristaAtualNome }}</p>
+            <p *ngIf="!exibeMotoristaAtual(veiculo)"><strong>Motorista:</strong> -</p>
+          </article>
         </div>
 
         <div class="review-box">
@@ -150,7 +158,16 @@
     <video #cameraVideo autoplay playsinline muted></video>
 
     <div class="camera-controls">
-      <button mat-flat-button color="primary" type="button" class="big-btn" (click)="captureFromCamera()">Tirar foto</button>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        class="camera-shot-btn"
+        (click)="captureFromCamera()"
+        aria-label="Capturar foto"
+      >
+        <mat-icon fontSet="material-symbols-rounded">photo_camera</mat-icon>
+      </button>
     </div>
   </article>
 </section>

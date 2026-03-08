@@ -1,26 +1,89 @@
-﻿<section class="page-wrap">
+<section class="page-wrap">
   <mat-card class="card-shell admin-shell">
     <header class="admin-header">
       <div>
         <p class="eyebrow">Administracao</p>
         <h2>Painel de Frota</h2>
       </div>
-      <button mat-stroked-button color="primary" type="button" *ngIf="activeMenu === 'dashboard'" (click)="logout()">Sair</button>
+      <button mat-stroked-button color="primary" type="button" *ngIf="activeMenu === 'dashboard' || activeMenu === 'operacao'" (click)="logout()">Sair</button>
     </header>
 
     <nav class="admin-menu">
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'operacao'" (click)="setMenu('operacao')">Operacao frota</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'dashboard'" (click)="setMenu('dashboard')">Dashboard</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'veiculos'" (click)="setMenu('veiculos')">Veiculos</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'motoristas'" (click)="setMenu('motoristas')">Motoristas</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'checklists'" (click)="setMenu('checklists')">Checklists</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'excecoes'" (click)="setMenu('excecoes')">Excecoes</button>
       <button mat-stroked-button type="button" (click)="abrirTelaEstatisticas()">Estatisticas</button>
     </nav>
+
+    <section class="content" *ngIf="activeMenu === 'operacao'">
+      <mat-card class="panel-card operacao-card-shell">
+        <div class="checklist-topline">
+          <div>
+            <h3>Painel operacional de veiculos</h3>
+            <p class="panel-helper">Visualize e altere rapidamente quais veiculos estao disponiveis ou indisponiveis.</p>
+          </div>
+          <button mat-stroked-button type="button" (click)="carregarVeiculos()">Atualizar</button>
+        </div>
+
+        <div class="kpi-grid operacao-kpis">
+          <article class="kpi"><h3>{{ totalVeiculosDisponiveis() }}</h3><p>Disponiveis</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosEmMissao() }}</h3><p>Na rua em missao</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosNoPatio() }}</h3><p>No patio</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosOficina() }}</h3><p>Oficina</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosBloqueados() }}</h3><p>Bloqueados</p></article>
+          <article class="kpi kpi-desativado"><h3>{{ totalVeiculosDesativados() }}</h3><p>Baixados/Desativados</p></article>
+        </div>
+
+        <div class="operacao-board">
+          <section class="status-column" *ngFor="let categoria of categoriasPainel">
+            <header class="status-column-header">
+              <div>
+                <h4>{{ categoria.titulo }}</h4>
+                <p>{{ categoria.descricao }}</p>
+              </div>
+              <span>{{ contarCategoria(categoria.id) }}</span>
+            </header>
+
+            <div class="status-column-content">
+              <article class="vehicle-card operacao-vehicle-card" *ngFor="let v of veiculosDaCategoria(categoria.id)">
+                <header class="vehicle-header">
+                  <strong>{{ v.placa }}</strong>
+                  <span class="status-pill" [ngClass]="statusClass(v.statusAtual)">{{ statusLabel(v.statusAtual) }}</span>
+                </header>
+
+                <p class="vehicle-model">{{ v.marca }} {{ v.modelo }}</p>
+                <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
+
+                <mat-form-field appearance="outline" class="status-field">
+                  <mat-label>Status administrativo</mat-label>
+                  <mat-select [value]="v.statusAdministrativo || ''" (selectionChange)="atualizarStatusAdministrativo(v, $event.value)">
+                    <mat-option value="">Automatico (checklist)</mat-option>
+                    <mat-option *ngFor="let item of statusAdministrativoOptions" [value]="item.value">{{ item.label }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <div class="inline-buttons">
+                  <button mat-stroked-button type="button" (click)="abrirHistoricoStatus(v)">Historico</button>
+                </div>
+              </article>
+              <p class="empty-column" *ngIf="veiculosDaCategoria(categoria.id).length === 0">Sem veiculos nesta categoria.</p>
+            </div>
+          </section>
+        </div>
+      </mat-card>
+    </section>
 
     <section class="content" *ngIf="activeMenu === 'dashboard'">
       <div class="kpi-grid">
         <article class="kpi"><h3>{{ motoristas.length }}</h3><p>Motoristas</p></article>
         <article class="kpi"><h3>{{ veiculos.length }}</h3><p>Veiculos</p></article>
-        <article class="kpi"><h3>{{ totalVeiculosAtivos() }}</h3><p>Veiculos ativos</p></article>
+        <article class="kpi"><h3>{{ totalVeiculosDisponiveis() }}</h3><p>Disponiveis</p></article>
+        <article class="kpi"><h3>{{ totalVeiculosEmMissao() }}</h3><p>Na rua em missao</p></article>
+        <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
         <article class="kpi"><h3>{{ checklists.length }}</h3><p>Checklists</p></article>
       </div>
     </section>
@@ -32,14 +95,19 @@
           <mat-form-field appearance="outline"><mat-label>Placa</mat-label><input matInput formControlName="placa" placeholder="ABC1D23"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Modelo</mat-label><input matInput formControlName="modelo"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Marca</mat-label><input matInput formControlName="marca"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select formControlName="status"><mat-option value="ATIVO">ATIVO</mat-option><mat-option value="INATIVO">INATIVO</mat-option></mat-select></mat-form-field>
           <div class="row-actions">
             <button mat-flat-button color="primary">{{ editingVeiculoId ? 'Atualizar' : 'Criar' }}</button>
             <button mat-stroked-button type="button" (click)="cancelarEdicaoVeiculo()">Limpar</button>
           </div>
         </form>
 
-        <div class="search-line">
+        <div class="filter-toggle-row">
+          <button mat-stroked-button type="button" (click)="toggleFiltrosVeiculo()">
+            {{ filtrosVeiculoAbertos ? 'Ocultar filtro de veiculo' : 'Filtrar veiculos' }}
+          </button>
+        </div>
+
+        <div class="search-line" *ngIf="filtrosVeiculoAbertos">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Buscar por placa</mat-label>
             <input matInput [(ngModel)]="veiculoBusca" [ngModelOptions]="{standalone: true}">
@@ -47,15 +115,33 @@
           <button mat-stroked-button type="button" (click)="buscarVeiculos()">Buscar</button>
         </div>
 
-        <div class="list-header"><strong>Lista de veiculos</strong><span *ngIf="loadingVeiculos">Carregando...</span></div>
+        <div class="list-header"><strong>Lista de veiculos ativos</strong><span *ngIf="loadingVeiculos">Carregando...</span></div>
         <div class="table">
-          <article class="table-row" *ngFor="let v of veiculos">
-            <div><strong>{{ v.placa }}</strong><p>{{ v.marca }} {{ v.modelo }} · {{ v.status }}</p></div>
+          <article class="table-row" *ngFor="let v of veiculosAtivos()">
+            <div>
+              <strong>{{ v.placa }}</strong>
+              <p>{{ v.marca }} {{ v.modelo }} - {{ statusLabel(v.statusAtual) }}</p>
+            </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="editarVeiculo(v)">Editar</button>
-              <button mat-stroked-button type="button" (click)="excluirVeiculo(v.id)">Excluir</button>
+              <button mat-stroked-button type="button" (click)="desativarVeiculo(v)">Baixar</button>
             </div>
           </article>
+        </div>
+
+        <div class="list-header"><strong>Baixados/Desativados</strong><span>{{ totalVeiculosDesativados() }}</span></div>
+        <div class="table table-desativados">
+          <article class="table-row" *ngFor="let v of veiculosDesativados()">
+            <div>
+              <strong>{{ v.placa }}</strong>
+              <p>{{ v.marca }} {{ v.modelo }} - BAIXADO/DESATIVADO</p>
+            </div>
+            <div class="inline-buttons">
+              <button mat-flat-button color="primary" type="button" (click)="reativarVeiculo(v)">Reativar</button>
+              <button mat-stroked-button color="warn" type="button" (click)="excluirVeiculoDefinitivamente(v)">Excluir definitivo</button>
+            </div>
+          </article>
+          <p class="empty-column" *ngIf="veiculosDesativados().length === 0">Nenhum veiculo baixado/desativado.</p>
         </div>
       </mat-card>
     </section>
@@ -75,7 +161,13 @@
           </div>
         </form>
 
-        <div class="search-line">
+        <div class="filter-toggle-row">
+          <button mat-stroked-button type="button" (click)="toggleFiltrosMotorista()">
+            {{ filtrosMotoristaAbertos ? 'Ocultar filtro de motorista' : 'Filtrar motoristas' }}
+          </button>
+        </div>
+
+        <div class="search-line" *ngIf="filtrosMotoristaAbertos">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Buscar por nome/login/CPF</mat-label>
             <input matInput [(ngModel)]="motoristaBusca" [ngModelOptions]="{standalone: true}">
@@ -86,7 +178,7 @@
         <div class="list-header"><strong>Lista de usuarios</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
         <div class="table">
           <article class="table-row" *ngFor="let m of motoristas">
-            <div><strong>{{ m.nome }}</strong><p>{{ m.login }} · {{ m.cpf }} · {{ m.perfil }}</p></div>
+            <div><strong>{{ m.nome }}</strong><p>{{ m.login }} - {{ m.cpf }} - {{ m.perfil }}</p></div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="editarMotorista(m)">Editar</button>
               <button mat-stroked-button type="button" (click)="excluirMotorista(m.id)">Excluir</button>
@@ -113,6 +205,14 @@
             <mat-form-field appearance="outline"><mat-label>Busca (placa, nome, CPF)</mat-label><input matInput formControlName="busca"></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Motorista</mat-label><mat-select formControlName="motoristaId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let m of motoristas" [value]="m.id">{{ m.nome }}</mat-option></mat-select></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Veiculo</mat-label><mat-select formControlName="veiculoId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let v of veiculos" [value]="v.id">{{ v.placa }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Origem do registro</mat-label>
+              <mat-select formControlName="origemRegistro">
+                <mat-option value="">Todas</mat-option>
+                <mat-option value="CHECKLIST">Com checklist</mat-option>
+                <mat-option value="SEM_CHECKLIST">Sem checklist</mat-option>
+              </mat-select>
+            </mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Operacao</mat-label><mat-select formControlName="tipoOperacao"><mat-option value="">Todas</mat-option><mat-option value="SAIDA">SAIDA</mat-option><mat-option value="ENTRADA">CHEGADA</mat-option></mat-select></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Data inicio</mat-label><input matInput type="date" formControlName="dataInicio"></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Data fim</mat-label><input matInput type="date" formControlName="dataFim"></mat-form-field>
@@ -120,11 +220,110 @@
           </form>
         </section>
 
-        <div class="list-header"><strong>Resultados</strong><span *ngIf="loadingChecklists">Carregando...</span></div>
+        <div class="kpi-grid checklist-kpis">
+          <article class="kpi"><h3>{{ consultaChecklist.length }}</h3><p>Total</p></article>
+          <article class="kpi"><h3>{{ registrosComChecklist().length }}</h3><p>Com checklist</p></article>
+          <article class="kpi"><h3>{{ registrosSemChecklist().length }}</h3><p>Sem checklist</p></article>
+        </div>
+
+        <div class="time-note">
+          Horario exibido: horario local do registro (Brasilia).
+        </div>
+
+        <div class="list-header"><strong>Com checklist</strong><span *ngIf="loadingChecklists">Carregando...</span></div>
         <div class="table">
-          <article class="table-row" *ngFor="let c of checklists">
-            <div><strong>#{{ c.id }} · {{ tipoOperacaoLabel(c.tipoOperacao) }}</strong><p>{{ c.motoristaNome }} · {{ c.veiculoPlaca }} · {{ c.dataHora | date:'dd/MM/yyyy HH:mm' }}</p></div>
-            <button mat-stroked-button type="button" (click)="abrirChecklist(c)">Fotos</button>
+          <article class="table-row checklist-row" *ngFor="let item of registrosComChecklist()">
+            <div class="checklist-row-content">
+              <strong>{{ tipoOperacaoLabel(item.tipoOperacao) }} - {{ item.veiculoPlaca }}</strong>
+              <p>{{ item.motoristaNome }} - {{ formatarDataHora(item.dataHora) }}</p>
+              <p>{{ item.resumo }}</p>
+              <div class="row-badges">
+                <span class="status-pill status-circulando">{{ origemConsultaLabel(item.origem) }}</span>
+                <span class="status-pill status-base_joao_goulart">{{ item.statusRegularizacao }}</span>
+              </div>
+            </div>
+            <button mat-stroked-button type="button" (click)="abrirChecklist(item.checklist!)">Fotos</button>
+          </article>
+          <p class="empty-column" *ngIf="!loadingChecklists && registrosComChecklist().length === 0">Nenhum registro com checklist no periodo.</p>
+        </div>
+
+        <div class="list-header"><strong>Sem checklist (excecao)</strong><span *ngIf="loadingChecklists">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row checklist-row row-sem-checklist" *ngFor="let item of registrosSemChecklist()">
+            <div class="checklist-row-content">
+              <strong>{{ tipoOperacaoLabel(item.tipoOperacao) }} - {{ item.veiculoPlaca }}</strong>
+              <p>{{ item.motoristaNome }} - {{ formatarDataHora(item.dataHora) }}</p>
+              <p>{{ item.resumo }}</p>
+              <div class="row-badges">
+                <span class="status-pill status-oficina">{{ origemConsultaLabel(item.origem) }}</span>
+                <span class="status-pill" [ngClass]="item.statusRegularizacao === 'ATRASADA' ? 'status-bloqueado' : 'status-base_joao_goulart'">
+                  {{ item.statusRegularizacao || 'PENDENTE' }}
+                </span>
+              </div>
+            </div>
+            <span class="status-pill status-no_patio">Sem fotos</span>
+          </article>
+          <p class="empty-column" *ngIf="!loadingChecklists && registrosSemChecklist().length === 0">Nenhum registro sem checklist no periodo.</p>
+        </div>
+      </mat-card>
+    </section>
+
+    <section class="content" *ngIf="activeMenu === 'excecoes'">
+      <mat-card class="panel-card">
+        <div class="checklist-topline">
+          <h3>Missoes em excecao</h3>
+          <div class="checklist-actions">
+            <button mat-stroked-button type="button" (click)="toggleFiltrosExcecao()">
+              {{ filtrosExcecaoAbertos ? 'Ocultar filtros' : 'Filtros' }}
+            </button>
+            <button mat-stroked-button type="button" (click)="buscarExcecoes()">Atualizar</button>
+          </div>
+        </div>
+
+        <section class="filters-panel" *ngIf="filtrosExcecaoAbertos">
+          <form [formGroup]="excecaoFiltroForm" class="filter-grid">
+            <mat-form-field appearance="outline"><mat-label>Busca (placa ou motorista)</mat-label><input matInput formControlName="busca"></mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="">Todos</mat-option>
+                <mat-option value="EXCECAO_ABERTA">PENDENTE</mat-option>
+                <mat-option value="ATRASADA">ATRASADA</mat-option>
+                <mat-option value="REGULARIZADA_POR_CHECKLIST">REGULARIZADA (CHECKLIST)</mat-option>
+                <mat-option value="REGULARIZADA_SEM_CHECKLIST">REGULARIZADA (SEM CHECKLIST)</mat-option>
+                <mat-option value="ENCERRADA_ADMIN">REGULARIZADA (ADMIN)</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Motorista</mat-label><mat-select formControlName="motoristaId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let m of motoristas" [value]="m.id">{{ m.nome }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Veiculo</mat-label><mat-select formControlName="veiculoId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let v of veiculos" [value]="v.id">{{ v.placa }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data inicio</mat-label><input matInput type="date" formControlName="dataInicio"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data fim</mat-label><input matInput type="date" formControlName="dataFim"></mat-form-field>
+            <div class="row-actions"><button mat-flat-button color="primary" type="button" (click)="buscarExcecoes()">Filtrar</button><button mat-stroked-button type="button" (click)="limparFiltrosExcecao()">Limpar</button></div>
+          </form>
+        </section>
+
+        <div class="list-header"><strong>Resultados</strong><span *ngIf="loadingExcecoes">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row" *ngFor="let e of excecoes">
+            <div>
+              <strong>#{{ e.id }} - {{ e.veiculoPlaca }} - {{ statusExcecaoLabel(e.status) }}</strong>
+              <p>{{ e.motoristaNome }} - {{ e.dataHoraAbertura | date:'dd/MM/yyyy HH:mm' }}</p>
+              <p>Motivo: {{ motivoExcecaoLabel(e.motivo) }} - Aberta ha {{ duracaoExcecaoLabel(e.minutosEmAberto) }}</p>
+            </div>
+            <div class="inline-buttons">
+              <button
+                mat-flat-button
+                color="warn"
+                type="button"
+                *ngIf="isExcecaoAberta(e.status)"
+                (click)="abrirEncerramentoExcecao(e)"
+              >
+                Encerrar admin
+              </button>
+              <span class="status-pill" [ngClass]="e.status === 'ATRASADA' ? 'status-bloqueado' : 'status-base_joao_goulart'">
+                {{ e.statusRegularizacao }}
+              </span>
+            </div>
           </article>
         </div>
       </mat-card>
@@ -144,6 +343,55 @@
         <img [src]="fotoUrl(foto.caminhoArquivo)" [alt]="foto.tipoFoto">
         <figcaption>{{ foto.tipoFoto }}</figcaption>
       </figure>
+    </div>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedExcecaoEncerramento">
+  <article class="detail-card history-card">
+    <header>
+      <h3>Encerrar excecao #{{ selectedExcecaoEncerramento.id }}</h3>
+      <button mat-stroked-button type="button" (click)="cancelarEncerramentoExcecao()">Fechar</button>
+    </header>
+    <p><strong>Veiculo:</strong> {{ selectedExcecaoEncerramento.veiculoPlaca }}</p>
+    <p><strong>Motorista:</strong> {{ selectedExcecaoEncerramento.motoristaNome }}</p>
+    <p><strong>Motivo:</strong> {{ motivoExcecaoLabel(selectedExcecaoEncerramento.motivo) }}</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Justificativa do encerramento administrativo</mat-label>
+      <textarea
+        matInput
+        rows="4"
+        maxlength="700"
+        [(ngModel)]="encerramentoJustificativa"
+        [ngModelOptions]="{standalone: true}"
+      ></textarea>
+      <mat-hint align="end">{{ encerramentoJustificativa.length }}/700</mat-hint>
+    </mat-form-field>
+
+    <div class="row-actions">
+      <button mat-stroked-button type="button" (click)="cancelarEncerramentoExcecao()">Cancelar</button>
+      <button mat-flat-button color="warn" type="button" (click)="confirmarEncerramentoExcecao()">Encerrar</button>
+    </div>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedVeiculoHistorico">
+  <article class="detail-card history-card">
+    <header>
+      <h3>Historico de status - {{ selectedVeiculoHistorico.placa }}</h3>
+      <button mat-stroked-button type="button" (click)="fecharHistoricoStatus()">Fechar</button>
+    </header>
+
+    <p *ngIf="loadingHistoricoStatus">Carregando historico...</p>
+    <div class="table" *ngIf="!loadingHistoricoStatus">
+      <article class="table-row" *ngFor="let item of historicoStatus">
+        <div>
+          <strong>{{ statusLabel(item.statusAnterior) }} -> {{ statusLabel(item.statusNovo) }}</strong>
+          <p>{{ item.administradorNome }} - {{ item.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
+        </div>
+      </article>
+      <p *ngIf="historicoStatus.length === 0">Nenhuma alteracao registrada.</p>
     </div>
   </article>
 </section>

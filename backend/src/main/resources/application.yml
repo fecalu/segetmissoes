@@ -16,6 +16,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: ${APP_TIMEZONE:America/Sao_Paulo}
+  jackson:
+    time-zone: ${APP_TIMEZONE:America/Sao_Paulo}
   servlet:
     multipart:
       max-file-size: 10MB
@@ -27,6 +31,10 @@ security:
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 app:
+  timezone: ${APP_TIMEZONE:America/Sao_Paulo}
+  legacy-time-fix:
+    enabled: ${APP_LEGACY_TIME_FIX_ENABLED:false}
+    hours-offset: ${APP_LEGACY_TIME_FIX_HOURS_OFFSET:-3}
   upload:
     base-dir: ${UPLOAD_BASE_DIR:./uploads}
   cors:

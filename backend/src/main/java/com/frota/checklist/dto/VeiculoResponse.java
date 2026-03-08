@@ -7,6 +7,11 @@ public record VeiculoResponse(
         String placa,
         String modelo,
         String marca,
-        StatusVeiculo status
+        Boolean desativado,
+        StatusVeiculo statusAtual,
+        StatusVeiculo statusAutomatico,
+        StatusVeiculo statusAdministrativo,
+        Long motoristaAtualId,
+        String motoristaAtualNome
 ) {
 }

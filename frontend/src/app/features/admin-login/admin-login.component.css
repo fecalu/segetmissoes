@@ -34,17 +34,6 @@
   line-height: 1.45;
 }
 
-.cred-box {
-  margin-top: 10px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: inline-flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
 .form {
   padding: 30px;
   display: flex;
@@ -61,6 +50,12 @@
 .form button {
   min-height: 44px;
   font-weight: 700;
+}
+
+.remember-option {
+  margin: 2px 0 2px;
+  color: #274b7f;
+  font-size: 0.92rem;
 }
 
 .back-link {

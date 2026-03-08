@@ -29,25 +29,30 @@ public class DataInitializer implements CommandLineRunner {
             v1.setPlaca("BRA2E19");
             v1.setModelo("Cargo 2429");
             v1.setMarca("Ford");
-            v1.setStatus(StatusVeiculo.ATIVO);
+            v1.setStatusAdministrativo(null);
 
             Veiculo v2 = new Veiculo();
             v2.setPlaca("QWE4R56");
             v2.setModelo("Atego 1719");
             v2.setMarca("Mercedes");
-            v2.setStatus(StatusVeiculo.ATIVO);
+            v2.setStatusAdministrativo(null);
 
             Veiculo v3 = new Veiculo();
             v3.setPlaca("XYZ9K12");
             v3.setModelo("Delivery 11.180");
             v3.setMarca("Volkswagen");
-            v3.setStatus(StatusVeiculo.ATIVO);
+            v3.setStatusAdministrativo(null);
 
             veiculoRepository.saveAll(List.of(v1, v2, v3));
         }
         veiculoRepository.findAll().forEach(v -> {
-            if (v.getStatus() == null) {
-                v.setStatus(StatusVeiculo.ATIVO);
+            if (v.getDesativado() == null) {
+                v.setDesativado(false);
+                veiculoRepository.save(v);
+            }
+            StatusVeiculo statusNormalizado = StatusVeiculo.normalizarStatusAdministrativo(v.getStatusAdministrativo());
+            if (v.getStatusAdministrativo() != statusNormalizado) {
+                v.setStatusAdministrativo(statusNormalizado);
                 veiculoRepository.save(v);
             }
         });

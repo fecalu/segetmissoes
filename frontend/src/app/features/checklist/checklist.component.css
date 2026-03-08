@@ -1,4 +1,4 @@
-﻿.checklist-card {
+.checklist-card {
   padding: 12px;
   background: linear-gradient(165deg, #ffffff, #eef9f2);
 }
@@ -181,6 +181,120 @@
   gap: 8px;
 }
 
+.operation-chip {
+  border: 1px solid #cfe1d5;
+  background: #f2faf4;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.operation-chip strong {
+  display: block;
+  font-size: 0.98rem;
+  color: #1e5e3c;
+}
+
+.operation-chip p {
+  margin: 4px 0 0;
+  color: #365846;
+  font-size: 0.85rem;
+}
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.vehicle-card {
+  border: 1px solid #d3e4d8;
+  border-radius: 12px;
+  background: #f9fdf9;
+  min-height: 162px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.vehicle-card.selected {
+  border-color: #2f9958;
+  box-shadow: 0 0 0 2px rgba(47, 153, 88, 0.2);
+  transform: translateY(-1px);
+}
+
+.vehicle-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vehicle-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vehicle-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #425847;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: fit-content;
+  border: 1px solid transparent;
+}
+
+.status-circulando {
+  background: #e8f7ec;
+  color: #1f7f3e;
+  border-color: #8ed1a2;
+}
+
+.status-base_joao_goulart {
+  background: #e8f1ff;
+  color: #1f4eb8;
+  border-color: #9db7eb;
+}
+
+.status-no_patio {
+  background: #eff1f4;
+  color: #4b5563;
+  border-color: #bfc4cc;
+}
+
+.status-oficina {
+  background: #fff8de;
+  color: #8a6900;
+  border-color: #e6cf6c;
+}
+
+.status-em_viagem {
+  background: #ece8ff;
+  color: #4a33a3;
+  border-color: #b7a9ef;
+}
+
+.status-manutencao {
+  background: #fff0df;
+  color: #a04b00;
+  border-color: #f2b26d;
+}
+
+.status-bloqueado {
+  background: #ffe8ea;
+  color: #b4232f;
+  border-color: #e69aa2;
+}
+
 .review-box {
   border: 1px solid #d6e8dc;
   border-radius: 10px;
@@ -265,6 +379,25 @@
 
 .camera-controls {
   margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.camera-shot-btn {
+  width: 84px;
+  height: 84px;
+  min-width: 84px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(22, 101, 52, 0.35);
+}
+
+.camera-shot-btn mat-icon {
+  font-size: 36px;
+  width: 36px;
+  height: 36px;
 }
 
 .camera-input-fallback {
@@ -284,5 +417,11 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .camera-overlay { padding: 20px; }
+  .vehicle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .camera-overlay {
+    padding: 20px;
+  }
 }
