@@ -1,0 +1,59 @@
+databases:
+  - name: seget-db
+    databaseName: frota_db
+    user: frota_user
+    plan: free
+
+services:
+  - type: web
+    name: seget-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: seget-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: seget-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: seget-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: seget-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: seget-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://*.onrender.com
+      - key: UPLOAD_BASE_DIR
+        value: /var/data/uploads
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=75.0
+    disk:
+      name: uploads
+      mountPath: /var/data
+      sizeGB: 1
+
+  - type: web
+    name: seget-frontend
+    runtime: docker
+    plan: free
+    rootDir: frontend
+    dockerfilePath: ./frontend/Dockerfile
+    envVars:
+      - key: API_ORIGIN
+        fromService:
+          type: web
+          name: seget-backend
+          envVarKey: RENDER_EXTERNAL_URL

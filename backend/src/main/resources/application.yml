@@ -1,11 +1,11 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   address: ${SERVER_ADDRESS:0.0.0.0}
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/frota_db}
-    username: ${DB_USERNAME:frota_user}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:frota_db}}
+    username: ${DB_USERNAME:${DB_USER:frota_user}}
     password: ${DB_PASSWORD:frota_pass}
   jpa:
     hibernate:
@@ -28,4 +28,4 @@ app:
   upload:
     base-dir: ${UPLOAD_BASE_DIR:./uploads}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,http://192.168.*.*:4200,http://10.*.*.*:4200,http://172.*.*.*:4200}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,http://192.168.*.*:4200,http://10.*.*.*:4200,http://172.*.*.*:4200,https://*.onrender.com}

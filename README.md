@@ -141,3 +141,44 @@ cd frontend
 npm install
 npm start
 ```
+
+## Deploy no Render
+
+O projeto ja esta preparado para deploy com Blueprint usando o arquivo `render.yaml` na raiz.
+
+### 1. Publicar no GitHub
+
+```bash
+git add .
+git commit -m "chore: prepare render deployment"
+git push
+```
+
+### 2. Criar no Render via Blueprint
+
+1. No Render, clique em `New +` -> `Blueprint`.
+2. Conecte o repositorio `segetmissoes`.
+3. O Render vai ler o arquivo `render.yaml` e criar:
+   - `seget-db` (PostgreSQL)
+   - `seget-backend` (Spring Boot em Docker)
+   - `seget-frontend` (Angular + Nginx em Docker)
+4. Confirme e execute o deploy.
+
+### 3. Variaveis importantes
+
+No backend (ja configuradas no `render.yaml`):
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` (vindas do banco)
+- `JWT_SECRET` (gerada automaticamente)
+- `UPLOAD_BASE_DIR=/var/data/uploads`
+- `CORS_ALLOWED_ORIGINS=https://*.onrender.com`
+
+No frontend:
+- `API_ORIGIN` vem automaticamente do `RENDER_EXTERNAL_URL` do backend.
+
+### 4. Persistencia de fotos
+
+O backend usa disco persistente no Render:
+- `mountPath: /var/data`
+- uploads em `/var/data/uploads`
+
+Assim os caminhos de fotos no banco continuam validos entre restarts/deploys.
