@@ -14,18 +14,10 @@ services:
     domains:
       - api.segetmissoes.com.br
     envVars:
-      - key: DB_HOST
+      - key: DB_CONNECTION
         fromDatabase:
           name: seget-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: seget-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: seget-db
-          property: database
+          property: connectionString
       - key: DB_USERNAME
         fromDatabase:
           name: seget-db
@@ -34,6 +26,10 @@ services:
         fromDatabase:
           name: seget-db
           property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: seget-db
+          property: database
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
