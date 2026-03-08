@@ -37,13 +37,9 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: https://*.onrender.com
       - key: UPLOAD_BASE_DIR
-        value: /var/data/uploads
+        value: /tmp/uploads
       - key: JAVA_TOOL_OPTIONS
         value: -XX:MaxRAMPercentage=75.0
-    disk:
-      name: uploads
-      mountPath: /var/data
-      sizeGB: 1
 
   - type: web
     name: seget-frontend

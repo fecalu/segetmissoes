@@ -169,7 +169,7 @@ git push
 No backend (ja configuradas no `render.yaml`):
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` (vindas do banco)
 - `JWT_SECRET` (gerada automaticamente)
-- `UPLOAD_BASE_DIR=/var/data/uploads`
+- `UPLOAD_BASE_DIR=/tmp/uploads` (ephemero no plano free)
 - `CORS_ALLOWED_ORIGINS=https://*.onrender.com`
 
 No frontend:
@@ -177,8 +177,9 @@ No frontend:
 
 ### 4. Persistencia de fotos
 
-O backend usa disco persistente no Render:
-- `mountPath: /var/data`
-- uploads em `/var/data/uploads`
+No plano `free`, os uploads ficam em `/tmp/uploads` e podem ser perdidos em restart/redeploy.
 
-Assim os caminhos de fotos no banco continuam validos entre restarts/deploys.
+Se quiser persistencia real de fotos no Render:
+1. Troque o backend para plano `starter`.
+2. Adicione `disk` no servico backend (ex.: `/var/data`).
+3. Mude `UPLOAD_BASE_DIR` para `/var/data/uploads`.
