@@ -183,3 +183,19 @@ Se quiser persistencia real de fotos no Render:
 1. Troque o backend para plano `starter`.
 2. Adicione `disk` no servico backend (ex.: `/var/data`).
 3. Mude `UPLOAD_BASE_DIR` para `/var/data/uploads`.
+
+## Dominio proprio (Registro.br)
+
+O `render.yaml` ja esta configurado com:
+- Frontend: `segetmissoes.com.br`
+- Backend API: `api.segetmissoes.com.br`
+
+No Registro.br, configure o DNS assim:
+1. Dominio raiz (`segetmissoes.com.br`): registro `A` apontando para `216.24.57.1`.
+2. Subdominio da API (`api`): registro `CNAME` para o host padrao do backend no Render (valor exibido na aba `Custom Domains` do servico backend).
+3. Remova `AAAA` do dominio/subdominio se existirem.
+
+Depois, no Render:
+1. Abra o servico `seget-frontend` e confirme o dominio `segetmissoes.com.br`.
+2. Abra o servico `seget-backend` e confirme o dominio `api.segetmissoes.com.br`.
+3. Aguarde emissao do certificado TLS (SSL) e propagacao do DNS.

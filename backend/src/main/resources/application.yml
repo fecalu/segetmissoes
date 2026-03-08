@@ -28,4 +28,4 @@ app:
   upload:
     base-dir: ${UPLOAD_BASE_DIR:./uploads}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,http://192.168.*.*:4200,http://10.*.*.*:4200,http://172.*.*.*:4200,https://*.onrender.com}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,http://192.168.*.*:4200,http://10.*.*.*:4200,http://172.*.*.*:4200,https://*.onrender.com,https://segetmissoes.com.br,https://www.segetmissoes.com.br}
