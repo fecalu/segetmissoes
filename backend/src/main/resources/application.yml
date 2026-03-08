@@ -4,9 +4,9 @@ server:
 
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:frota_db}}
-    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:frota_user}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:frota_pass}}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:${PGHOST:localhost}}:${DB_PORT:${PGPORT:5432}}/${DB_NAME:${PGDATABASE:frota_db}}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:${PGUSER:frota_user}}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:${PGPASSWORD:frota_pass}}}
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
