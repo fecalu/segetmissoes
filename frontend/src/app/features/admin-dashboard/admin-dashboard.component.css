@@ -708,7 +708,8 @@
   width: 100%;
   height: clamp(220px, 34vh, 460px);
   object-fit: contain;
-  background: #0f172a;
+  object-position: center;
+  background: #ffffff;
 }
 
 .photo-grid figcaption {
