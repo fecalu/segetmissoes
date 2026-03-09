@@ -17,6 +17,7 @@ import { VeiculoService } from '../../core/services/veiculo.service';
 })
 export class ProcessSelectorComponent implements OnInit {
   selectedFluxo: 'INICIAR' | 'FINALIZAR' | null = null;
+  selectedChecklistCompleto = false;
   showDevModal = false;
   devFeatureName = '';
   missaoAtivaMotorista: Veiculo | null = null;
@@ -68,6 +69,10 @@ export class ProcessSelectorComponent implements OnInit {
   abrirEmDesenvolvimento(featureName: string): void {
     this.devFeatureName = featureName;
     this.showDevModal = true;
+  }
+
+  toggleChecklistCompleto(): void {
+    this.selectedChecklistCompleto = !this.selectedChecklistCompleto;
   }
 
   fecharModal(): void {

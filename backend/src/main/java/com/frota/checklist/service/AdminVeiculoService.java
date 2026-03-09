@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -43,9 +44,12 @@ public class AdminVeiculoService {
 
     public List<VeiculoResponse> listar(String buscaPlaca) {
         String filtro = buscaPlaca == null ? "" : normalizarPlaca(buscaPlaca);
-        return veiculoRepository.findAll(Sort.by(Sort.Direction.ASC, "placa")).stream()
+        List<Veiculo> veiculos = veiculoRepository.findAll(Sort.by(Sort.Direction.ASC, "placa")).stream()
                 .filter(v -> filtro.isBlank() || normalizarPlaca(v.getPlaca()).contains(filtro))
-                .map(this::toResponse)
+                .toList();
+        Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
+        return veiculos.stream()
+                .map(v -> toResponse(v, snapshots.get(v.getId())))
                 .toList();
     }
 
@@ -263,7 +267,10 @@ public class AdminVeiculoService {
     }
 
     private VeiculoResponse toResponse(Veiculo veiculo) {
-        VeiculoStatusSnapshot snapshot = veiculoStatusResolver.resolver(veiculo);
+        return toResponse(veiculo, veiculoStatusResolver.resolver(veiculo));
+    }
+
+    private VeiculoResponse toResponse(Veiculo veiculo, VeiculoStatusSnapshot snapshot) {
         return new VeiculoResponse(
                 veiculo.getId(),
                 veiculo.getPlaca(),

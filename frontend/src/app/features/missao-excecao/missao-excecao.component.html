@@ -23,7 +23,7 @@
           ou encerramento administrativo.
         </ng-container>
         <ng-container *ngIf="operacao === 'ENTRADA'">
-          Encerramento registrado com responsabilidade e justificativa.
+          Encerramento registrado com responsabilidade.
         </ng-container>
       </p>
       <button mat-flat-button color="primary" class="big-btn" type="button" (click)="irChecklistChegada()" *ngIf="operacao === 'SAIDA'">
@@ -78,29 +78,6 @@
           <mat-select formControlName="motivo">
             <mat-option *ngFor="let item of motivos" [value]="item.value">{{ item.label }}</mat-option>
           </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Justificativa</mat-label>
-          <textarea
-            matInput
-            rows="3"
-            maxlength="700"
-            formControlName="justificativa"
-            placeholder="Explique rapidamente o contexto da excecao"
-          ></textarea>
-          <mat-hint align="end">{{ form.controls.justificativa.value.length }}/700</mat-hint>
-          <mat-error *ngIf="form.controls.justificativa.hasError('required')">
-            Justificativa obrigatoria para "Outros motivos".
-          </mat-error>
-          <mat-error *ngIf="form.controls.justificativa.hasError('minlength')">
-            Use pelo menos 10 caracteres.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Localizacao (opcional)</mat-label>
-          <input matInput formControlName="localizacao" maxlength="140">
         </mat-form-field>
       </section>
 

@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -24,7 +23,6 @@ import { VeiculoService } from '../../core/services/veiculo.service';
     ReactiveFormsModule,
     MatCardModule,
     MatFormFieldModule,
-    MatInputModule,
     MatSelectModule,
     MatCheckboxModule,
     MatButtonModule,
@@ -44,9 +42,7 @@ export class MissaoExcecaoComponent implements OnInit {
 
   readonly motivos: Array<{ value: MotivoExcecaoMissao; label: string }> = [
     { value: 'URGENCIA_OPERACIONAL', label: 'Urgencia operacional' },
-    { value: 'TROCA_RAPIDA_VEICULO', label: 'Troca rapida de veiculo' },
-    { value: 'SEM_TEMPO_OPERACIONAL', label: 'Sem tempo operacional' },
-    { value: 'CHUVA_FORTE', label: 'Chuva forte' },
+    { value: 'CHUVA_FORTE', label: 'Chuva' },
     { value: 'FALHA_CAMERA', label: 'Falha da camera' },
     { value: 'OUTROS', label: 'Outros motivos' }
   ];
@@ -65,9 +61,7 @@ export class MissaoExcecaoComponent implements OnInit {
     this.form = this.fb.nonNullable.group({
       veiculoId: [0, [Validators.required, Validators.min(1)]],
       motivo: ['URGENCIA_OPERACIONAL' as MotivoExcecaoMissao, [Validators.required]],
-      justificativa: [''],
-      aceiteResponsabilidade: [false, [Validators.requiredTrue]],
-      localizacao: ['']
+      aceiteResponsabilidade: [false, [Validators.requiredTrue]]
     });
   }
 
@@ -87,8 +81,6 @@ export class MissaoExcecaoComponent implements OnInit {
         },
         error: () => this.snackBar.open('Nao foi possivel carregar os veiculos.', 'Fechar', { duration: 3000 })
       });
-
-    this.form.controls.motivo.valueChanges.subscribe(() => this.validarJustificativaPorMotivo());
   }
 
   canSelectVeiculo(veiculo: Veiculo): boolean {
@@ -145,11 +137,10 @@ export class MissaoExcecaoComponent implements OnInit {
   descricaoResponsabilidade(): string {
     return this.operacao === 'SAIDA'
       ? 'Esta opcao e apenas para emergencia operacional. Ao continuar, voce assume responsabilidade pelo estado do veiculo ate o retorno.'
-      : 'Esta opcao encerra a missao sem checklist de chegada. Use somente em emergencia e com justificativa adequada.';
+      : 'Esta opcao encerra a missao sem checklist de chegada. Use somente em emergencia operacional.';
   }
 
   submit(): void {
-    this.validarJustificativaPorMotivo();
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.snackBar.open('Preencha os campos obrigatorios para continuar.', 'Fechar', { duration: 3000 });
@@ -163,14 +154,11 @@ export class MissaoExcecaoComponent implements OnInit {
       ? this.missaoExcecaoService.iniciar({
           veiculoId: raw.veiculoId,
           motivo: raw.motivo,
-          justificativa: raw.justificativa?.trim() || undefined,
-          aceiteResponsabilidade: raw.aceiteResponsabilidade,
-          localizacao: raw.localizacao?.trim() || undefined
+          aceiteResponsabilidade: raw.aceiteResponsabilidade
         })
       : this.missaoExcecaoService.finalizarSemChecklist({
           veiculoId: raw.veiculoId,
           motivo: raw.motivo,
-          justificativa: raw.justificativa?.trim() || undefined,
           aceiteResponsabilidade: raw.aceiteResponsabilidade
         });
 
@@ -191,17 +179,6 @@ export class MissaoExcecaoComponent implements OnInit {
 
   irChecklistChegada(): void {
     this.router.navigate(['/checklist'], { queryParams: { operacao: 'ENTRADA' } });
-  }
-
-  private validarJustificativaPorMotivo(): void {
-    const motivo = this.form.controls.motivo.value;
-    const justificativaControl = this.form.controls.justificativa;
-    if (motivo === 'OUTROS') {
-      justificativaControl.setValidators([Validators.required, Validators.minLength(10), Validators.maxLength(700)]);
-    } else {
-      justificativaControl.setValidators([Validators.maxLength(700)]);
-    }
-    justificativaControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private garantirVeiculoSelecionadoValido(): void {

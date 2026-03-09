@@ -1,3 +1,7 @@
+.card-shell.admin-shell {
+  max-width: min(98vw, 1760px);
+}
+
 .admin-shell {
   padding: 14px;
   background: linear-gradient(165deg, #ffffff, #eef3ff);
@@ -40,6 +44,23 @@
 .admin-menu button.active {
   border-color: #2d5ac8;
   background: #eaf0ff;
+}
+
+.admin-submenu {
+  margin: -2px 0 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-submenu button {
+  min-height: 38px;
+  font-size: 0.86rem;
+}
+
+.admin-submenu button.active {
+  border-color: #2d5ac8;
+  background: #eef3ff;
 }
 
 .content {
@@ -109,11 +130,46 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .checklist-actions button {
   min-height: 40px;
   font-weight: 700;
+}
+
+.report-date-field {
+  width: 122px !important;
+  min-width: 122px !important;
+  max-width: 122px !important;
+  margin-bottom: -0.25rem;
+  --mat-form-field-container-height: 38px;
+  --mat-form-field-container-vertical-padding: 8px;
+}
+
+:host ::ng-deep .report-date-field .mat-mdc-text-field-wrapper {
+  height: 38px !important;
+}
+
+:host ::ng-deep .report-date-field .mat-mdc-form-field-infix {
+  min-height: 0 !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+  width: auto !important;
+}
+
+:host ::ng-deep .report-date-field .mat-mdc-form-field-flex {
+  height: 38px !important;
+}
+
+:host ::ng-deep .report-date-field .mat-mdc-icon-button {
+  width: 30px;
+  height: 30px;
+  padding: 3px;
+}
+
+:host ::ng-deep .report-date-field .mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
 }
 
 .filters-panel {
@@ -215,6 +271,19 @@
   color: #4f5d82;
 }
 
+.table-row-edit {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status-config-left {
+  min-width: 170px;
+}
+
+.status-config-input {
+  flex: 1 1 260px;
+}
+
 .checklist-row {
   align-items: flex-start;
 }
@@ -235,6 +304,11 @@
 .row-sem-checklist {
   border-color: #f7cfa0;
   background: #fffaf3;
+}
+
+.missao-row-pendente {
+  border-color: #f2c185;
+  background: #fffaf2;
 }
 
 .checklist-kpis {
@@ -272,6 +346,9 @@
   border-radius: 12px;
   background: #fff;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
 }
 
 .status-column-header {
@@ -361,6 +438,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 220px;
+  flex: 1;
+  transition: background-color 0.15s ease;
+}
+
+.status-column-content.cdk-drop-list-receiving,
+.status-column-content.cdk-drop-list-dragging {
+  background: #f3f7ff;
 }
 
 .empty-column {
@@ -381,6 +466,23 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  cursor: grab;
+}
+
+.operacao-vehicle-card.cdk-drag-dragging {
+  cursor: grabbing;
+}
+
+.operacao-vehicle-card.cdk-drag-preview {
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(30, 64, 175, 0.24);
+}
+
+.operacao-vehicle-card.cdk-drag-placeholder {
+  opacity: 0.38;
+  border-style: dashed;
+  border-color: #98afe8;
+  background: #f3f7ff;
 }
 
 .vehicle-header {
@@ -488,6 +590,18 @@
   background: #ffe8ea;
   color: #b4232f;
   border-color: #e69aa2;
+}
+
+.status-documental-pendente {
+  background: #fff4dd;
+  color: #965400;
+  border-color: #f0cb8a;
+}
+
+.status-documental-ok {
+  background: #e9f8ef;
+  color: #1f7f3e;
+  border-color: #9bd6b0;
 }
 
 .detail-overlay {
@@ -602,11 +716,15 @@
 
 @media (min-width: 900px) {
   .admin-menu {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .admin-submenu {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .kpi-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .form-grid,
@@ -617,10 +735,94 @@
   .operacao-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .status-column {
+    min-height: 340px;
+  }
+
+  .status-column-content {
+    min-height: 280px;
+  }
 }
 
 @media (min-width: 1280px) {
+  .admin-shell {
+    padding: 18px 20px;
+  }
+
+  .admin-header {
+    padding: 14px 16px;
+  }
+
+  .admin-menu {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-menu button {
+    min-height: 44px;
+  }
+
+  .admin-submenu {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .content {
+    margin-top: 10px;
+  }
+
+  .panel-card {
+    padding: 14px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .operacao-kpis {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .form-grid,
+  .filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .form-grid .row-actions,
+  .filter-grid .row-actions {
+    grid-column: span 3;
+    max-width: 420px;
+  }
+
+  .table-row {
+    padding: 10px 12px;
+  }
+
   .operacao-board {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1640px) {
+  .admin-shell {
+    padding: 20px 22px;
+  }
+
+  .panel-card {
+    padding: 16px;
+  }
+
+  .filter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .filter-grid .row-actions {
+    grid-column: span 4;
+  }
+
+  .operacao-board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

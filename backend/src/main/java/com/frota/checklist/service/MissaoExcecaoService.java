@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -35,11 +36,19 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MissaoExcecaoService {
 
+    private static final EnumSet<MotivoExcecaoMissao> MOTIVOS_PERMITIDOS = EnumSet.of(
+            MotivoExcecaoMissao.URGENCIA_OPERACIONAL,
+            MotivoExcecaoMissao.CHUVA_FORTE,
+            MotivoExcecaoMissao.FALHA_CAMERA,
+            MotivoExcecaoMissao.OUTROS
+    );
+
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final MotoristaRepository motoristaRepository;
     private final VeiculoRepository veiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final MissaoAtivaValidatorService missaoAtivaValidatorService;
+    private final MissaoService missaoService;
 
     @Transactional
     public MissaoExcecaoResponse iniciarSemChecklist(
@@ -53,6 +62,7 @@ public class MissaoExcecaoService {
         if (!request.aceiteResponsabilidade()) {
             throw new BusinessException("Aceite de responsabilidade e obrigatorio");
         }
+        validarMotivoPermitido(request.motivo());
 
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
@@ -62,10 +72,6 @@ public class MissaoExcecaoService {
 
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
             throw new BusinessException("Veiculo desativado nao pode iniciar missao");
-        }
-
-        if (motivoExigeJustificativa(request.motivo()) && (request.justificativa() == null || request.justificativa().trim().length() < 10)) {
-            throw new BusinessException("Informe justificativa com pelo menos 10 caracteres para o motivo selecionado");
         }
 
         VeiculoStatusSnapshot statusVeiculo = veiculoStatusResolver.resolver(veiculo);
@@ -83,14 +89,13 @@ public class MissaoExcecaoService {
         missaoExcecao.setMotorista(motorista);
         missaoExcecao.setVeiculo(veiculo);
         missaoExcecao.setMotivo(request.motivo());
-        missaoExcecao.setJustificativa(trimToNull(request.justificativa()));
         missaoExcecao.setAceiteResponsabilidade(true);
         missaoExcecao.setStatus(StatusExcecaoMissao.EXCECAO_ABERTA);
         missaoExcecao.setIpOrigem(trimToNull(ipOrigem));
         missaoExcecao.setDispositivo(trimToNull(dispositivo));
-        missaoExcecao.setLocalizacao(trimToNull(request.localizacao()));
 
         MissaoExcecao saved = missaoExcecaoRepository.save(missaoExcecao);
+        missaoService.abrirSemChecklist(motorista, veiculo, saved.getId(), saved.getDataHoraAbertura());
         return toResponse(saved);
     }
 
@@ -101,22 +106,12 @@ public class MissaoExcecaoService {
         if (!request.aceiteResponsabilidade()) {
             throw new BusinessException("Aceite de responsabilidade e obrigatorio");
         }
-        if (motivoExigeJustificativa(request.motivo()) && (request.justificativa() == null || request.justificativa().trim().length() < 10)) {
-            throw new BusinessException("Informe justificativa com pelo menos 10 caracteres para o motivo selecionado");
-        }
+        validarMotivoPermitido(request.motivo());
 
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
         Veiculo veiculo = veiculoRepository.findById(request.veiculoId())
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-
-        VeiculoStatusSnapshot statusVeiculo = veiculoStatusResolver.resolver(veiculo);
-        if (statusVeiculo.statusAutomatico() != StatusVeiculo.CIRCULANDO) {
-            throw new BusinessException("Nao existe missao em aberto para finalizar sem checklist");
-        }
-        if (statusVeiculo.motoristaAtualId() == null || !statusVeiculo.motoristaAtualId().equals(motoristaId)) {
-            throw new BusinessException("Somente o motorista responsavel pela missao pode finalizar sem checklist");
-        }
 
         LocalDateTime agora = LocalDateTime.now();
         Optional<MissaoExcecao> missaoAbertaOpt = missaoExcecaoRepository
@@ -130,21 +125,19 @@ public class MissaoExcecaoService {
             }
             aberta.setStatus(StatusExcecaoMissao.REGULARIZADA_SEM_CHECKLIST);
             aberta.setDataHoraRegularizacao(agora);
-            if (trimToNull(request.justificativa()) != null) {
-                aberta.setJustificativa(trimToNull(request.justificativa()));
-            }
             registro = missaoExcecaoRepository.save(aberta);
         } else {
             MissaoExcecao regularizacao = new MissaoExcecao();
             regularizacao.setMotorista(motorista);
             regularizacao.setVeiculo(veiculo);
             regularizacao.setMotivo(request.motivo());
-            regularizacao.setJustificativa(trimToNull(request.justificativa()));
             regularizacao.setAceiteResponsabilidade(true);
             regularizacao.setStatus(StatusExcecaoMissao.REGULARIZADA_SEM_CHECKLIST);
             regularizacao.setDataHoraRegularizacao(agora);
             registro = missaoExcecaoRepository.save(regularizacao);
         }
+
+        missaoService.encerrarSemChecklist(motorista, veiculo, registro.getId(), agora, registro.getDataHoraAbertura());
 
         veiculo.setDataHoraUltimoEncerramentoSemChecklist(agora);
         veiculo.setMotoristaUltimoEncerramentoSemChecklist(motorista);
@@ -176,8 +169,16 @@ public class MissaoExcecaoService {
         missao.setDataHoraRegularizacao(LocalDateTime.now());
         missao.setAdministradorEncerramento(administrador);
         missao.setJustificativaEncerramentoAdmin(justificativaEncerramento.trim());
-
-        return toResponse(missaoExcecaoRepository.save(missao));
+        MissaoExcecao saved = missaoExcecaoRepository.save(missao);
+        missaoService.encerrarPorAdministracao(
+                saved.getVeiculo(),
+                saved.getMotorista(),
+                administrador,
+                saved.getId(),
+                saved.getDataHoraAbertura(),
+                saved.getDataHoraRegularizacao()
+        );
+        return toResponse(saved);
     }
 
     @Transactional
@@ -260,8 +261,10 @@ public class MissaoExcecaoService {
                 .toList();
     }
 
-    private boolean motivoExigeJustificativa(MotivoExcecaoMissao motivo) {
-        return motivo == MotivoExcecaoMissao.OUTROS;
+    private void validarMotivoPermitido(MotivoExcecaoMissao motivo) {
+        if (!MOTIVOS_PERMITIDOS.contains(motivo)) {
+            throw new BusinessException("Motivo de excecao invalido para este fluxo");
+        }
     }
 
     private MissaoExcecaoResponse toResponse(MissaoExcecao missao) {

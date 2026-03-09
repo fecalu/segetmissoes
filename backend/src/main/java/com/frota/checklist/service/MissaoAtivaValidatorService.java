@@ -8,12 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class MissaoAtivaValidatorService {
 
+    private final MissaoService missaoService;
     private final VeiculoRepository veiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
 
@@ -32,8 +34,22 @@ public class MissaoAtivaValidatorService {
             return Optional.empty();
         }
 
-        return veiculoRepository.findAll(Sort.by(Sort.Direction.ASC, "placa")).stream()
-                .map(veiculo -> new VeiculoSnapshot(veiculo, veiculoStatusResolver.resolver(veiculo)))
+        Optional<MissaoAtivaInfo> missaoPorEntidade = missaoService.buscarMissaoAtivaPorMotorista(motoristaId)
+                .map(missao -> new MissaoAtivaInfo(
+                        missao.getVeiculo().getId(),
+                        missao.getVeiculo().getPlaca(),
+                        missao.getVeiculo().getMarca(),
+                        missao.getVeiculo().getModelo()
+                ));
+        if (missaoPorEntidade.isPresent()) {
+            return missaoPorEntidade;
+        }
+
+        var veiculos = veiculoRepository.findAll(Sort.by(Sort.Direction.ASC, "placa"));
+        Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
+
+        return veiculos.stream()
+                .map(veiculo -> new VeiculoSnapshot(veiculo, snapshots.get(veiculo.getId())))
                 .filter(item -> item.snapshot().statusAutomatico() == StatusVeiculo.CIRCULANDO
                         && motoristaId.equals(item.snapshot().motoristaAtualId()))
                 .findFirst()

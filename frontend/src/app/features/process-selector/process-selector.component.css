@@ -234,6 +234,20 @@
   grid-template-columns: 1fr;
 }
 
+.complete-shell.expanded {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  border-color: #dc2626;
+}
+
+.complete-card {
+  background: linear-gradient(135deg, #991b1b, #dc2626);
+  color: #fff !important;
+}
+
+.complete-actions {
+  background: linear-gradient(180deg, #fff1f2, #fff7f7);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

@@ -7,15 +7,12 @@ import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from 
 export interface IniciarMissaoExcecaoPayload {
   veiculoId: number;
   motivo: MotivoExcecaoMissao;
-  justificativa?: string;
   aceiteResponsabilidade: boolean;
-  localizacao?: string;
 }
 
 export interface FinalizarMissaoSemChecklistPayload {
   veiculoId: number;
   motivo: MotivoExcecaoMissao;
-  justificativa?: string;
   aceiteResponsabilidade: boolean;
 }
 

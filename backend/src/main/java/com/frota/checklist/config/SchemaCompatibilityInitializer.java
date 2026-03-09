@@ -18,6 +18,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         atualizarConstraintsStatusVeiculo();
         atualizarConstraintsHistoricoStatusVeiculo();
         atualizarConstraintsMissaoExcecao();
+        atualizarConstraintsAuditoriaMissao();
     }
 
     private void atualizarConstraintsStatusVeiculo() {
@@ -69,6 +70,23 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'REGULARIZADA_POR_CHECKLIST',
                     'REGULARIZADA_SEM_CHECKLIST',
                     'ENCERRADA_ADMIN'
+                ))
+                """);
+    }
+
+    private void atualizarConstraintsAuditoriaMissao() {
+        executarSilencioso("alter table auditoria_missoes drop constraint if exists auditoria_missoes_acao_check");
+        executarSilencioso("""
+                alter table auditoria_missoes
+                add constraint auditoria_missoes_acao_check
+                check (acao in (
+                    'ABERTURA_CHECKLIST',
+                    'ABERTURA_SEM_CHECKLIST',
+                    'ABERTURA_LEGADO_RECONSTRUIDA',
+                    'ENCERRAMENTO_CHECKLIST',
+                    'ENCERRAMENTO_SEM_CHECKLIST',
+                    'ENCERRAMENTO_ADMINISTRATIVO',
+                    'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
                 ))
                 """);
     }

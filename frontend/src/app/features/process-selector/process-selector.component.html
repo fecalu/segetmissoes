@@ -70,15 +70,40 @@
     </section>
 
     <section class="options-grid future-grid">
-      <button mat-stroked-button class="option-card danger-card" type="button" (click)="abrirEmDesenvolvimento('Checklist de entrega de veiculo')">
-        <strong>Checklist de entrega de veiculo:</strong>
-        <span class="line-break">Em desenvolvimento</span>
-      </button>
+      <article class="flow-shell complete-shell" [class.expanded]="selectedChecklistCompleto">
+        <button
+          mat-flat-button
+          class="option-card complete-card"
+          [class.selected]="selectedChecklistCompleto"
+          type="button"
+          (click)="toggleChecklistCompleto()"
+        >
+          <strong>Checklist Completo</strong>
+          <span class="line-break">Entrega e recebimento de veiculo</span>
+        </button>
 
-      <button mat-stroked-button class="option-card danger-card" type="button" (click)="abrirEmDesenvolvimento('Receber veiculo')">
-        <strong>Receber veiculo:</strong>
-        <span class="line-break">Em desenvolvimento</span>
-      </button>
+        <div class="embedded-actions complete-actions" *ngIf="selectedChecklistCompleto">
+          <button
+            mat-flat-button
+            class="decision-btn danger-card"
+            type="button"
+            (click)="abrirEmDesenvolvimento('Checklist de entrega')"
+          >
+            <strong>Checklist de entrega</strong>
+            <span class="line-break">Quando entregamos um veiculo da frota para uso externo.</span>
+          </button>
+
+          <button
+            mat-flat-button
+            class="decision-btn danger-card"
+            type="button"
+            (click)="abrirEmDesenvolvimento('Checklist de recebimento')"
+          >
+            <strong>Checklist de recebimento</strong>
+            <span class="line-break">Quando recebemos um veiculo novo ou devolvido.</span>
+          </button>
+        </div>
+      </article>
     </section>
   </mat-card>
 </section>

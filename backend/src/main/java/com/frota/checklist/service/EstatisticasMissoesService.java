@@ -2,10 +2,10 @@ package com.frota.checklist.service;
 
 import com.frota.checklist.dto.EstatisticasMissoesResponse;
 import com.frota.checklist.dto.MissaoMotoristaStatsResponse;
-import com.frota.checklist.entity.Checklist;
-import com.frota.checklist.entity.TipoOperacao;
+import com.frota.checklist.entity.Missao;
+import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.exception.BusinessException;
-import com.frota.checklist.repository.ChecklistRepository;
+import com.frota.checklist.repository.MissaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EstatisticasMissoesService {
 
-    private final ChecklistRepository checklistRepository;
+    private final MissaoRepository missaoRepository;
 
     @Transactional(readOnly = true)
     public EstatisticasMissoesResponse gerar(LocalDate dataInicial, LocalDate dataFinal) {
@@ -36,33 +34,23 @@ public class EstatisticasMissoesService {
         LocalDateTime inicio = dataInicial.atStartOfDay();
         LocalDateTime fim = dataFinal.atTime(23, 59, 59);
 
-        List<Checklist> registros = checklistRepository.buscarParaRelatorio(inicio, fim);
-
+        List<Missao> registros = missaoRepository.buscarParaRelatorio(inicio, fim);
         Map<Long, AcumuladorMotorista> agregados = new HashMap<>();
-        Map<Long, Map<Long, Deque<LocalDateTime>>> saidasPendentes = new HashMap<>();
 
-        for (Checklist checklist : registros) {
-            Long motoristaId = checklist.getMotorista().getId();
-            Long veiculoId = checklist.getVeiculo().getId();
-            LocalDateTime dataHora = checklist.getDataHora();
-
-            if (checklist.getTipoOperacao() == TipoOperacao.SAIDA) {
-                saidasPendentes
-                        .computeIfAbsent(motoristaId, id -> new HashMap<>())
-                        .computeIfAbsent(veiculoId, id -> new LinkedList<>())
-                        .addLast(dataHora);
+        for (Missao missao : registros) {
+            if (missao.getStatus() != StatusMissao.FINALIZADA || missao.getDataHoraFim() == null) {
                 continue;
             }
 
-            LocalDateTime saida = consumirSaidaCorrespondente(saidasPendentes.get(motoristaId), veiculoId);
-            if (saida == null || dataHora.isBefore(saida)) {
+            if (missao.getDataHoraFim().isBefore(missao.getDataHoraInicio())) {
                 continue;
             }
 
-            long duracaoSegundos = Duration.between(saida, dataHora).getSeconds();
+            long duracaoSegundos = Duration.between(missao.getDataHoraInicio(), missao.getDataHoraFim()).getSeconds();
+            Long motoristaId = missao.getMotorista().getId();
             AcumuladorMotorista acumulador = agregados.computeIfAbsent(
                     motoristaId,
-                    id -> new AcumuladorMotorista(motoristaId, checklist.getMotorista().getNome())
+                    id -> new AcumuladorMotorista(motoristaId, missao.getMotorista().getNome())
             );
             acumulador.incrementar(duracaoSegundos);
         }
@@ -103,36 +91,6 @@ public class EstatisticasMissoesService {
         if (dataFinal.isBefore(dataInicial)) {
             throw new BusinessException("dataFinal nao pode ser menor que dataInicial.");
         }
-    }
-
-    private LocalDateTime consumirSaidaCorrespondente(Map<Long, Deque<LocalDateTime>> saidasMotorista, Long veiculoId) {
-        if (saidasMotorista == null || saidasMotorista.isEmpty()) {
-            return null;
-        }
-
-        Deque<LocalDateTime> saidasVeiculo = saidasMotorista.get(veiculoId);
-        if (saidasVeiculo != null && !saidasVeiculo.isEmpty()) {
-            return saidasVeiculo.removeFirst();
-        }
-
-        LocalDateTime candidata = null;
-        Long veiculoCandidato = null;
-        for (Map.Entry<Long, Deque<LocalDateTime>> entry : saidasMotorista.entrySet()) {
-            Deque<LocalDateTime> fila = entry.getValue();
-            if (fila == null || fila.isEmpty()) {
-                continue;
-            }
-            LocalDateTime primeira = fila.peekFirst();
-            if (candidata == null || primeira.isBefore(candidata)) {
-                candidata = primeira;
-                veiculoCandidato = entry.getKey();
-            }
-        }
-
-        if (candidata == null || veiculoCandidato == null) {
-            return null;
-        }
-        return saidasMotorista.get(veiculoCandidato).removeFirst();
     }
 
     private MissaoMotoristaStatsResponse toResponse(AcumuladorMotorista acumulador) {

@@ -2,6 +2,7 @@ package com.frota.checklist.repository;
 
 import com.frota.checklist.entity.MissaoExcecao;
 import com.frota.checklist.entity.StatusExcecaoMissao;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -24,6 +25,12 @@ public interface MissaoExcecaoRepository extends JpaRepository<MissaoExcecao, Lo
     List<MissaoExcecao> findByStatusInAndPrazoRegularizacaoBefore(
             Collection<StatusExcecaoMissao> statuses,
             LocalDateTime dataHora
+    );
+
+    @EntityGraph(attributePaths = {"motorista"})
+    List<MissaoExcecao> findByVeiculoIdInAndStatusIn(
+            Collection<Long> veiculoIds,
+            Collection<StatusExcecaoMissao> statuses
     );
 
     long countByVeiculoId(Long veiculoId);
