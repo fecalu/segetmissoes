@@ -133,11 +133,15 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   canAdvanceFromStep1(): boolean {
-    return this.externalPhotos.every(photo => !!this.files[photo.key]);
+    return this.isStep1Externa()
+      ? this.externalPhotos.every(photo => !!this.files[photo.key])
+      : !!this.files.fotoPainel;
   }
 
   canAdvanceFromStep2(): boolean {
-    return !!this.files.fotoPainel;
+    return this.isStep2Externa()
+      ? this.externalPhotos.every(photo => !!this.files[photo.key])
+      : !!this.files.fotoPainel;
   }
 
   isReadyToSend(): boolean {
@@ -146,11 +150,15 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   goNext(): void {
     if (this.currentStep === 1 && !this.canAdvanceFromStep1()) {
-      this.snackBar.open('Capture as 3 fotos externas para continuar.', 'Fechar', { duration: 2200 });
+      this.snackBar.open(this.isStep1Externa()
+        ? 'Capture as 3 fotos externas para continuar.'
+        : 'Capture a foto do painel para continuar.', 'Fechar', { duration: 2200 });
       return;
     }
     if (this.currentStep === 2 && !this.canAdvanceFromStep2()) {
-      this.snackBar.open('Capture a foto do painel para continuar.', 'Fechar', { duration: 2200 });
+      this.snackBar.open(this.isStep2Externa()
+        ? 'Capture as 3 fotos externas para continuar.'
+        : 'Capture a foto do painel para continuar.', 'Fechar', { duration: 2200 });
       return;
     }
     if (this.currentStep < this.totalSteps()) {
@@ -323,6 +331,26 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.form.controls.tipoOperacao.value === 'SAIDA' ? 'Iniciar Missao' : 'Finalizar Missao';
   }
 
+  step1Title(): string {
+    return this.isStep1Externa() ? 'Etapa 1 - Fotos externas' : 'Etapa 1 - Foto do painel';
+  }
+
+  step1Helper(): string {
+    return this.isStep1Externa()
+      ? 'Capture primeiro estepe e laterais do veiculo.'
+      : 'Na chegada, comece pelo painel com a quilometragem visivel.';
+  }
+
+  step2Title(): string {
+    return this.isStep2Externa() ? 'Etapa 2 - Fotos externas finais' : 'Etapa 2 - Foto final do painel';
+  }
+
+  step2Helper(): string {
+    return this.isStep2Externa()
+      ? 'Agora capture estepe e laterais para fechar a vistoria da chegada.'
+      : 'Agora entre no veiculo e fotografe o painel com a quilometragem visivel.';
+  }
+
   submit(): void {
     if (!this.isReadyToSend()) {
       this.snackBar.open('Complete todas as etapas antes do envio.', 'Fechar', { duration: 2200 });
@@ -420,5 +448,13 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (this.cameraVideo?.nativeElement) {
       this.cameraVideo.nativeElement.srcObject = null;
     }
+  }
+
+  isStep1Externa(): boolean {
+    return this.form.controls.tipoOperacao.value === 'SAIDA';
+  }
+
+  isStep2Externa(): boolean {
+    return !this.isStep1Externa();
   }
 }

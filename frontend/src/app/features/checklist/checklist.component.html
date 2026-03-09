@@ -31,53 +31,101 @@
 
     <form *ngIf="!loading && !showSuccess" [formGroup]="form" (ngSubmit)="submit()" class="wizard">
       <section class="step-card" *ngIf="currentStep === 1">
-        <h3>Etapa 1 - Fotos externas</h3>
-        <p class="helper">Capture primeiro estepe e laterais do veiculo.</p>
+        <h3>{{ step1Title() }}</h3>
+        <p class="helper">{{ step1Helper() }}</p>
 
-        <div class="photo-grid">
-          <article class="photo-card" *ngFor="let photo of externalPhotos" [class.done]="previews[photo.key]">
-            <h4>{{ photo.label }}</h4>
-            <small>{{ photo.hint }}</small>
+        <ng-container *ngIf="isStep1Externa(); else step1Painel">
+          <div class="photo-grid">
+            <article class="photo-card" *ngFor="let photo of externalPhotos" [class.done]="previews[photo.key]">
+              <h4>{{ photo.label }}</h4>
+              <small>{{ photo.hint }}</small>
 
-            <div class="preview" *ngIf="previews[photo.key] as src; else emptyExt">
-              <img [src]="src" [alt]="'Preview ' + photo.label">
+              <div class="preview" *ngIf="previews[photo.key] as src; else emptyExt">
+                <img [src]="src" [alt]="'Preview ' + photo.label">
+              </div>
+              <ng-template #emptyExt>
+                <div class="empty">CAMERA<br>nao capturada</div>
+              </ng-template>
+
+              <div class="actions">
+                <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(photo.key)">
+                  {{ previews[photo.key] ? 'Refazer' : 'Capturar' }}
+                </button>
+                <button mat-stroked-button type="button" *ngIf="previews[photo.key]" (click)="clearPhoto(photo.key)">Limpar</button>
+              </div>
+            </article>
+          </div>
+        </ng-container>
+
+        <ng-template #step1Painel>
+          <article class="panel-card" [class.done]="previews[panelPhoto.key]">
+            <h4>{{ panelPhoto.label }}</h4>
+            <small>{{ panelPhoto.hint }}</small>
+
+            <div class="preview" *ngIf="previews[panelPhoto.key] as src; else emptyPanelStep1">
+              <img [src]="src" alt="Preview painel">
             </div>
-            <ng-template #emptyExt>
+            <ng-template #emptyPanelStep1>
               <div class="empty">CAMERA<br>nao capturada</div>
             </ng-template>
 
             <div class="actions">
-              <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(photo.key)">
-                {{ previews[photo.key] ? 'Refazer' : 'Capturar' }}
+              <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(panelPhoto.key)">
+                {{ previews[panelPhoto.key] ? 'Refazer' : 'Capturar painel' }}
               </button>
-              <button mat-stroked-button type="button" *ngIf="previews[photo.key]" (click)="clearPhoto(photo.key)">Limpar</button>
+              <button mat-stroked-button type="button" *ngIf="previews[panelPhoto.key]" (click)="clearPhoto(panelPhoto.key)">Limpar</button>
             </div>
           </article>
-        </div>
+        </ng-template>
       </section>
 
       <section class="step-card" *ngIf="currentStep === 2">
-        <h3>Etapa 2 - Foto final do painel</h3>
-        <p class="helper">Agora entre no veiculo e fotografe o painel com a quilometragem visivel.</p>
+        <h3>{{ step2Title() }}</h3>
+        <p class="helper">{{ step2Helper() }}</p>
 
-        <article class="panel-card" [class.done]="previews[panelPhoto.key]">
-          <h4>{{ panelPhoto.label }}</h4>
-          <small>{{ panelPhoto.hint }}</small>
+        <ng-container *ngIf="isStep2Externa(); else step2Painel">
+          <div class="photo-grid">
+            <article class="photo-card" *ngFor="let photo of externalPhotos" [class.done]="previews[photo.key]">
+              <h4>{{ photo.label }}</h4>
+              <small>{{ photo.hint }}</small>
 
-          <div class="preview" *ngIf="previews[panelPhoto.key] as src; else emptyPanel">
-            <img [src]="src" alt="Preview painel">
+              <div class="preview" *ngIf="previews[photo.key] as src; else emptyExtStep2">
+                <img [src]="src" [alt]="'Preview ' + photo.label">
+              </div>
+              <ng-template #emptyExtStep2>
+                <div class="empty">CAMERA<br>nao capturada</div>
+              </ng-template>
+
+              <div class="actions">
+                <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(photo.key)">
+                  {{ previews[photo.key] ? 'Refazer' : 'Capturar' }}
+                </button>
+                <button mat-stroked-button type="button" *ngIf="previews[photo.key]" (click)="clearPhoto(photo.key)">Limpar</button>
+              </div>
+            </article>
           </div>
-          <ng-template #emptyPanel>
-            <div class="empty">CAMERA<br>nao capturada</div>
-          </ng-template>
+        </ng-container>
 
-          <div class="actions">
-            <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(panelPhoto.key)">
-              {{ previews[panelPhoto.key] ? 'Refazer' : 'Capturar painel' }}
-            </button>
-            <button mat-stroked-button type="button" *ngIf="previews[panelPhoto.key]" (click)="clearPhoto(panelPhoto.key)">Limpar</button>
-          </div>
-        </article>
+        <ng-template #step2Painel>
+          <article class="panel-card" [class.done]="previews[panelPhoto.key]">
+            <h4>{{ panelPhoto.label }}</h4>
+            <small>{{ panelPhoto.hint }}</small>
+
+            <div class="preview" *ngIf="previews[panelPhoto.key] as src; else emptyPanelStep2">
+              <img [src]="src" alt="Preview painel">
+            </div>
+            <ng-template #emptyPanelStep2>
+              <div class="empty">CAMERA<br>nao capturada</div>
+            </ng-template>
+
+            <div class="actions">
+              <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(panelPhoto.key)">
+                {{ previews[panelPhoto.key] ? 'Refazer' : 'Capturar painel' }}
+              </button>
+              <button mat-stroked-button type="button" *ngIf="previews[panelPhoto.key]" (click)="clearPhoto(panelPhoto.key)">Limpar</button>
+            </div>
+          </article>
+        </ng-template>
       </section>
 
       <section class="step-card" *ngIf="currentStep === 3">

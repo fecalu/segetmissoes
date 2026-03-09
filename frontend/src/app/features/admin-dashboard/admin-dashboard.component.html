@@ -45,7 +45,19 @@
                 <h4>{{ categoria.titulo }}</h4>
                 <p>{{ categoria.descricao }}</p>
               </div>
-              <span>{{ contarCategoria(categoria.id) }}</span>
+              <div class="status-column-header-right">
+                <span class="status-column-count">{{ contarCategoria(categoria.id) }}</span>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="add-vehicle-btn"
+                  *ngIf="categoriaPermiteInclusao(categoria.id)"
+                  (click)="abrirInclusaoCategoria(categoria.id)"
+                  [attr.aria-label]="'Adicionar veiculo em ' + categoria.titulo"
+                >
+                  <span class="plus-sign" aria-hidden="true">+</span>
+                </button>
+              </div>
             </header>
 
             <div class="status-column-content">
@@ -57,17 +69,13 @@
 
                 <p class="vehicle-model">{{ v.marca }} {{ v.modelo }}</p>
                 <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
-
-                <mat-form-field appearance="outline" class="status-field">
-                  <mat-label>Status administrativo</mat-label>
-                  <mat-select [value]="v.statusAdministrativo || ''" (selectionChange)="atualizarStatusAdministrativo(v, $event.value)">
-                    <mat-option value="">Automatico (checklist)</mat-option>
-                    <mat-option *ngFor="let item of statusAdministrativoOptions" [value]="item.value">{{ item.label }}</mat-option>
-                  </mat-select>
-                </mat-form-field>
+                <p class="vehicle-admin-state">
+                  <strong>Status administrativo:</strong>
+                  {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
+                </p>
 
                 <div class="inline-buttons">
-                  <button mat-stroked-button type="button" (click)="abrirHistoricoStatus(v)">Historico</button>
+                  <button mat-stroked-button type="button" class="historico-btn" (click)="abrirHistoricoStatus(v)">Historico</button>
                 </div>
               </article>
               <p class="empty-column" *ngIf="veiculosDaCategoria(categoria.id).length === 0">Sem veiculos nesta categoria.</p>
@@ -103,17 +111,19 @@
 
         <div class="filter-toggle-row">
           <button mat-stroked-button type="button" (click)="toggleFiltrosVeiculo()">
-            {{ filtrosVeiculoAbertos ? 'Ocultar filtro de veiculo' : 'Filtrar veiculos' }}
+            {{ filtrosVeiculoAbertos ? 'Ocultar filtros' : 'Filtros' }}
           </button>
         </div>
 
-        <div class="search-line" *ngIf="filtrosVeiculoAbertos">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Buscar por placa</mat-label>
-            <input matInput [(ngModel)]="veiculoBusca" [ngModelOptions]="{standalone: true}">
-          </mat-form-field>
-          <button mat-stroked-button type="button" (click)="buscarVeiculos()">Buscar</button>
-        </div>
+        <section class="filters-panel filters-panel-inline" *ngIf="filtrosVeiculoAbertos">
+          <div class="search-line">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Buscar por placa</mat-label>
+              <input matInput [(ngModel)]="veiculoBusca" [ngModelOptions]="{standalone: true}">
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="buscarVeiculos()">Buscar</button>
+          </div>
+        </section>
 
         <div class="list-header"><strong>Lista de veiculos ativos</strong><span *ngIf="loadingVeiculos">Carregando...</span></div>
         <div class="table">
@@ -163,17 +173,19 @@
 
         <div class="filter-toggle-row">
           <button mat-stroked-button type="button" (click)="toggleFiltrosMotorista()">
-            {{ filtrosMotoristaAbertos ? 'Ocultar filtro de motorista' : 'Filtrar motoristas' }}
+            {{ filtrosMotoristaAbertos ? 'Ocultar filtros' : 'Filtros' }}
           </button>
         </div>
 
-        <div class="search-line" *ngIf="filtrosMotoristaAbertos">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Buscar por nome/login/CPF</mat-label>
-            <input matInput [(ngModel)]="motoristaBusca" [ngModelOptions]="{standalone: true}">
-          </mat-form-field>
-          <button mat-stroked-button type="button" (click)="buscarMotoristas()">Buscar</button>
-        </div>
+        <section class="filters-panel filters-panel-inline" *ngIf="filtrosMotoristaAbertos">
+          <div class="search-line">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Buscar por nome/login/CPF</mat-label>
+              <input matInput [(ngModel)]="motoristaBusca" [ngModelOptions]="{standalone: true}">
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="buscarMotoristas()">Buscar</button>
+          </div>
+        </section>
 
         <div class="list-header"><strong>Lista de usuarios</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
         <div class="table">
@@ -329,6 +341,57 @@
       </mat-card>
     </section>
   </mat-card>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedCategoriaInclusao as categoriaSelecionada">
+  <article class="detail-card inclusion-card">
+    <header>
+      <h3>{{ acaoInclusaoLabel(categoriaSelecionada) }}</h3>
+      <button mat-stroked-button type="button" (click)="fecharInclusaoCategoria()">Fechar</button>
+    </header>
+
+    <p class="inclusion-helper">
+      Lista de veiculos elegiveis para <strong>{{ categoriaTitulo(categoriaSelecionada) }}</strong>.
+      Veiculos com missao ativa nao aparecem nesta lista.
+    </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Buscar por placa, marca ou modelo</mat-label>
+      <input matInput [(ngModel)]="buscaInclusaoVeiculo" [ngModelOptions]="{standalone: true}">
+    </mat-form-field>
+
+    <div class="inclusion-list">
+      <button
+        type="button"
+        class="inclusion-row"
+        *ngFor="let v of veiculosElegiveisInclusao()"
+        [class.selected]="veiculoInclusaoSelecionadoId === v.id"
+        (click)="veiculoInclusaoSelecionadoId = v.id"
+      >
+        <div class="inclusion-main">
+          <strong>{{ v.placa }}</strong>
+          <p>{{ v.marca }} {{ v.modelo }}</p>
+        </div>
+        <span class="status-pill" [ngClass]="statusClass(v.statusAtual)">{{ statusLabel(v.statusAtual) }}</span>
+      </button>
+      <p *ngIf="veiculosElegiveisInclusao().length === 0" class="empty-column">
+        Nenhum veiculo elegivel encontrado.
+      </p>
+    </div>
+
+    <div class="row-actions">
+      <button mat-stroked-button type="button" (click)="fecharInclusaoCategoria()">Cancelar</button>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="!veiculoInclusaoSelecionadoId || processandoInclusao"
+        (click)="confirmarInclusaoCategoria()"
+      >
+        {{ processandoInclusao ? 'Salvando...' : 'Confirmar' }}
+      </button>
+    </div>
+  </article>
 </section>
 
 <section class="detail-overlay" *ngIf="selectedChecklist">

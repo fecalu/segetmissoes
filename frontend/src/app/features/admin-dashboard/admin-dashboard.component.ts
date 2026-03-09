@@ -83,6 +83,10 @@ export class AdminDashboardComponent implements OnInit {
   selectedChecklist: ChecklistResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
   selectedExcecaoEncerramento: MissaoExcecaoResponse | null = null;
+  selectedCategoriaInclusao: PainelCategoria | null = null;
+  veiculoInclusaoSelecionadoId: number | null = null;
+  buscaInclusaoVeiculo = '';
+  processandoInclusao = false;
   historicoStatus: HistoricoStatusVeiculo[] = [];
   encerramentoJustificativa = '';
 
@@ -361,6 +365,96 @@ export class AdminDashboardComponent implements OnInit {
       },
       error: (err) => this.snackBar.open(err.error?.message || 'Erro ao alterar status.', 'Fechar', { duration: 3000 })
     });
+  }
+
+  categoriaPermiteInclusao(categoria: PainelCategoria): boolean {
+    return categoria !== 'MISSAO';
+  }
+
+  abrirInclusaoCategoria(categoria: PainelCategoria): void {
+    if (!this.categoriaPermiteInclusao(categoria)) {
+      return;
+    }
+
+    const elegiveis = this.veiculosElegiveisParaCategoria(categoria);
+    if (elegiveis.length === 0) {
+      this.snackBar.open('Nenhum veiculo elegivel para essa coluna no momento.', 'Fechar', { duration: 2600 });
+      return;
+    }
+
+    this.selectedCategoriaInclusao = categoria;
+    this.veiculoInclusaoSelecionadoId = null;
+    this.buscaInclusaoVeiculo = '';
+  }
+
+  fecharInclusaoCategoria(): void {
+    this.selectedCategoriaInclusao = null;
+    this.veiculoInclusaoSelecionadoId = null;
+    this.buscaInclusaoVeiculo = '';
+    this.processandoInclusao = false;
+  }
+
+  categoriaTitulo(categoria: PainelCategoria): string {
+    return this.categoriasPainel.find(item => item.id === categoria)?.titulo || categoria;
+  }
+
+  acaoInclusaoLabel(categoria: PainelCategoria): string {
+    return categoria === 'DISPONIVEL' ? 'Liberar para disponivel' : `Incluir em ${this.categoriaTitulo(categoria)}`;
+  }
+
+  veiculosElegiveisInclusao(): Veiculo[] {
+    if (!this.selectedCategoriaInclusao) {
+      return [];
+    }
+
+    const busca = this.buscaInclusaoVeiculo.trim().toLowerCase();
+    const base = this.veiculosElegiveisParaCategoria(this.selectedCategoriaInclusao);
+    if (!busca) {
+      return base;
+    }
+
+    return base.filter(v =>
+      v.placa.toLowerCase().includes(busca)
+      || v.modelo.toLowerCase().includes(busca)
+      || v.marca.toLowerCase().includes(busca)
+    );
+  }
+
+  confirmarInclusaoCategoria(): void {
+    if (!this.selectedCategoriaInclusao || !this.veiculoInclusaoSelecionadoId || this.processandoInclusao) {
+      return;
+    }
+
+    const veiculo = this.veiculos.find(v => v.id === this.veiculoInclusaoSelecionadoId);
+    if (!veiculo) {
+      this.snackBar.open('Veiculo nao encontrado.', 'Fechar', { duration: 2400 });
+      return;
+    }
+
+    const novoStatus = this.statusAdministrativoAlvoPorCategoria(this.selectedCategoriaInclusao);
+    if (novoStatus === undefined) {
+      this.snackBar.open('Categoria sem alteracao administrativa manual.', 'Fechar', { duration: 2400 });
+      return;
+    }
+
+    const atualLabel = veiculo.statusAdministrativo ? this.statusLabel(veiculo.statusAdministrativo) : 'AUTOMATICO';
+    const destinoLabel = novoStatus ? this.statusLabel(novoStatus) : 'DISPONIVEL (AUTOMATICO)';
+    const confirmar = confirm(`Alterar status de ${veiculo.placa}?\n${atualLabel} -> ${destinoLabel}`);
+    if (!confirmar) {
+      return;
+    }
+
+    this.processandoInclusao = true;
+    this.adminService.atualizarStatusAdministrativoVeiculo(veiculo.id, novoStatus)
+      .pipe(finalize(() => (this.processandoInclusao = false)))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Veiculo atualizado com sucesso.', 'Fechar', { duration: 2200 });
+          this.fecharInclusaoCategoria();
+          this.carregarVeiculos(this.veiculoBusca);
+        },
+        error: (err) => this.snackBar.open(err.error?.message || 'Erro ao atualizar veiculo.', 'Fechar', { duration: 3000 })
+      });
   }
 
   abrirHistoricoStatus(veiculo: Veiculo): void {
@@ -772,6 +866,42 @@ export class AdminDashboardComponent implements OnInit {
       return 'OFICINA';
     }
     return 'BLOQUEADO';
+  }
+
+  private veiculosElegiveisParaCategoria(categoria: PainelCategoria): Veiculo[] {
+    const statusAlvo = this.statusAdministrativoAlvoPorCategoria(categoria);
+    if (statusAlvo === undefined) {
+      return [];
+    }
+
+    return this.veiculosAtivos()
+      .filter(v => v.statusAutomatico !== 'CIRCULANDO')
+      .filter(v => {
+        if (categoria === 'DISPONIVEL') {
+          return v.statusAdministrativo !== null;
+        }
+        return v.statusAdministrativo !== statusAlvo;
+      })
+      .sort((a, b) => a.placa.localeCompare(b.placa));
+  }
+
+  private statusAdministrativoAlvoPorCategoria(categoria: PainelCategoria): StatusAdministrativoVeiculo | null | undefined {
+    if (categoria === 'DISPONIVEL') {
+      return null;
+    }
+    if (categoria === 'VIAGEM') {
+      return 'EM_VIAGEM';
+    }
+    if (categoria === 'PATIO') {
+      return 'NO_PATIO';
+    }
+    if (categoria === 'OFICINA') {
+      return 'OFICINA';
+    }
+    if (categoria === 'BLOQUEADO') {
+      return 'BLOQUEADO';
+    }
+    return undefined;
   }
 
   private montarConsultaChecklist(

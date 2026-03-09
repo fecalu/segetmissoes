@@ -157,16 +157,28 @@
 }
 
 .filter-toggle-row button {
-  min-height: 40px;
+  min-height: 36px;
   font-weight: 700;
+  font-size: 0.82rem;
+  padding-inline: 12px;
 }
 
 .search-line button {
-  min-height: 42px;
+  min-height: 38px;
 }
 
 .full-width {
   width: 100%;
+}
+
+.filters-panel-inline {
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding: 8px;
+}
+
+.filters-panel-inline .search-line {
+  margin-top: 0;
 }
 
 .list-header {
@@ -282,7 +294,13 @@
   font-size: 0.77rem;
 }
 
-.status-column-header span {
+.status-column-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-column-count {
   min-width: 28px;
   height: 28px;
   border-radius: 999px;
@@ -292,6 +310,50 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
+}
+
+.add-vehicle-btn {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #c9d8fb;
+  background: #f3f7ff;
+  color: #21459d;
+}
+
+:host ::ng-deep .add-vehicle-btn .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+:host ::ng-deep .add-vehicle-btn .mat-mdc-button-touch-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.plus-sign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-0.5px);
 }
 
 .status-column-content {
@@ -349,8 +411,10 @@
   color: #4d5f83;
 }
 
-.status-field {
-  margin-bottom: -0.8em;
+.vehicle-admin-state {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #5b698b;
 }
 
 .inline-buttons {
@@ -361,6 +425,23 @@
 
 .inline-buttons button {
   flex: 1 1 auto;
+}
+
+.historico-btn {
+  min-height: 30px;
+  height: 30px;
+  line-height: 28px;
+  padding-inline: 8px;
+  font-size: 0.74rem;
+  border-radius: 8px;
+}
+
+.operacao-vehicle-card .inline-buttons {
+  justify-content: flex-end;
+}
+
+.operacao-vehicle-card .inline-buttons .historico-btn {
+  flex: 0 0 auto;
 }
 
 .inline-buttons .status-pill {
@@ -432,6 +513,53 @@
 
 .history-card {
   max-width: 700px;
+}
+
+.inclusion-card {
+  max-width: 760px;
+}
+
+.inclusion-helper {
+  margin: 2px 0 10px;
+  font-size: 0.84rem;
+  color: #4f5d82;
+}
+
+.inclusion-list {
+  border: 1px solid #dce5fb;
+  border-radius: 10px;
+  padding: 8px;
+  max-height: 320px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f9fbff;
+}
+
+.inclusion-row {
+  width: 100%;
+  border: 1px solid #dce5fb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.inclusion-row.selected {
+  border-color: #5c83df;
+  background: #edf3ff;
+}
+
+.inclusion-main p {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: #4f5d82;
 }
 
 .detail-card header {
