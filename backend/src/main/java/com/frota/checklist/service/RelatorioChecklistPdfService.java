@@ -215,7 +215,8 @@ public class RelatorioChecklistPdfService {
             try (var inputStream = resource.getInputStream()) {
                 return Image.getInstance(inputStream.readAllBytes());
             }
-        } catch (IOException | BadElementException ignored) {
+        } catch (Exception ex) {
+            log.warn("Logo do relatorio de checklists nao carregada. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
             return null;
         }
     }
@@ -225,7 +226,12 @@ public class RelatorioChecklistPdfService {
     }
 
     private Font font(float size, int style, Color color) {
-        return FontFactory.getFont(FontFactory.HELVETICA, size, style, color);
+        try {
+            return FontFactory.getFont(FontFactory.HELVETICA, size, style, color);
+        } catch (Exception ex) {
+            log.warn("Fallback de fonte no relatorio de checklists. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
+            return new Font(Font.HELVETICA, size, style, color);
+        }
     }
 
     private static class FooterPageEvent extends PdfPageEventHelper {

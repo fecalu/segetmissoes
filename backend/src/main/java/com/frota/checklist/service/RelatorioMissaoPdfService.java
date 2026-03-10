@@ -251,13 +251,19 @@ public class RelatorioMissaoPdfService {
             try (var inputStream = resource.getInputStream()) {
                 return Image.getInstance(inputStream.readAllBytes());
             }
-        } catch (IOException | BadElementException ignored) {
+        } catch (Exception ex) {
+            log.warn("Logo do relatorio de missoes nao carregada. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
             return null;
         }
     }
 
     private Font font(float size, int style, Color color) {
-        return FontFactory.getFont(FontFactory.HELVETICA, size, style, color);
+        try {
+            return FontFactory.getFont(FontFactory.HELVETICA, size, style, color);
+        } catch (Exception ex) {
+            log.warn("Fallback de fonte no relatorio de missoes. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
+            return new Font(Font.HELVETICA, size, style, color);
+        }
     }
 
     private static class FooterPageEvent extends PdfPageEventHelper {
