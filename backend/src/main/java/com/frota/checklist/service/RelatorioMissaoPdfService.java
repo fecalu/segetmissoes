@@ -272,46 +272,56 @@ public class RelatorioMissaoPdfService {
 
         @Override
         public void onOpenDocument(PdfWriter writer, Document document) {
-            totalTemplate = writer.getDirectContent().createTemplate(40, 10);
             try {
+                totalTemplate = writer.getDirectContent().createTemplate(40, 10);
                 baseFont = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
-            } catch (DocumentException | IOException ignored) {
+            } catch (Exception ex) {
+                log.warn("Rodape PDF missoes: fallback sem fonte/template. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
                 baseFont = null;
+                totalTemplate = null;
             }
         }
 
         @Override
         public void onEndPage(PdfWriter writer, Document document) {
-            if (baseFont == null || totalTemplate == null) {
-                return;
+            try {
+                if (baseFont == null || totalTemplate == null) {
+                    return;
+                }
+
+                PdfContentByte cb = writer.getDirectContent();
+                String texto = "Pagina " + writer.getPageNumber() + " de ";
+                float textoLargura = baseFont.getWidthPoint(texto, 9);
+
+                float x = (document.left() + document.right()) / 2;
+                float y = document.bottom() - 20;
+
+                cb.beginText();
+                cb.setFontAndSize(baseFont, 9);
+                cb.setTextMatrix(x - textoLargura / 2, y);
+                cb.showText(texto);
+                cb.endText();
+                cb.addTemplate(totalTemplate, x - textoLargura / 2 + textoLargura, y);
+            } catch (Exception ex) {
+                log.warn("Rodape PDF missoes: falha ao escrever pagina. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
             }
-
-            PdfContentByte cb = writer.getDirectContent();
-            String texto = "Pagina " + writer.getPageNumber() + " de ";
-            float textoLargura = baseFont.getWidthPoint(texto, 9);
-
-            float x = (document.left() + document.right()) / 2;
-            float y = document.bottom() - 20;
-
-            cb.beginText();
-            cb.setFontAndSize(baseFont, 9);
-            cb.setTextMatrix(x - textoLargura / 2, y);
-            cb.showText(texto);
-            cb.endText();
-            cb.addTemplate(totalTemplate, x - textoLargura / 2 + textoLargura, y);
         }
 
         @Override
         public void onCloseDocument(PdfWriter writer, Document document) {
-            if (baseFont == null || totalTemplate == null) {
-                return;
-            }
+            try {
+                if (baseFont == null || totalTemplate == null) {
+                    return;
+                }
 
-            totalTemplate.beginText();
-            totalTemplate.setFontAndSize(baseFont, 9);
-            totalTemplate.setTextMatrix(0, 0);
-            totalTemplate.showText(String.valueOf(writer.getPageNumber() - 1));
-            totalTemplate.endText();
+                totalTemplate.beginText();
+                totalTemplate.setFontAndSize(baseFont, 9);
+                totalTemplate.setTextMatrix(0, 0);
+                totalTemplate.showText(String.valueOf(writer.getPageNumber() - 1));
+                totalTemplate.endText();
+            } catch (Exception ex) {
+                log.warn("Rodape PDF missoes: falha ao finalizar total de paginas. causa={}:{}", ex.getClass().getSimpleName(), ex.getMessage());
+            }
         }
     }
 }
