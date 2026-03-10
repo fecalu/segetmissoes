@@ -40,6 +40,7 @@ public class AdminVeiculoService {
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final AuditoriaExclusaoVeiculoRepository auditoriaExclusaoVeiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
+    private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
     private final PasswordEncoder passwordEncoder;
 
     public List<VeiculoResponse> listar(String buscaPlaca) {
@@ -48,8 +49,9 @@ public class AdminVeiculoService {
                 .filter(v -> filtro.isBlank() || normalizarPlaca(v.getPlaca()).contains(filtro))
                 .toList();
         Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
+        Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return veiculos.stream()
-                .map(v -> toResponse(v, snapshots.get(v.getId())))
+                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos))
                 .toList();
     }
 
@@ -267,10 +269,21 @@ public class AdminVeiculoService {
     }
 
     private VeiculoResponse toResponse(Veiculo veiculo) {
-        return toResponse(veiculo, veiculoStatusResolver.resolver(veiculo));
+        Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
+        return toResponse(veiculo, veiculoStatusResolver.resolver(veiculo), rotulos);
     }
 
-    private VeiculoResponse toResponse(Veiculo veiculo, VeiculoStatusSnapshot snapshot) {
+    private VeiculoResponse toResponse(
+            Veiculo veiculo,
+            VeiculoStatusSnapshot snapshot,
+            Map<StatusVeiculo, String> rotulos
+    ) {
+        String statusAtualRotulo = rotulos.getOrDefault(snapshot.statusAtual(), snapshot.statusAtual().name());
+        String statusAutomaticoRotulo = rotulos.getOrDefault(snapshot.statusAutomatico(), snapshot.statusAutomatico().name());
+        String statusAdministrativoRotulo = snapshot.statusAdministrativo() == null
+                ? null
+                : rotulos.getOrDefault(snapshot.statusAdministrativo(), snapshot.statusAdministrativo().name());
+
         return new VeiculoResponse(
                 veiculo.getId(),
                 veiculo.getPlaca(),
@@ -281,7 +294,10 @@ public class AdminVeiculoService {
                 snapshot.statusAutomatico(),
                 snapshot.statusAdministrativo(),
                 snapshot.motoristaAtualId(),
-                snapshot.motoristaAtualNome()
+                snapshot.motoristaAtualNome(),
+                statusAtualRotulo,
+                statusAutomaticoRotulo,
+                statusAdministrativoRotulo
         );
     }
 }

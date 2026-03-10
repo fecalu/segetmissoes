@@ -10,8 +10,8 @@
 
     <nav class="admin-menu">
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'operacao'" (click)="setMenu('operacao')">Operacao frota</button>
-      <button mat-stroked-button type="button" [class.active]="isCadastrosAtivo()" (click)="abrirCadastros()">Cadastros</button>
       <button mat-stroked-button type="button" [class.active]="isControleAtivo()" (click)="abrirControle()">Controle</button>
+      <button mat-stroked-button type="button" [class.active]="isCadastrosAtivo()" (click)="abrirCadastros()">Cadastros</button>
       <button mat-stroked-button type="button" (click)="abrirTelaEstatisticas()">Estatisticas</button>
     </nav>
 
@@ -35,7 +35,7 @@
             <h3>Painel operacional de veiculos</h3>
             <p class="panel-helper">Visualize e altere rapidamente quais veiculos estao disponiveis ou indisponiveis.</p>
           </div>
-          <button mat-stroked-button type="button" (click)="carregarVeiculos()">Atualizar</button>
+          <button mat-stroked-button type="button" (click)="atualizarPainelOperacional()">Atualizar</button>
         </div>
 
         <div class="kpi-grid operacao-kpis">
@@ -91,11 +91,18 @@
                 </header>
 
                 <p class="vehicle-model">{{ v.marca }} {{ v.modelo }}</p>
-                <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
-                <p class="vehicle-admin-state">
-                  <strong>Status administrativo:</strong>
-                  {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
-                </p>
+                <ng-container *ngIf="categoria.id === 'MISSAO'; else dadosPadraoStatus">
+                  <p class="vehicle-driver"><strong>Motorista:</strong> {{ motoristaEmMissao(v) }}</p>
+                  <p class="vehicle-missao-meta"><strong>Inicio:</strong> {{ inicioMissaoPainelLabel(v.id) }} | <strong>Tempo:</strong> {{ duracaoMissaoPainelLabel(v.id) }}</p>
+                  <p class="vehicle-missao-meta">{{ resumoDadosAdministrativosPainel(v.id) }}</p>
+                </ng-container>
+                <ng-template #dadosPadraoStatus>
+                  <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
+                  <p class="vehicle-admin-state">
+                    <strong>Status administrativo:</strong>
+                    {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
+                  </p>
+                </ng-template>
 
                 <div class="inline-buttons">
                   <button mat-stroked-button type="button" class="historico-btn" (click)="abrirHistoricoStatus(v)">Historico</button>

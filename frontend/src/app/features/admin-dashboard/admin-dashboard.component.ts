@@ -277,6 +277,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu !== 'tempo-real') {
       this.carregarDadosDoMenu(menu, false);
     }
+    if (menu === 'operacao') {
+      this.carregarMissoesTempoReal(false);
+    }
 
     if (menu === 'tempo-real') {
       this.iniciarAtualizacaoTempoReal();
@@ -303,6 +306,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   toggleFiltrosMissoes(): void {
     this.filtrosMissoesAbertos = !this.filtrosMissoesAbertos;
+  }
+
+  atualizarPainelOperacional(): void {
+    this.carregarVeiculos(this.veiculoBusca);
+    this.carregarMissoesTempoReal(false);
   }
 
   abrirCadastros(): void {
@@ -851,13 +859,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  carregarMissoesTempoReal(): void {
+  carregarMissoesTempoReal(showError = true): void {
     this.loadingTempoReal = true;
     this.adminService.listarMissoes({ status: 'ATIVA' })
       .pipe(finalize(() => (this.loadingTempoReal = false)))
       .subscribe({
         next: data => (this.missoesTempoReal = data),
-        error: () => this.snackBar.open('Falha ao carregar missoes em tempo real.', 'Fechar', { duration: 2800 })
+        error: () => {
+          if (showError) {
+            this.snackBar.open('Falha ao carregar missoes em tempo real.', 'Fechar', { duration: 2800 });
+          }
+        }
       });
   }
 
@@ -1121,7 +1133,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (updated) => {
         this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
-        this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
+        const idxTempoReal = this.missoesTempoReal.findIndex(item => item.id === updated.id);
+        if (idxTempoReal >= 0) {
+          this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
+        } else if (updated.status === 'ATIVA') {
+          this.missoesTempoReal = [updated, ...this.missoesTempoReal];
+        }
         if (this.selectedMissaoAuditoria?.id === updated.id) {
           this.selectedMissaoAuditoria = updated;
           this.abrirAuditoriaMissao(updated);
@@ -1238,6 +1255,33 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return `status-${status.toLowerCase()}`;
   }
 
+  missaoAtivaPorVeiculo(veiculoId: number): MissaoResponse | null {
+    return this.missoesTempoReal.find(m => m.veiculoId === veiculoId) || null;
+  }
+
+  motoristaEmMissao(veiculo: Veiculo): string {
+    const missao = this.missaoAtivaPorVeiculo(veiculo.id);
+    return missao?.motoristaNome || veiculo.motoristaAtualNome || '-';
+  }
+
+  inicioMissaoPainelLabel(veiculoId: number): string {
+    const missao = this.missaoAtivaPorVeiculo(veiculoId);
+    return missao ? this.formatarDataHora(missao.dataHoraInicio) : '-';
+  }
+
+  duracaoMissaoPainelLabel(veiculoId: number): string {
+    const missao = this.missaoAtivaPorVeiculo(veiculoId);
+    return missao ? this.duracaoTempoRealLabel(missao) : '-';
+  }
+
+  resumoDadosAdministrativosPainel(veiculoId: number): string {
+    const missao = this.missaoAtivaPorVeiculo(veiculoId);
+    const destino = this.valorPainelOuPendente(missao?.localDestino);
+    const setor = this.valorPainelOuPendente(missao?.setorSolicitante);
+    const solicitante = this.valorPainelOuPendente(missao?.solicitanteNome);
+    return `Destino: ${destino} | Setor: ${setor} | Solicitante: ${solicitante}`;
+  }
+
   logout(): void {
     this.authService.logout();
   }
@@ -1245,6 +1289,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private toNullIfBlank(value: string): string | null {
     const normalized = value.trim();
     return normalized ? normalized : null;
+  }
+
+  private valorPainelOuPendente(value: string | null | undefined): string {
+    const normalized = (value || '').trim();
+    return normalized ? normalized : 'PENDENTE';
   }
 
   private baixarArquivo(blob: Blob, nomeArquivo: string): void {
@@ -1329,6 +1378,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (menu === 'operacao' && (force || this.veiculos.length === 0) && !this.loadingVeiculos) {
       this.carregarVeiculos(this.veiculoBusca);
+      this.carregarMissoesTempoReal(false);
       return;
     }
     if (menu === 'tempo-real' && (force || this.missoesTempoReal.length === 0) && !this.loadingTempoReal) {

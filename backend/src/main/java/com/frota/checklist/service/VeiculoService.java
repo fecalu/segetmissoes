@@ -1,6 +1,7 @@
 package com.frota.checklist.service;
 
 import com.frota.checklist.dto.VeiculoResponse;
+import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.repository.VeiculoRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,18 +17,30 @@ public class VeiculoService {
 
     private final VeiculoRepository veiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
+    private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
 
     public List<VeiculoResponse> listar() {
         List<Veiculo> veiculos = veiculoRepository.findAll(Sort.by(Sort.Direction.ASC, "placa")).stream()
                 .filter(v -> !Boolean.TRUE.equals(v.getDesativado()))
                 .toList();
         Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
+        Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return veiculos.stream()
-                .map(v -> toResponse(v, snapshots.get(v.getId())))
+                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos))
                 .toList();
     }
 
-    private VeiculoResponse toResponse(Veiculo veiculo, VeiculoStatusSnapshot snapshot) {
+    private VeiculoResponse toResponse(
+            Veiculo veiculo,
+            VeiculoStatusSnapshot snapshot,
+            Map<StatusVeiculo, String> rotulos
+    ) {
+        String statusAtualRotulo = rotulos.getOrDefault(snapshot.statusAtual(), snapshot.statusAtual().name());
+        String statusAutomaticoRotulo = rotulos.getOrDefault(snapshot.statusAutomatico(), snapshot.statusAutomatico().name());
+        String statusAdministrativoRotulo = snapshot.statusAdministrativo() == null
+                ? null
+                : rotulos.getOrDefault(snapshot.statusAdministrativo(), snapshot.statusAdministrativo().name());
+
         return new VeiculoResponse(
                 veiculo.getId(),
                 veiculo.getPlaca(),
@@ -38,7 +51,10 @@ public class VeiculoService {
                 snapshot.statusAutomatico(),
                 snapshot.statusAdministrativo(),
                 snapshot.motoristaAtualId(),
-                snapshot.motoristaAtualNome()
+                snapshot.motoristaAtualNome(),
+                statusAtualRotulo,
+                statusAutomaticoRotulo,
+                statusAdministrativoRotulo
         );
     }
 }

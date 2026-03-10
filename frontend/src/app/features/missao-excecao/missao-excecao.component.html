@@ -62,7 +62,7 @@
             <header>
               <strong>{{ veiculo.placa }}</strong>
               <span class="status-pill" [ngClass]="statusClass(veiculo.statusAtual)">
-                {{ statusLabel(veiculo.statusAtual) }}
+                {{ statusLabel(veiculo.statusAtual, veiculo.statusAtualRotulo) }}
               </span>
             </header>
             <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>

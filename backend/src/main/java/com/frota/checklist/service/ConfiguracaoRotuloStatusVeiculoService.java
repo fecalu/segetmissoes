@@ -42,8 +42,7 @@ public class ConfiguracaoRotuloStatusVeiculoService {
 
     @Transactional(readOnly = true)
     public List<RotuloStatusVeiculoResponse> listar() {
-        Map<StatusVeiculo, ConfiguracaoRotuloStatusVeiculo> configuracoes = new EnumMap<>(StatusVeiculo.class);
-        configuracaoRepository.findAll().forEach(config -> configuracoes.put(config.getStatus(), config));
+        Map<StatusVeiculo, ConfiguracaoRotuloStatusVeiculo> configuracoes = carregarConfiguracoesPorStatus();
 
         return STATUS_EDITAVEIS.stream()
                 .map(status -> {
@@ -54,6 +53,26 @@ public class ConfiguracaoRotuloStatusVeiculoService {
                     return new RotuloStatusVeiculoResponse(status, rotuloAtual, rotuloPadrao, personalizado);
                 })
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<StatusVeiculo, String> mapaRotulosAtuais() {
+        Map<StatusVeiculo, ConfiguracaoRotuloStatusVeiculo> configuracoes = carregarConfiguracoesPorStatus();
+        Map<StatusVeiculo, String> rotulos = new EnumMap<>(StatusVeiculo.class);
+        for (StatusVeiculo status : STATUS_EDITAVEIS) {
+            ConfiguracaoRotuloStatusVeiculo config = configuracoes.get(status);
+            String rotuloPadrao = ROTULOS_PADRAO.get(status);
+            rotulos.put(status, config != null ? config.getRotulo() : rotuloPadrao);
+        }
+        return rotulos;
+    }
+
+    @Transactional(readOnly = true)
+    public String rotuloAtual(StatusVeiculo status) {
+        if (status == null) {
+            return null;
+        }
+        return mapaRotulosAtuais().getOrDefault(status, status.name());
     }
 
     @Transactional
@@ -103,6 +122,12 @@ public class ConfiguracaoRotuloStatusVeiculoService {
                 throw new BusinessException("Status duplicado no envio: " + request.status());
             }
         }
+    }
+
+    private Map<StatusVeiculo, ConfiguracaoRotuloStatusVeiculo> carregarConfiguracoesPorStatus() {
+        Map<StatusVeiculo, ConfiguracaoRotuloStatusVeiculo> configuracoes = new EnumMap<>(StatusVeiculo.class);
+        configuracaoRepository.findAll().forEach(config -> configuracoes.put(config.getStatus(), config));
+        return configuracoes;
     }
 
     private static Map<StatusVeiculo, String> criarRotulosPadrao() {

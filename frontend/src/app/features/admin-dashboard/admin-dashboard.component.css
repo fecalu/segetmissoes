@@ -434,10 +434,10 @@
 }
 
 .status-column-content {
-  padding: 8px;
+  padding: 5px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   min-height: 220px;
   flex: 1;
   transition: background-color 0.15s ease;
@@ -457,15 +457,15 @@
 
 .vehicle-card {
   border: 1px solid #dce5fb;
-  border-radius: 12px;
+  border-radius: 9px;
   background: #fbfdff;
-  padding: 10px;
+  padding: 7px;
 }
 
 .operacao-vehicle-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   cursor: grab;
 }
 
@@ -491,6 +491,18 @@
   gap: 6px;
 }
 
+.operacao-vehicle-card .vehicle-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.operacao-vehicle-card .vehicle-header strong {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
 .status-pill {
   display: inline-flex;
   padding: 4px 8px;
@@ -507,16 +519,51 @@
   font-size: 0.86rem;
 }
 
+.operacao-vehicle-card .vehicle-model {
+  font-size: 0.74rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .vehicle-driver {
   margin: 0;
   font-size: 0.82rem;
   color: #4d5f83;
 }
 
+.operacao-vehicle-card .vehicle-driver {
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
 .vehicle-admin-state {
   margin: 0;
   font-size: 0.78rem;
   color: #5b698b;
+}
+
+.operacao-vehicle-card .vehicle-admin-state {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vehicle-missao-meta {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: #546487;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inline-buttons {
@@ -544,6 +591,16 @@
 
 .operacao-vehicle-card .inline-buttons .historico-btn {
   flex: 0 0 auto;
+  min-height: 22px;
+  height: 22px;
+  line-height: 20px;
+  padding-inline: 5px;
+  font-size: 0.64rem;
+}
+
+.operacao-vehicle-card .status-pill {
+  padding: 1px 5px;
+  font-size: 0.62rem;
 }
 
 .inline-buttons .status-pill {

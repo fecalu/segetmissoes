@@ -27,6 +27,9 @@ export interface Veiculo {
   statusAdministrativo: StatusAdministrativoVeiculo | null;
   motoristaAtualId: number | null;
   motoristaAtualNome: string | null;
+  statusAtualRotulo?: string | null;
+  statusAutomaticoRotulo?: string | null;
+  statusAdministrativoRotulo?: string | null;
 }
 
 export interface HistoricoStatusVeiculo {

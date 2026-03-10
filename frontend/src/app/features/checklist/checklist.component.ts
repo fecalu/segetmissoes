@@ -12,7 +12,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { finalize } from 'rxjs';
 import { StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
+import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
 import { ChecklistPayload, ChecklistService } from '../../core/services/checklist.service';
+import { StatusLabelService } from '../../core/services/status-label.service';
 import { VeiculoService } from '../../core/services/veiculo.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -69,6 +71,17 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   readonly form;
   operacaoBloqueada: 'SAIDA' | 'ENTRADA' | null = null;
+  private readonly statusLabelsPadrao: Record<StatusVeiculo, string> = {
+    CIRCULANDO: 'NA RUA (MISSAO)',
+    BASE_JOAO_GOULART: 'DISPONIVEL',
+    NO_PATIO: 'NO PATIO',
+    AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
+    OFICINA: 'OFICINA',
+    EM_VIAGEM: 'EM VIAGEM',
+    MANUTENCAO: 'MANUTENCAO',
+    BLOQUEADO: 'BLOQUEADO'
+  };
+  private readonly statusLabelsCustomizados: Partial<Record<StatusVeiculo, string>> = {};
 
   constructor(
     private readonly fb: FormBuilder,
@@ -76,6 +89,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly veiculoService: VeiculoService,
     private readonly checklistService: ChecklistService,
+    private readonly statusLabelService: StatusLabelService,
     private readonly authService: AuthService,
     private readonly snackBar: MatSnackBar
   ) {
@@ -105,6 +119,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       });
 
     this.form.controls.tipoOperacao.valueChanges.subscribe(() => this.garantirVeiculoSelecionadoValido());
+    this.carregarRotulosStatus();
   }
 
   ngAfterViewChecked(): void {
@@ -204,18 +219,11 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.form.controls.tipoOperacao.value === 'ENTRADA' && this.veiculosVisiveis().length === 0;
   }
 
-  statusLabel(status: StatusVeiculo): string {
-    const labels: Record<StatusVeiculo, string> = {
-      CIRCULANDO: 'NA RUA (MISSAO)',
-      BASE_JOAO_GOULART: 'DISPONIVEL',
-      NO_PATIO: 'NO PATIO',
-      AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
-      OFICINA: 'OFICINA',
-      EM_VIAGEM: 'EM VIAGEM',
-      MANUTENCAO: 'MANUTENCAO',
-      BLOQUEADO: 'BLOQUEADO'
-    };
-    return labels[status];
+  statusLabel(status: StatusVeiculo, statusRotuloServidor?: string | null): string {
+    return statusRotuloServidor
+      || this.statusLabelsCustomizados[status]
+      || this.statusLabelsPadrao[status]
+      || status;
   }
 
   statusClass(status: StatusVeiculo): string {
@@ -402,6 +410,20 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     const selected = this.veiculos.find(v => v.id === selectedId);
     if (!selected || !this.canSelectVeiculo(selected)) {
       this.form.controls.veiculoId.setValue(0);
+    }
+  }
+
+  private carregarRotulosStatus(): void {
+    this.statusLabelService.listar().subscribe({
+      next: rotulos => this.aplicarRotulosStatus(rotulos),
+      error: () => undefined
+    });
+  }
+
+  private aplicarRotulosStatus(rotulos: RotuloStatusVeiculoResponse[]): void {
+    for (const status of Object.keys(this.statusLabelsPadrao) as StatusVeiculo[]) {
+      const item = rotulos.find(r => r.status === status);
+      this.statusLabelsCustomizados[status] = item?.rotulo || this.statusLabelsPadrao[status];
     }
   }
 

@@ -11,9 +11,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { finalize } from 'rxjs';
 import { MotivoExcecaoMissao } from '../../core/models/missao-excecao.model';
+import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
 import { StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { AuthService } from '../../core/services/auth.service';
 import { MissaoExcecaoService } from '../../core/services/missao-excecao.service';
+import { StatusLabelService } from '../../core/services/status-label.service';
 import { VeiculoService } from '../../core/services/veiculo.service';
 
 @Component({
@@ -46,6 +48,17 @@ export class MissaoExcecaoComponent implements OnInit {
     { value: 'FALHA_CAMERA', label: 'Falha da camera' },
     { value: 'OUTROS', label: 'Outros motivos' }
   ];
+  private readonly statusLabelsPadrao: Record<StatusVeiculo, string> = {
+    CIRCULANDO: 'NA RUA (MISSAO)',
+    BASE_JOAO_GOULART: 'DISPONIVEL',
+    NO_PATIO: 'NO PATIO',
+    AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
+    OFICINA: 'OFICINA',
+    EM_VIAGEM: 'EM VIAGEM',
+    MANUTENCAO: 'MANUTENCAO',
+    BLOQUEADO: 'BLOQUEADO'
+  };
+  private readonly statusLabelsCustomizados: Partial<Record<StatusVeiculo, string>> = {};
 
   readonly form;
 
@@ -54,6 +67,7 @@ export class MissaoExcecaoComponent implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly veiculoService: VeiculoService,
     private readonly missaoExcecaoService: MissaoExcecaoService,
+    private readonly statusLabelService: StatusLabelService,
     private readonly authService: AuthService,
     private readonly snackBar: MatSnackBar,
     private readonly router: Router
@@ -81,6 +95,7 @@ export class MissaoExcecaoComponent implements OnInit {
         },
         error: () => this.snackBar.open('Nao foi possivel carregar os veiculos.', 'Fechar', { duration: 3000 })
       });
+    this.carregarRotulosStatus();
   }
 
   canSelectVeiculo(veiculo: Veiculo): boolean {
@@ -101,18 +116,11 @@ export class MissaoExcecaoComponent implements OnInit {
     return this.form.controls.veiculoId.value === veiculo.id;
   }
 
-  statusLabel(status: StatusVeiculo): string {
-    const labels: Record<StatusVeiculo, string> = {
-      CIRCULANDO: 'NA RUA (MISSAO)',
-      BASE_JOAO_GOULART: 'DISPONIVEL',
-      NO_PATIO: 'NO PATIO',
-      AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
-      OFICINA: 'OFICINA',
-      EM_VIAGEM: 'EM VIAGEM',
-      MANUTENCAO: 'MANUTENCAO',
-      BLOQUEADO: 'BLOQUEADO'
-    };
-    return labels[status];
+  statusLabel(status: StatusVeiculo, statusRotuloServidor?: string | null): string {
+    return statusRotuloServidor
+      || this.statusLabelsCustomizados[status]
+      || this.statusLabelsPadrao[status]
+      || status;
   }
 
   statusClass(status: StatusVeiculo): string {
@@ -186,6 +194,20 @@ export class MissaoExcecaoComponent implements OnInit {
     const selecionado = this.veiculos.find(v => v.id === this.form.controls.veiculoId.value);
     if (!selecionado || !this.canSelectVeiculo(selecionado)) {
       this.form.controls.veiculoId.setValue(0);
+    }
+  }
+
+  private carregarRotulosStatus(): void {
+    this.statusLabelService.listar().subscribe({
+      next: rotulos => this.aplicarRotulosStatus(rotulos),
+      error: () => undefined
+    });
+  }
+
+  private aplicarRotulosStatus(rotulos: RotuloStatusVeiculoResponse[]): void {
+    for (const status of Object.keys(this.statusLabelsPadrao) as StatusVeiculo[]) {
+      const item = rotulos.find(r => r.status === status);
+      this.statusLabelsCustomizados[status] = item?.rotulo || this.statusLabelsPadrao[status];
     }
   }
 }

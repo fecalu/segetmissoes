@@ -7,6 +7,7 @@ import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
@@ -67,6 +68,7 @@ public class MissaoService {
         Missao missao = new Missao();
         missao.setMotorista(checklist.getMotorista());
         missao.setVeiculo(checklist.getVeiculo());
+        liberarVeiculoParaMissao(checklist.getVeiculo());
         missao.setStatus(StatusMissao.ATIVA);
         missao.setDataHoraInicio(checklist.getDataHora());
         missao.setOrigemAbertura(OrigemAberturaMissao.CHECKLIST);
@@ -91,6 +93,7 @@ public class MissaoService {
         Missao missao = new Missao();
         missao.setMotorista(motorista);
         missao.setVeiculo(veiculo);
+        liberarVeiculoParaMissao(veiculo);
         missao.setStatus(StatusMissao.ATIVA);
         missao.setDataHoraInicio(dataHoraInicio == null ? LocalDateTime.now() : dataHoraInicio);
         missao.setOrigemAbertura(OrigemAberturaMissao.SEM_CHECKLIST);
@@ -296,5 +299,11 @@ public class MissaoService {
                 "Encerramento por checklist de chegada em missao legada reconstruida."
         );
         return saved;
+    }
+
+    private void liberarVeiculoParaMissao(Veiculo veiculo) {
+        if (veiculo.getStatusAdministrativo() == StatusVeiculo.NO_PATIO) {
+            veiculo.setStatusAdministrativo(null);
+        }
     }
 }

@@ -12,6 +12,9 @@ public record VeiculoResponse(
         StatusVeiculo statusAutomatico,
         StatusVeiculo statusAdministrativo,
         Long motoristaAtualId,
-        String motoristaAtualNome
+        String motoristaAtualNome,
+        String statusAtualRotulo,
+        String statusAutomaticoRotulo,
+        String statusAdministrativoRotulo
 ) {
 }
