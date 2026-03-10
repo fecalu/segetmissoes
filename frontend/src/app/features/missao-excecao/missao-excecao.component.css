@@ -124,6 +124,10 @@ h2 {
   background: #5f6c7b;
 }
 
+.status-aguardando_realocacao {
+  background: #7c3aed;
+}
+
 .status-oficina {
   background: #f59e0b;
 }

@@ -39,7 +39,7 @@ import {
 type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'excecoes';
 type CadastroMenu = 'veiculos' | 'motoristas' | 'rotulos-status';
 type ControleMenu = 'missoes' | 'tempo-real' | 'checklists' | 'excecoes';
-type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'VIAGEM' | 'PATIO' | 'OFICINA' | 'BLOQUEADO';
+type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 
 interface ConsultaChecklistItem {
@@ -136,6 +136,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { id: 'MISSAO', titulo: 'Na rua em missao', descricao: 'Checklist de saida sem chegada' },
     { id: 'VIAGEM', titulo: 'Em viagem', descricao: 'Viagem definida administrativamente' },
     { id: 'PATIO', titulo: 'No patio', descricao: 'Parados no patio' },
+    { id: 'REALOCACAO', titulo: 'Aguardando realocacao', descricao: 'Recebidos e aguardando definicao' },
     { id: 'OFICINA', titulo: 'Oficina', descricao: 'Oficina ou manutencao' },
     { id: 'BLOQUEADO', titulo: 'Bloqueados', descricao: 'Sem liberacao para uso' }
   ];
@@ -144,6 +145,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     CIRCULANDO: 'NA RUA (MISSAO)',
     BASE_JOAO_GOULART: 'DISPONIVEL',
     NO_PATIO: 'NO PATIO',
+    AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
     OFICINA: 'OFICINA',
     EM_VIAGEM: 'EM VIAGEM',
     MANUTENCAO: 'MANUTENCAO',
@@ -982,6 +984,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.veiculosDaCategoria('PATIO').length;
   }
 
+  totalVeiculosAguardandoRealocacao(): number {
+    return this.veiculosDaCategoria('REALOCACAO').length;
+  }
+
   totalVeiculosOficina(): number {
     return this.veiculosDaCategoria('OFICINA').length;
   }
@@ -1274,6 +1280,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       || value === 'MISSAO'
       || value === 'VIAGEM'
       || value === 'PATIO'
+      || value === 'REALOCACAO'
       || value === 'OFICINA'
       || value === 'BLOQUEADO';
   }
@@ -1335,6 +1342,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       MISSAO: [],
       VIAGEM: [],
       PATIO: [],
+      REALOCACAO: [],
       OFICINA: [],
       BLOQUEADO: []
     };
@@ -1363,6 +1371,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (veiculo.statusAtual === 'NO_PATIO') {
       return 'PATIO';
+    }
+    if (veiculo.statusAtual === 'AGUARDANDO_REALOCACAO') {
+      return 'REALOCACAO';
     }
     if (veiculo.statusAtual === 'OFICINA' || veiculo.statusAtual === 'MANUTENCAO') {
       return 'OFICINA';
@@ -1396,6 +1407,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (categoria === 'PATIO') {
       return 'NO_PATIO';
+    }
+    if (categoria === 'REALOCACAO') {
+      return 'AGUARDANDO_REALOCACAO';
     }
     if (categoria === 'OFICINA') {
       return 'OFICINA';

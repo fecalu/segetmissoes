@@ -85,7 +85,7 @@ export class MissaoExcecaoComponent implements OnInit {
 
   canSelectVeiculo(veiculo: Veiculo): boolean {
     if (this.operacao === 'SAIDA') {
-      return veiculo.statusAtual === 'BASE_JOAO_GOULART';
+      return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
     }
     return veiculo.statusAutomatico === 'CIRCULANDO' && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
   }
@@ -106,6 +106,7 @@ export class MissaoExcecaoComponent implements OnInit {
       CIRCULANDO: 'NA RUA (MISSAO)',
       BASE_JOAO_GOULART: 'DISPONIVEL',
       NO_PATIO: 'NO PATIO',
+      AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
       OFICINA: 'OFICINA',
       EM_VIAGEM: 'EM VIAGEM',
       MANUTENCAO: 'MANUTENCAO',

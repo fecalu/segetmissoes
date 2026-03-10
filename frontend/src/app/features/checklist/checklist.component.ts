@@ -188,7 +188,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   canSelectVeiculo(veiculo: Veiculo): boolean {
     const tipoOperacao = this.form.controls.tipoOperacao.value;
     if (tipoOperacao === 'SAIDA') {
-      return veiculo.statusAtual === 'BASE_JOAO_GOULART';
+      return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
     }
     return veiculo.statusAutomatico === 'CIRCULANDO' && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
   }
@@ -209,6 +209,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       CIRCULANDO: 'NA RUA (MISSAO)',
       BASE_JOAO_GOULART: 'DISPONIVEL',
       NO_PATIO: 'NO PATIO',
+      AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
       OFICINA: 'OFICINA',
       EM_VIAGEM: 'EM VIAGEM',
       MANUTENCAO: 'MANUTENCAO',

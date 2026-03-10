@@ -271,6 +271,12 @@
   border-color: #bfc4cc;
 }
 
+.status-aguardando_realocacao {
+  background: #ede9ff;
+  color: #5b21b6;
+  border-color: #c8b5ff;
+}
+
 .status-oficina {
   background: #fff8de;
   color: #8a6900;

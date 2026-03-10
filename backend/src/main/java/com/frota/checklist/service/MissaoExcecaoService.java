@@ -9,7 +9,6 @@ import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusExcecaoMissao;
-import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
@@ -75,7 +74,7 @@ public class MissaoExcecaoService {
         }
 
         VeiculoStatusSnapshot statusVeiculo = veiculoStatusResolver.resolver(veiculo);
-        if (statusVeiculo.statusAtual() != StatusVeiculo.BASE_JOAO_GOULART) {
+        if (!statusVeiculo.statusAtual().permiteInicioMissaoMotorista()) {
             throw new BusinessException("Veiculo indisponivel para iniciar missao sem checklist. Status atual: " + statusVeiculo.statusAtual());
         }
 

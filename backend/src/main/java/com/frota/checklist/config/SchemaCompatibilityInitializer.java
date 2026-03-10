@@ -30,6 +30,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'CIRCULANDO',
                     'BASE_JOAO_GOULART',
                     'NO_PATIO',
+                    'AGUARDANDO_REALOCACAO',
                     'OFICINA',
                     'EM_VIAGEM',
                     'MANUTENCAO',
@@ -45,7 +46,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_novo_check");
 
         String allowed = """
-                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
+                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
                 """;
         executarSilencioso("""
                 alter table historico_status_veiculo

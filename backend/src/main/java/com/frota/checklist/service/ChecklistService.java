@@ -60,7 +60,7 @@ public class ChecklistService {
         }
 
         VeiculoStatusSnapshot statusSnapshot = veiculoStatusResolver.resolver(veiculo);
-        if (tipoOperacao == TipoOperacao.SAIDA && statusSnapshot.statusAtual() != StatusVeiculo.BASE_JOAO_GOULART) {
+        if (tipoOperacao == TipoOperacao.SAIDA && !statusSnapshot.statusAtual().permiteInicioMissaoMotorista()) {
             throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusSnapshot.statusAtual());
         }
         if (tipoOperacao == TipoOperacao.ENTRADA) {

@@ -92,4 +92,11 @@ if [ -n "${SPRING_DATASOURCE_URL:-}" ]; then
   log "Using SPRING_DATASOURCE_URL from runtime env/bootstrap."
 fi
 
-exec java -jar app.jar
+resolved_port="${PORT:-${SERVER_PORT:-8080}}"
+resolved_address="${SERVER_ADDRESS:-0.0.0.0}"
+log "Starting API at ${resolved_address}:${resolved_port}"
+
+exec java \
+  -Dserver.address="${resolved_address}" \
+  -Dserver.port="${resolved_port}" \
+  -jar app.jar

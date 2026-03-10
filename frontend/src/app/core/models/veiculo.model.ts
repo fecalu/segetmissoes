@@ -2,12 +2,19 @@ export type StatusVeiculo =
   | 'CIRCULANDO'
   | 'BASE_JOAO_GOULART'
   | 'NO_PATIO'
+  | 'AGUARDANDO_REALOCACAO'
   | 'OFICINA'
   | 'EM_VIAGEM'
   | 'MANUTENCAO'
   | 'BLOQUEADO';
 
-export type StatusAdministrativoVeiculo = 'NO_PATIO' | 'OFICINA' | 'EM_VIAGEM' | 'MANUTENCAO' | 'BLOQUEADO';
+export type StatusAdministrativoVeiculo =
+  | 'NO_PATIO'
+  | 'AGUARDANDO_REALOCACAO'
+  | 'OFICINA'
+  | 'EM_VIAGEM'
+  | 'MANUTENCAO'
+  | 'BLOQUEADO';
 
 export interface Veiculo {
   id: number;
