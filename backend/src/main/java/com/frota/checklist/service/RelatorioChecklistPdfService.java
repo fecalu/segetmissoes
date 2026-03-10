@@ -25,6 +25,8 @@ import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RelatorioChecklistPdfService {
+
+    private static final Logger log = LoggerFactory.getLogger(RelatorioChecklistPdfService.class);
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -75,6 +79,10 @@ public class RelatorioChecklistPdfService {
 
             return outputStream.toByteArray();
         } catch (Exception ex) {
+            log.error(
+                    "Falha ao gerar PDF de checklists. dataInicial={}, dataFinal={}, total={}, saidas={}, chegadas={}",
+                    dataInicial, dataFinal, total, saidas, chegadas, ex
+            );
             throw new BusinessException("Nao foi possivel gerar o relatorio em PDF.");
         }
     }

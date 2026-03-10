@@ -25,6 +25,8 @@ import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RelatorioMissaoPdfService {
+
+    private static final Logger log = LoggerFactory.getLogger(RelatorioMissaoPdfService.class);
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -76,6 +80,10 @@ public class RelatorioMissaoPdfService {
             document.close();
             return outputStream.toByteArray();
         } catch (Exception ex) {
+            log.error(
+                    "Falha ao gerar PDF de missoes. dataRelatorio={}, total={}, finalizadas={}, emAndamento={}",
+                    dataRelatorio, total, finalizadas, emAndamento, ex
+            );
             throw new BusinessException("Nao foi possivel gerar o relatorio em PDF das missoes.");
         }
     }
