@@ -2,6 +2,7 @@ package com.frota.checklist.dto;
 
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
+import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
 
@@ -25,8 +26,13 @@ public record MissaoResponse(
         Long checklistSaidaId,
         Long checklistChegadaId,
         Long missaoExcecaoId,
+        Long administradorAberturaId,
+        String administradorAberturaNome,
         Long administradorEncerramentoId,
         String administradorEncerramentoNome,
+        MotivoExcecaoMissao motivoContingencia,
+        String justificativaContingenciaAbertura,
+        String justificativaContingenciaEncerramento,
         String localDestino,
         String setorSolicitante,
         String solicitanteNome

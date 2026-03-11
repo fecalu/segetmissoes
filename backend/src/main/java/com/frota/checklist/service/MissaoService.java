@@ -3,6 +3,7 @@ package com.frota.checklist.service;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.AcaoAuditoriaMissao;
 import com.frota.checklist.entity.Missao;
+import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
@@ -13,6 +14,7 @@ import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.ChecklistRepository;
 import com.frota.checklist.repository.MissaoRepository;
+import com.frota.checklist.repository.VeiculoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class MissaoService {
 
     private final MissaoRepository missaoRepository;
     private final ChecklistRepository checklistRepository;
+    private final VeiculoRepository veiculoRepository;
     private final MissaoAuditoriaService missaoAuditoriaService;
 
     public Optional<Missao> buscarMissaoAtivaPorMotorista(Long motoristaId) {
@@ -45,7 +48,7 @@ public class MissaoService {
     public void validarMotoristaSemMissaoAtiva(Long motoristaId) {
         buscarMissaoAtivaPorMotorista(motoristaId).ifPresent(missao -> {
             throw new BusinessException(
-                    "Motorista ja possui missao ativa no veiculo %s. Finalize a missao atual antes de iniciar outra."
+                    "Motorista ja possui missao em andamento no veiculo %s. Finalize a missao atual antes de iniciar outra."
                             .formatted(missao.getVeiculo().getPlaca())
             );
         });
@@ -53,7 +56,7 @@ public class MissaoService {
 
     public void validarVeiculoSemMissaoAtiva(Long veiculoId) {
         buscarMissaoAtivaPorVeiculo(veiculoId).ifPresent(missao -> {
-            throw new BusinessException("Veiculo ja possui missao ativa em andamento.");
+            throw new BusinessException("Veiculo ja possui missao em andamento.");
         });
     }
 
@@ -80,7 +83,7 @@ public class MissaoService {
                 null,
                 StatusMissao.ATIVA,
                 checklist.getMotorista(),
-                "Missao aberta a partir do checklist de saida #%d.".formatted(checklist.getId())
+                "Inicio registrado pelo checklist de saida #%d.".formatted(checklist.getId())
         );
         return saved;
     }
@@ -105,7 +108,49 @@ public class MissaoService {
                 null,
                 StatusMissao.ATIVA,
                 motorista,
-                "Missao aberta sem checklist. Excecao vinculada: %s".formatted(missaoExcecaoId)
+                "Inicio registrado sem checklist. Excecao vinculada: %s".formatted(missaoExcecaoId)
+        );
+        return saved;
+    }
+
+    @Transactional
+    public Missao abrirContingenciaAdministrativa(
+            Motorista administrador,
+            Motorista motoristaMissao,
+            Veiculo veiculo,
+            LocalDateTime dataHoraInicio,
+            MotivoExcecaoMissao motivoContingencia,
+            String justificativaAbertura,
+            String localDestino,
+            String setorSolicitante,
+            String solicitanteNome
+    ) {
+        validarMotoristaSemMissaoAtiva(motoristaMissao.getId());
+        validarVeiculoSemMissaoAtiva(veiculo.getId());
+
+        Missao missao = new Missao();
+        missao.setMotorista(motoristaMissao);
+        missao.setVeiculo(veiculo);
+        liberarVeiculoParaMissao(veiculo);
+        missao.setStatus(StatusMissao.ATIVA);
+        missao.setDataHoraInicio(dataHoraInicio == null ? LocalDateTime.now() : dataHoraInicio);
+        missao.setOrigemAbertura(OrigemAberturaMissao.CONTINGENCIA_ADMIN);
+        missao.setAdministradorAbertura(administrador);
+        missao.setMotivoContingencia(motivoContingencia == null ? MotivoExcecaoMissao.OUTROS : motivoContingencia);
+        missao.setJustificativaContingenciaAbertura(trimToNull(justificativaAbertura));
+        missao.setLocalDestino(trimToNull(localDestino));
+        missao.setSetorSolicitante(trimToNull(setorSolicitante));
+        missao.setSolicitanteNome(trimToNull(solicitanteNome));
+        missao.atualizarStatusDocumental();
+
+        Missao saved = missaoRepository.save(missao);
+        missaoAuditoriaService.registrar(
+                saved,
+                AcaoAuditoriaMissao.ABERTURA_CONTINGENCIA_ADMIN,
+                null,
+                StatusMissao.ATIVA,
+                administrador,
+                "Missao manual registrada pela administracao."
         );
         return saved;
     }
@@ -113,7 +158,7 @@ public class MissaoService {
     @Transactional
     public Missao encerrarComChecklist(Checklist checklist) {
         if (checklist.getTipoOperacao() != TipoOperacao.ENTRADA) {
-            throw new BusinessException("Checklist invalido para encerramento de missao");
+            throw new BusinessException("Checklist invalido para finalizacao de missao");
         }
 
         Optional<Missao> missaoOpt = buscarMissaoAtivaPorVeiculo(checklist.getVeiculo().getId());
@@ -137,7 +182,7 @@ public class MissaoService {
                 StatusMissao.ATIVA,
                 StatusMissao.FINALIZADA,
                 checklist.getMotorista(),
-                "Missao encerrada pelo checklist de chegada #%d.".formatted(checklist.getId())
+                "Fim registrado pelo checklist de chegada #%d.".formatted(checklist.getId())
         );
         return saved;
     }
@@ -150,25 +195,27 @@ public class MissaoService {
             LocalDateTime dataHoraFim,
             LocalDateTime dataHoraInicioFallback
     ) {
+        LocalDateTime dataHoraFimEfetiva = dataHoraFim == null ? LocalDateTime.now() : dataHoraFim;
         Optional<Missao> missaoOpt = buscarMissaoAtivaPorVeiculo(veiculo.getId());
         if (missaoOpt.isEmpty()) {
             Missao missaoLegado = new Missao();
             missaoLegado.setMotorista(motorista);
             missaoLegado.setVeiculo(veiculo);
             missaoLegado.setStatus(StatusMissao.FINALIZADA);
-            missaoLegado.setDataHoraInicio(dataHoraInicioFallback != null ? dataHoraInicioFallback : dataHoraFim);
-            missaoLegado.setDataHoraFim(dataHoraFim == null ? LocalDateTime.now() : dataHoraFim);
+            missaoLegado.setDataHoraInicio(dataHoraInicioFallback != null ? dataHoraInicioFallback : dataHoraFimEfetiva);
+            missaoLegado.setDataHoraFim(dataHoraFimEfetiva);
             missaoLegado.setOrigemAbertura(OrigemAberturaMissao.SEM_CHECKLIST);
             missaoLegado.setOrigemEncerramento(OrigemEncerramentoMissao.SEM_CHECKLIST);
             missaoLegado.setMissaoExcecaoId(missaoExcecaoId);
             Missao saved = missaoRepository.save(missaoLegado);
+            registrarEncerramentoSemChecklistNoVeiculo(veiculo, motorista, dataHoraFimEfetiva);
             missaoAuditoriaService.registrar(
                     saved,
                     AcaoAuditoriaMissao.ABERTURA_LEGADO_RECONSTRUIDA,
                     null,
                     StatusMissao.FINALIZADA,
                     motorista,
-                    "Missao legada reconstruida e encerrada sem checklist. Excecao vinculada: %s".formatted(missaoExcecaoId)
+                    "Registro reconstruido e finalizado sem checklist. Excecao vinculada: %s".formatted(missaoExcecaoId)
             );
             missaoAuditoriaService.registrar(
                     saved,
@@ -176,7 +223,7 @@ public class MissaoService {
                     StatusMissao.ATIVA,
                     StatusMissao.FINALIZADA,
                     motorista,
-                    "Encerramento sem checklist em missao legada reconstruida."
+                    "Fim registrado sem checklist em registro reconstruido."
             );
             return saved;
         }
@@ -187,17 +234,18 @@ public class MissaoService {
         }
 
         missao.setStatus(StatusMissao.FINALIZADA);
-        missao.setDataHoraFim(dataHoraFim == null ? LocalDateTime.now() : dataHoraFim);
+        missao.setDataHoraFim(dataHoraFimEfetiva);
         missao.setOrigemEncerramento(OrigemEncerramentoMissao.SEM_CHECKLIST);
         missao.setMissaoExcecaoId(missaoExcecaoId != null ? missaoExcecaoId : missao.getMissaoExcecaoId());
         Missao saved = missaoRepository.save(missao);
+        registrarEncerramentoSemChecklistNoVeiculo(veiculo, motorista, dataHoraFimEfetiva);
         missaoAuditoriaService.registrar(
                 saved,
                 AcaoAuditoriaMissao.ENCERRAMENTO_SEM_CHECKLIST,
                 StatusMissao.ATIVA,
                 StatusMissao.FINALIZADA,
                 motorista,
-                "Missao encerrada sem checklist. Excecao vinculada: %s".formatted(saved.getMissaoExcecaoId())
+                "Fim registrado sem checklist. Excecao vinculada: %s".formatted(saved.getMissaoExcecaoId())
         );
         return saved;
     }
@@ -211,26 +259,28 @@ public class MissaoService {
             LocalDateTime dataHoraInicioFallback,
             LocalDateTime dataHoraFim
     ) {
+        LocalDateTime dataHoraFimEfetiva = dataHoraFim == null ? LocalDateTime.now() : dataHoraFim;
         Optional<Missao> missaoAtiva = buscarMissaoAtivaPorVeiculo(veiculo.getId());
         if (missaoAtiva.isEmpty()) {
             Missao missaoLegado = new Missao();
             missaoLegado.setMotorista(motoristaMissao);
             missaoLegado.setVeiculo(veiculo);
             missaoLegado.setStatus(StatusMissao.FINALIZADA);
-            missaoLegado.setDataHoraInicio(dataHoraInicioFallback != null ? dataHoraInicioFallback : (dataHoraFim == null ? LocalDateTime.now() : dataHoraFim));
-            missaoLegado.setDataHoraFim(dataHoraFim == null ? LocalDateTime.now() : dataHoraFim);
+            missaoLegado.setDataHoraInicio(dataHoraInicioFallback != null ? dataHoraInicioFallback : dataHoraFimEfetiva);
+            missaoLegado.setDataHoraFim(dataHoraFimEfetiva);
             missaoLegado.setOrigemAbertura(OrigemAberturaMissao.SEM_CHECKLIST);
             missaoLegado.setOrigemEncerramento(OrigemEncerramentoMissao.ADMINISTRATIVO);
             missaoLegado.setMissaoExcecaoId(missaoExcecaoId);
             missaoLegado.setAdministradorEncerramento(administrador);
             Missao saved = missaoRepository.save(missaoLegado);
+            registrarEncerramentoSemChecklistNoVeiculo(veiculo, motoristaMissao, dataHoraFimEfetiva);
             missaoAuditoriaService.registrar(
                     saved,
                     AcaoAuditoriaMissao.ABERTURA_LEGADO_RECONSTRUIDA,
                     null,
                     StatusMissao.FINALIZADA,
                     administrador,
-                    "Missao legada reconstruida e encerrada administrativamente. Excecao: %s".formatted(missaoExcecaoId)
+                    "Registro reconstruido e finalizado pela administracao. Excecao: %s".formatted(missaoExcecaoId)
             );
             missaoAuditoriaService.registrar(
                     saved,
@@ -238,26 +288,55 @@ public class MissaoService {
                     StatusMissao.ATIVA,
                     StatusMissao.FINALIZADA,
                     administrador,
-                    "Encerramento administrativo em missao legada."
+                    "Fim registrado pela administracao em registro reconstruido."
             );
             return;
         }
 
         Missao missao = missaoAtiva.get();
         missao.setStatus(StatusMissao.FINALIZADA);
-        missao.setDataHoraFim(dataHoraFim == null ? LocalDateTime.now() : dataHoraFim);
+        missao.setDataHoraFim(dataHoraFimEfetiva);
         missao.setOrigemEncerramento(OrigemEncerramentoMissao.ADMINISTRATIVO);
         missao.setAdministradorEncerramento(administrador);
         missao.setMissaoExcecaoId(missaoExcecaoId != null ? missaoExcecaoId : missao.getMissaoExcecaoId());
         Missao saved = missaoRepository.save(missao);
+        registrarEncerramentoSemChecklistNoVeiculo(veiculo, missao.getMotorista(), dataHoraFimEfetiva);
         missaoAuditoriaService.registrar(
                 saved,
                 AcaoAuditoriaMissao.ENCERRAMENTO_ADMINISTRATIVO,
                 StatusMissao.ATIVA,
                 StatusMissao.FINALIZADA,
                 administrador,
-                "Missao encerrada administrativamente."
+                "Fim registrado pela administracao."
         );
+    }
+
+    @Transactional
+    public Missao encerrarPendenteAdministrativamente(
+            Missao missao,
+            Motorista administrador,
+            LocalDateTime dataHoraFim,
+            String justificativaEncerramento
+    ) {
+        LocalDateTime dataHoraFimEfetiva = dataHoraFim == null ? LocalDateTime.now() : dataHoraFim;
+        String justificativaNormalizada = trimToNull(justificativaEncerramento);
+        missao.setStatus(StatusMissao.FINALIZADA);
+        missao.setDataHoraFim(dataHoraFimEfetiva);
+        missao.setOrigemEncerramento(OrigemEncerramentoMissao.ADMINISTRATIVO);
+        missao.setAdministradorEncerramento(administrador);
+        missao.setJustificativaContingenciaEncerramento(justificativaNormalizada);
+        Missao saved = missaoRepository.save(missao);
+        registrarEncerramentoSemChecklistNoVeiculo(missao.getVeiculo(), missao.getMotorista(), dataHoraFimEfetiva);
+        missaoAuditoriaService.registrar(
+                saved,
+                AcaoAuditoriaMissao.ENCERRAMENTO_PENDENTE_ADMIN,
+                StatusMissao.ATIVA,
+                StatusMissao.FINALIZADA,
+                administrador,
+                "Missao em aberto finalizada pela administracao. Justificativa: %s"
+                        .formatted(justificativaNormalizada == null ? "-" : justificativaNormalizada)
+        );
+        return saved;
     }
 
     private Missao registrarEncerramentoLegadoPorChecklist(Checklist checklist) {
@@ -288,7 +367,7 @@ public class MissaoService {
                 null,
                 StatusMissao.FINALIZADA,
                 checklist.getMotorista(),
-                "Missao legada reconstruida por checklist de chegada #%d.".formatted(checklist.getId())
+                "Registro reconstruido pelo checklist de chegada #%d.".formatted(checklist.getId())
         );
         missaoAuditoriaService.registrar(
                 saved,
@@ -296,7 +375,7 @@ public class MissaoService {
                 StatusMissao.ATIVA,
                 StatusMissao.FINALIZADA,
                 checklist.getMotorista(),
-                "Encerramento por checklist de chegada em missao legada reconstruida."
+                "Fim registrado pelo checklist de chegada em registro reconstruido."
         );
         return saved;
     }
@@ -305,5 +384,23 @@ public class MissaoService {
         if (veiculo.getStatusAdministrativo() == StatusVeiculo.NO_PATIO) {
             veiculo.setStatusAdministrativo(null);
         }
+    }
+
+    private void registrarEncerramentoSemChecklistNoVeiculo(
+            Veiculo veiculo,
+            Motorista motoristaResponsavel,
+            LocalDateTime dataHoraEncerramento
+    ) {
+        veiculo.setDataHoraUltimoEncerramentoSemChecklist(dataHoraEncerramento);
+        veiculo.setMotoristaUltimoEncerramentoSemChecklist(motoristaResponsavel);
+        veiculoRepository.save(veiculo);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 }

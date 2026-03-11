@@ -73,8 +73,22 @@ public class Missao {
     private Long missaoExcecaoId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "administrador_abertura_id")
+    private Motorista administradorAbertura;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "administrador_encerramento_id")
     private Motorista administradorEncerramento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo_contingencia", length = 40)
+    private MotivoExcecaoMissao motivoContingencia;
+
+    @Column(name = "justificativa_contingencia_abertura", length = 700)
+    private String justificativaContingenciaAbertura;
+
+    @Column(name = "justificativa_contingencia_encerramento", length = 700)
+    private String justificativaContingenciaEncerramento;
 
     @Column(name = "local_destino", length = 180)
     private String localDestino;

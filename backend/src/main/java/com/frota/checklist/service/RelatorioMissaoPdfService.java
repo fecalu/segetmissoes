@@ -4,7 +4,6 @@ import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
-import com.lowagie.text.BadElementException;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -32,8 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -146,29 +143,25 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarTabela(Document document, List<Missao> missoes) throws DocumentException {
-        PdfPTable tabela = new PdfPTable(new float[]{2f, 1.7f, 2.1f, 1.8f, 1.8f, 1.7f, 1.7f, 1.2f, 1.2f});
+        PdfPTable tabela = new PdfPTable(new float[]{2.15f, 1.55f, 0.95f, 3.7f, 1.15f, 1.15f});
         tabela.setWidthPercentage(100);
 
-        adicionarHeaderTabela(tabela, "Motorista");
         adicionarHeaderTabela(tabela, "Veiculo");
-        adicionarHeaderTabela(tabela, "Destino");
-        adicionarHeaderTabela(tabela, "Setor solicitante");
-        adicionarHeaderTabela(tabela, "Quem solicitou");
-        adicionarHeaderTabela(tabela, "Horario de saida");
-        adicionarHeaderTabela(tabela, "Horario de chegada");
-        adicionarHeaderTabela(tabela, "Duracao");
-        adicionarHeaderTabela(tabela, "Status");
+        adicionarHeaderTabela(tabela, "Motorista");
+        adicionarHeaderTabela(tabela, "Situacao");
+        adicionarHeaderTabela(tabela, "Destino | Setor | Solicitante");
+        adicionarHeaderTabela(tabela, "Inicio");
+        adicionarHeaderTabela(tabela, "Fim");
 
         if (missoes.isEmpty()) {
             PdfPCell empty = new PdfPCell(new Phrase("Nenhuma missao encontrada para o dia informado.", font(10, Font.NORMAL, TEXT)));
-            empty.setColspan(9);
+            empty.setColspan(6);
             empty.setPadding(12);
             empty.setHorizontalAlignment(Element.ALIGN_CENTER);
             empty.setBorderColor(BORDER);
             tabela.addCell(empty);
         } else {
             for (Missao missao : missoes) {
-                adicionarBodyTabela(tabela, missao.getMotorista().getNome());
                 adicionarBodyTabela(
                         tabela,
                         missao.getVeiculo().getPlaca()
@@ -177,13 +170,11 @@ public class RelatorioMissaoPdfService {
                                 + " "
                                 + missao.getVeiculo().getModelo()
                 );
-                adicionarBodyTabela(tabela, valorOuTraco(missao.getLocalDestino()));
-                adicionarBodyTabela(tabela, valorOuTraco(missao.getSetorSolicitante()));
-                adicionarBodyTabela(tabela, valorOuTraco(missao.getSolicitanteNome()));
+                adicionarBodyTabela(tabela, missao.getMotorista().getNome());
+                adicionarBodyTabela(tabela, statusLabel(missao.getStatus()));
+                adicionarBodyTabela(tabela, dadosMissaoResumidos(missao));
                 adicionarBodyTabela(tabela, missao.getDataHoraInicio().format(DATE_TIME_FORMATTER));
                 adicionarBodyTabela(tabela, formatarChegada(missao.getDataHoraFim()));
-                adicionarBodyTabela(tabela, formatarDuracao(missao.getDataHoraInicio(), missao.getDataHoraFim()));
-                adicionarBodyTabela(tabela, statusLabel(missao.getStatus()));
             }
         }
 
@@ -191,7 +182,7 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarHeaderTabela(PdfPTable tabela, String label) {
-        PdfPCell header = new PdfPCell(new Phrase(label, font(9, Font.BOLD, Color.WHITE)));
+        PdfPCell header = new PdfPCell(new Phrase(label, font(8.5f, Font.BOLD, Color.WHITE)));
         header.setHorizontalAlignment(Element.ALIGN_CENTER);
         header.setVerticalAlignment(Element.ALIGN_MIDDLE);
         header.setPadding(7);
@@ -201,7 +192,7 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarBodyTabela(PdfPTable tabela, String valor) {
-        PdfPCell body = new PdfPCell(new Phrase(valor, font(8.5f, Font.NORMAL, TEXT)));
+        PdfPCell body = new PdfPCell(new Phrase(valor, font(8f, Font.NORMAL, TEXT)));
         body.setPadding(6);
         body.setBorderColor(BORDER);
         body.setVerticalAlignment(Element.ALIGN_MIDDLE);
@@ -215,24 +206,17 @@ public class RelatorioMissaoPdfService {
         return dataHoraFim.format(DATE_TIME_FORMATTER);
     }
 
-    private String formatarDuracao(LocalDateTime inicio, LocalDateTime fim) {
-        if (fim == null) {
-            return "EM ANDAMENTO";
-        }
-        if (fim.isBefore(inicio)) {
-            return "-";
-        }
-        long minutos = Duration.between(inicio, fim).toMinutes();
-        long horas = minutos / 60;
-        long restoMin = minutos % 60;
-        if (horas > 0) {
-            return String.format("%dh %02dmin", horas, restoMin);
-        }
-        return restoMin + "min";
-    }
-
     private String statusLabel(StatusMissao status) {
         return status == StatusMissao.ATIVA ? "EM ANDAMENTO" : "FINALIZADA";
+    }
+
+    private String dadosMissaoResumidos(Missao missao) {
+        String destino = valorOuTraco(missao.getLocalDestino());
+        String setor = valorOuTraco(missao.getSetorSolicitante());
+        String solicitante = valorOuTraco(missao.getSolicitanteNome());
+        return "Destino: " + destino
+                + " | Setor: " + setor
+                + " | Solicitante: " + solicitante;
     }
 
     private String valorOuTraco(String value) {

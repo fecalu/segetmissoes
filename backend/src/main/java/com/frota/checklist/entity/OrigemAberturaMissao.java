@@ -2,6 +2,6 @@ package com.frota.checklist.entity;
 
 public enum OrigemAberturaMissao {
     CHECKLIST,
-    SEM_CHECKLIST
+    SEM_CHECKLIST,
+    CONTINGENCIA_ADMIN
 }
-

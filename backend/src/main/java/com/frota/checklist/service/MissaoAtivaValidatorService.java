@@ -23,7 +23,7 @@ public class MissaoAtivaValidatorService {
         Optional<MissaoAtivaInfo> missaoAtiva = buscarMissaoAtiva(motoristaId);
         if (missaoAtiva.isPresent()) {
             throw new BusinessException(
-                    "Motorista ja possui missao ativa no veiculo %s. Finalize a missao atual antes de iniciar outra."
+                    "Motorista ja possui missao em andamento no veiculo %s. Finalize a missao atual antes de iniciar outra."
                             .formatted(missaoAtiva.get().placa())
             );
         }

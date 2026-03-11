@@ -11,6 +11,10 @@ export type MotivoExcecaoMissao =
   | 'URGENCIA_OPERACIONAL'
   | 'SEM_TEMPO_OPERACIONAL'
   | 'FALHA_CAMERA'
+  | 'SEM_INTERNET'
+  | 'SEM_CELULAR'
+  | 'BATERIA_DESCARREGADA'
+  | 'APP_INDISPONIVEL'
   | 'OUTROS';
 
 export interface MissaoExcecaoResponse {

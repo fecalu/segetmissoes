@@ -2,7 +2,10 @@ package com.frota.checklist.controller;
 
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
+import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
+import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
 import com.frota.checklist.dto.MissaoResponse;
+import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.security.CustomUserDetails;
@@ -13,6 +16,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,6 +40,7 @@ public class AdminMissaoController {
             @RequestParam(required = false) Long motoristaId,
             @RequestParam(required = false) Long veiculoId,
             @RequestParam(required = false) StatusMissao status,
+            @RequestParam(required = false) OrigemAberturaMissao origemAbertura,
             @RequestParam(required = false) StatusDocumentalMissao statusDocumental,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
@@ -44,6 +50,7 @@ public class AdminMissaoController {
                 motoristaId,
                 veiculoId,
                 status,
+                origemAbertura,
                 statusDocumental,
                 dataInicio,
                 dataFim,
@@ -68,6 +75,40 @@ public class AdminMissaoController {
                 request.localDestino(),
                 request.setorSolicitante(),
                 request.solicitanteNome()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/contingencias")
+    public ResponseEntity<MissaoResponse> criarContingencia(
+            @Valid @RequestBody CriarMissaoContingenciaAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        MissaoResponse response = adminMissaoService.criarContingencia(
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.veiculoId(),
+                request.dataHoraInicio(),
+                request.motivoContingencia(),
+                request.justificativaAbertura(),
+                request.localDestino(),
+                request.setorSolicitante(),
+                request.solicitanteNome()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/encerrar-pendente")
+    public ResponseEntity<MissaoResponse> encerrarPendente(
+            @PathVariable Long id,
+            @Valid @RequestBody EncerrarMissaoPendenteAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        MissaoResponse response = adminMissaoService.encerrarPendente(
+                id,
+                userDetails.getMotoristaId(),
+                request.dataHoraFim(),
+                request.justificativaEncerramento()
         );
         return ResponseEntity.ok(response);
     }

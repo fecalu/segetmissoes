@@ -306,14 +306,156 @@
   background: #fffaf3;
 }
 
+.checklist-consulta-row {
+  border-width: 2px;
+  padding: 10px 12px;
+}
+
+.checklist-consulta-com-checklist {
+  border-color: #6f9bf0;
+  background: #f3f8ff;
+  box-shadow: 0 8px 22px rgba(93, 139, 233, 0.14);
+}
+
+.checklist-consulta-sem-fotos {
+  border-color: #c3cde4;
+  background: #f7f9fd;
+  box-shadow: 0 8px 20px rgba(120, 136, 173, 0.12);
+}
+
+.checklist-consulta-sem-checklist {
+  border-color: #e8a74d;
+  background: #fff8ef;
+  box-shadow: 0 8px 22px rgba(232, 167, 77, 0.14);
+}
+
+.checklist-consulta-atrasada {
+  border-color: #e06b74;
+  background: #fff4f5;
+  box-shadow: 0 8px 22px rgba(224, 107, 116, 0.16);
+}
+
 .missao-row-pendente {
-  border-color: #f2c185;
-  background: #fffaf2;
+  border-color: #e8a74d;
+  background: #fff8ef;
+  box-shadow: 0 8px 22px rgba(232, 167, 77, 0.14);
+}
+
+.missao-row-ativa {
+  border-color: #6f9bf0;
+  background: #f3f8ff;
+  box-shadow: 0 8px 22px rgba(93, 139, 233, 0.14);
+}
+
+.missao-row-finalizada {
+  border-color: #7fc592;
+  background: #f3fbf5;
+  box-shadow: 0 8px 22px rgba(87, 169, 111, 0.14);
+}
+
+.missao-lista-row {
+  border-width: 2px;
+  padding: 10px 12px;
+}
+
+.missao-lista-row .checklist-row-content {
+  gap: 4px;
+}
+
+.missao-lista-row strong {
+  color: #223764;
+}
+
+.missao-lista-row .inline-buttons {
+  align-self: center;
 }
 
 .checklist-kpis {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 10px;
+}
+
+.missao-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.missao-glossario {
+  border: 1px solid #dce5fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+
+.missao-glossario-toggle {
+  margin: 0 0 10px;
+}
+
+.missao-glossario-toggle button {
+  border-color: #c9d7f6;
+  color: #2d4e93;
+  background: #f8fbff;
+}
+
+.missao-glossario-title {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2d4e93;
+}
+
+.missao-glossario-bloco + .missao-glossario-bloco {
+  margin-top: 10px;
+}
+
+.missao-glossario-subtitle {
+  margin: 0 0 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5f6f92;
+}
+
+.missao-glossario-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.missao-glossario-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.missao-glossario-pill {
+  flex: 0 0 auto;
+}
+
+.missao-glossario-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.missao-glossario-grid > p,
+.missao-glossario-item p {
+  font-size: 0.79rem;
+  color: #46567a;
+}
+
+.missao-glossario-grid > p {
+  margin: 0;
+}
+
+.missao-glossario-item p {
+  margin: 2px 0 0;
+}
+
+.missao-glossario-exemplo {
+  color: #657597;
+  font-style: italic;
 }
 
 .time-note {
@@ -613,6 +755,12 @@
   border-color: #8ed1a2;
 }
 
+.status-finalizada {
+  background: #e8f1ff;
+  color: #1f4eb8;
+  border-color: #9db7eb;
+}
+
 .status-base_joao_goulart {
   background: #e8f1ff;
   color: #1f4eb8;
@@ -694,6 +842,22 @@
 
 .inclusion-card {
   max-width: 760px;
+}
+
+.nova-missao-card {
+  max-width: 840px;
+}
+
+.nova-missao-modos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.nova-missao-modos button.active {
+  border-color: #2d5ac8;
+  background: #eaf0ff;
 }
 
 .inclusion-helper {
@@ -794,12 +958,28 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .checklist-kpis {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .missao-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .form-grid,
   .filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .missao-glossario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .operacao-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nova-missao-modos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -845,6 +1025,10 @@
 
   .kpi-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .missao-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .operacao-kpis {

@@ -18,6 +18,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         atualizarConstraintsStatusVeiculo();
         atualizarConstraintsHistoricoStatusVeiculo();
         atualizarConstraintsMissaoExcecao();
+        atualizarConstraintsMissoes();
         atualizarConstraintsAuditoriaMissao();
     }
 
@@ -75,6 +76,69 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 """);
     }
 
+    private void atualizarConstraintsMissoes() {
+        executarSilencioso("alter table missoes drop constraint if exists missoes_status_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_origem_abertura_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_origem_encerramento_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_status_documental_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_motivo_contingencia_check");
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_status_check
+                check (status in (
+                    'ATIVA',
+                    'FINALIZADA'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_origem_abertura_check
+                check (origem_abertura in (
+                    'CHECKLIST',
+                    'SEM_CHECKLIST',
+                    'CONTINGENCIA_ADMIN'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_origem_encerramento_check
+                check (origem_encerramento in (
+                    'CHECKLIST',
+                    'SEM_CHECKLIST',
+                    'ADMINISTRATIVO'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_status_documental_check
+                check (status_documental in (
+                    'PENDENTE_DADOS_ADMIN',
+                    'DADOS_ADMIN_COMPLETOS'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_motivo_contingencia_check
+                check (motivo_contingencia in (
+                    'CHUVA_FORTE',
+                    'TROCA_RAPIDA_VEICULO',
+                    'URGENCIA_OPERACIONAL',
+                    'SEM_TEMPO_OPERACIONAL',
+                    'FALHA_CAMERA',
+                    'SEM_INTERNET',
+                    'SEM_CELULAR',
+                    'BATERIA_DESCARREGADA',
+                    'APP_INDISPONIVEL',
+                    'OUTROS'
+                ))
+                """);
+    }
+
     private void atualizarConstraintsAuditoriaMissao() {
         executarSilencioso("alter table auditoria_missoes drop constraint if exists auditoria_missoes_acao_check");
         executarSilencioso("""
@@ -83,9 +147,11 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 check (acao in (
                     'ABERTURA_CHECKLIST',
                     'ABERTURA_SEM_CHECKLIST',
+                    'ABERTURA_CONTINGENCIA_ADMIN',
                     'ABERTURA_LEGADO_RECONSTRUIDA',
                     'ENCERRAMENTO_CHECKLIST',
                     'ENCERRAMENTO_SEM_CHECKLIST',
+                    'ENCERRAMENTO_PENDENTE_ADMIN',
                     'ENCERRAMENTO_ADMINISTRATIVO',
                     'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
                 ))

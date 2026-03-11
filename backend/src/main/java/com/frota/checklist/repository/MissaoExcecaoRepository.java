@@ -5,6 +5,8 @@ import com.frota.checklist.entity.StatusExcecaoMissao;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -31,6 +33,19 @@ public interface MissaoExcecaoRepository extends JpaRepository<MissaoExcecao, Lo
     List<MissaoExcecao> findByVeiculoIdInAndStatusIn(
             Collection<Long> veiculoIds,
             Collection<StatusExcecaoMissao> statuses
+    );
+
+    @Query("""
+            select e
+            from MissaoExcecao e
+            join fetch e.motorista
+            join fetch e.veiculo
+            where e.dataHoraAbertura between :inicio and :fim
+            order by e.dataHoraAbertura asc, e.id asc
+            """)
+    List<MissaoExcecao> buscarParaRelatorio(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
     );
 
     long countByVeiculoId(Long veiculoId);

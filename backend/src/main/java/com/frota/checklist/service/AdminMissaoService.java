@@ -3,13 +3,17 @@ package com.frota.checklist.service;
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.MissaoResponse;
 import com.frota.checklist.entity.Missao;
+import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.VeiculoRepository;
 import com.frota.checklist.exception.NotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,14 +34,25 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class AdminMissaoService {
 
+    private static final EnumSet<MotivoExcecaoMissao> MOTIVOS_CONTINGENCIA_ADMIN = EnumSet.of(
+            MotivoExcecaoMissao.SEM_INTERNET,
+            MotivoExcecaoMissao.SEM_CELULAR,
+            MotivoExcecaoMissao.BATERIA_DESCARREGADA,
+            MotivoExcecaoMissao.APP_INDISPONIVEL,
+            MotivoExcecaoMissao.OUTROS
+    );
+
     private final MissaoRepository missaoRepository;
     private final MotoristaRepository motoristaRepository;
+    private final VeiculoRepository veiculoRepository;
+    private final MissaoService missaoService;
     private final MissaoAuditoriaService missaoAuditoriaService;
 
     public List<MissaoResponse> listar(
             Long motoristaId,
             Long veiculoId,
             StatusMissao status,
+            OrigemAberturaMissao origemAbertura,
             StatusDocumentalMissao statusDocumental,
             LocalDate dataInicio,
             LocalDate dataFim,
@@ -52,6 +68,9 @@ public class AdminMissaoService {
             }
             if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (origemAbertura != null) {
+                predicates.add(cb.equal(root.get("origemAbertura"), origemAbertura));
             }
             if (statusDocumental != null) {
                 if (statusDocumental == StatusDocumentalMissao.PENDENTE_DADOS_ADMIN) {
@@ -112,8 +131,13 @@ public class AdminMissaoService {
                 missao.getChecklistSaidaId(),
                 missao.getChecklistChegadaId(),
                 missao.getMissaoExcecaoId(),
+                missao.getAdministradorAbertura() != null ? missao.getAdministradorAbertura().getId() : null,
+                missao.getAdministradorAbertura() != null ? missao.getAdministradorAbertura().getNome() : null,
                 missao.getAdministradorEncerramento() != null ? missao.getAdministradorEncerramento().getId() : null,
                 missao.getAdministradorEncerramento() != null ? missao.getAdministradorEncerramento().getNome() : null,
+                missao.getMotivoContingencia(),
+                missao.getJustificativaContingenciaAbertura(),
+                missao.getJustificativaContingenciaEncerramento(),
                 missao.getLocalDestino(),
                 missao.getSetorSolicitante(),
                 missao.getSolicitanteNome()
@@ -174,6 +198,94 @@ public class AdminMissaoService {
 
         Missao salva = missaoRepository.save(missao);
         return toResponse(salva);
+    }
+
+    @Transactional
+    public MissaoResponse criarContingencia(
+            Long administradorId,
+            Long motoristaId,
+            Long veiculoId,
+            LocalDateTime dataHoraInicio,
+            MotivoExcecaoMissao motivoContingencia,
+            String justificativaAbertura,
+            String localDestino,
+            String setorSolicitante,
+            String solicitanteNome
+    ) {
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+        Motorista motorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+        Veiculo veiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+
+        if (Boolean.TRUE.equals(veiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode receber registro manual");
+        }
+        MotivoExcecaoMissao motivoContingenciaNormalizado =
+                motivoContingencia == null ? MotivoExcecaoMissao.OUTROS : motivoContingencia;
+        if (!MOTIVOS_CONTINGENCIA_ADMIN.contains(motivoContingenciaNormalizado)) {
+            throw new BusinessException("Motivo do registro manual invalido para este fluxo");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativaAbertura);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa do registro manual com pelo menos 10 caracteres");
+        }
+
+        Missao missao = missaoService.abrirContingenciaAdministrativa(
+                administrador,
+                motorista,
+                veiculo,
+                dataHoraInicio,
+                motivoContingenciaNormalizado,
+                justificativaNormalizada,
+                localDestino,
+                setorSolicitante,
+                solicitanteNome
+        );
+        return toResponse(missao);
+    }
+
+    @Transactional
+    public MissaoResponse encerrarPendente(
+            Long missaoId,
+            Long administradorId,
+            LocalDateTime dataHoraFim,
+            String justificativaEncerramento
+    ) {
+        Missao missao = missaoRepository.findById(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            throw new BusinessException("Somente missoes em andamento podem ser finalizadas por este fluxo");
+        }
+
+        LocalDateTime dataFimNormalizada = dataHoraFim == null ? LocalDateTime.now() : dataHoraFim;
+        if (!dataFimNormalizada.isAfter(missao.getDataHoraInicio())) {
+            throw new BusinessException("Data/hora de fim deve ser posterior ao inicio da missao");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativaEncerramento);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa do encerramento manual com pelo menos 10 caracteres");
+        }
+
+        Missao encerrada = missaoService.encerrarPendenteAdministrativamente(
+                missao,
+                administrador,
+                dataFimNormalizada,
+                justificativaNormalizada
+        );
+        return toResponse(encerrada);
     }
 
     private void registrarAlteracaoTexto(

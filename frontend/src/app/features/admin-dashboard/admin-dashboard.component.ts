@@ -25,7 +25,11 @@ import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from 
 import { Motorista } from '../../core/models/motorista.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
-import { AdminService } from '../../core/services/admin.service';
+import {
+  AdminService,
+  CriarMissaoContingenciaPayload,
+  EncerrarMissaoPendentePayload
+} from '../../core/services/admin.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MissaoExcecaoService } from '../../core/services/missao-excecao.service';
 import { environment } from '../../../environments/environment';
@@ -38,9 +42,10 @@ import {
 
 type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'excecoes';
 type CadastroMenu = 'veiculos' | 'motoristas' | 'rotulos-status';
-type ControleMenu = 'missoes' | 'tempo-real' | 'checklists' | 'excecoes';
+type ControleMenu = 'missoes' | 'checklists';
 type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
+type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -53,9 +58,20 @@ interface ConsultaChecklistItem {
   veiculoPlaca: string;
   resumo: string;
   possuiFotos: boolean;
+  quantidadeFotos: number;
   statusRegularizacao?: string;
   checklist?: ChecklistResponse;
   excecao?: MissaoExcecaoResponse;
+}
+
+interface GlossarioItem {
+  termo: string;
+  descricao: string;
+}
+
+interface GlossarioBadgeItem extends GlossarioItem {
+  classe: string;
+  exemplo?: string;
 }
 
 @Component({
@@ -84,14 +100,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   filtrosVeiculoAbertos = false;
   filtrosMotoristaAbertos = false;
   filtrosMissoesAbertos = false;
-  filtrosExcecaoAbertos = false;
 
   motoristas: Motorista[] = [];
   veiculos: Veiculo[] = [];
   checklists: ChecklistResponse[] = [];
   missoes: MissaoResponse[] = [];
   consultaChecklist: ConsultaChecklistItem[] = [];
-  excecoes: MissaoExcecaoResponse[] = [];
   painelVeiculos = this.criarPainelVazio();
 
   loadingMotoristas = false;
@@ -100,7 +114,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadingMissoes = false;
   loadingTempoReal = false;
   loadingAuditoriaMissao = false;
-  loadingExcecoes = false;
   loadingHistoricoStatus = false;
   loadingRotulosStatus = false;
   gerandoRelatorioMissoes = false;
@@ -116,7 +129,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   selectedMissaoAuditoria: MissaoResponse | null = null;
   selectedMissaoDadosAdmin: MissaoResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
-  selectedExcecaoEncerramento: MissaoExcecaoResponse | null = null;
   selectedCategoriaInclusao: PainelCategoria | null = null;
   veiculoInclusaoSelecionadoId: number | null = null;
   buscaInclusaoVeiculo = '';
@@ -126,14 +138,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   auditoriaMissao: AuditoriaMissaoResponse[] = [];
   historicoStatus: HistoricoStatusVeiculo[] = [];
   rotulosStatusEditor: RotuloStatusVeiculoResponse[] = [];
-  encerramentoJustificativa = '';
   dataRelatorioMissoes = this.hojeIso();
+  showNovaMissaoModal = false;
+  novaMissaoModo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA';
+  salvandoNovaMissaoContingencia = false;
+  encerrandoMissaoPendente = false;
+  glossarioMissoesAberto = false;
+  glossarioChecklistsAberto = false;
   private relogioSub?: Subscription;
   private refreshTempoRealSub?: Subscription;
 
   readonly categoriasPainel: Array<{ id: PainelCategoria; titulo: string; descricao: string }> = [
     { id: 'DISPONIVEL', titulo: 'Disponiveis', descricao: 'Prontos para nova missao' },
-    { id: 'MISSAO', titulo: 'Na rua em missao', descricao: 'Checklist de saida sem chegada' },
+    { id: 'MISSAO', titulo: 'Em missao', descricao: 'Veiculos com missao em andamento' },
     { id: 'VIAGEM', titulo: 'Em viagem', descricao: 'Viagem definida administrativamente' },
     { id: 'PATIO', titulo: 'No patio', descricao: 'Parados no patio' },
     { id: 'REALOCACAO', titulo: 'Aguardando realocacao', descricao: 'Recebidos e aguardando definicao' },
@@ -152,13 +169,72 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     BLOQUEADO: 'BLOQUEADO'
   };
   private readonly statusLabelsCustomizados: Partial<Record<StatusVeiculo, string>> = {};
+  private readonly statusMissaoLabels: Record<StatusMissao, string> = {
+    ATIVA: 'EM ANDAMENTO',
+    FINALIZADA: 'FINALIZADA'
+  };
+  private readonly statusDocumentalMissaoLabels: Record<StatusDocumentalMissao, string> = {
+    PENDENTE_DADOS_ADMIN: 'DADOS PENDENTES',
+    DADOS_ADMIN_COMPLETOS: 'DADOS COMPLETOS'
+  };
+  private readonly origemAberturaMissaoLabels: Record<OrigemAberturaMissao, string> = {
+    CHECKLIST: 'INICIO: COM CHECKLIST',
+    SEM_CHECKLIST: 'INICIO: SEM CHECKLIST',
+    CONTINGENCIA_ADMIN: 'INICIO: PELO ADMIN'
+  };
+  private readonly origemEncerramentoMissaoLabels: Record<OrigemEncerramentoMissao, string> = {
+    CHECKLIST: 'FIM: COM CHECKLIST',
+    SEM_CHECKLIST: 'FIM: SEM CHECKLIST',
+    ADMINISTRATIVO: 'FIM: PELO ADMIN'
+  };
+  private readonly tipoMissaoLabels = {
+    MANUAL: 'REGISTRO MANUAL'
+  } as const;
+  readonly glossarioMissoesBadges: GlossarioBadgeItem[] = [
+    { termo: this.statusMissaoLabels.ATIVA, descricao: 'Missao em andamento, ainda sem finalizacao.', exemplo: 'Ex.: motorista saiu 13:12 e ainda nao registrou o fim.', classe: 'status-circulando' },
+    { termo: this.statusMissaoLabels.FINALIZADA, descricao: 'Missao ja finalizada.', exemplo: 'Ex.: inicio 08:00 e fim 09:15 ja registrados.', classe: 'status-finalizada' },
+    { termo: this.statusDocumentalMissaoLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda faltam destino, setor ou solicitante.', exemplo: 'Ex.: destino foi informado, mas setor e solicitante ainda faltam.', classe: 'status-documental-pendente' },
+    { termo: this.statusDocumentalMissaoLabels.DADOS_ADMIN_COMPLETOS, descricao: 'Destino, setor e solicitante ja foram preenchidos.', exemplo: 'Ex.: destino SEGET, setor ATOS e solicitante VAL ja informados.', classe: 'status-documental-ok' },
+    { termo: this.tipoMissaoLabels.MANUAL, descricao: 'Missao registrada manualmente pela administracao.', exemplo: 'Ex.: administrador registrou a missao porque o celular descarregou.', classe: 'status-bloqueado' },
+    { termo: this.origemAberturaMissaoLabels.CHECKLIST, descricao: 'Inicio registrado pelo checklist de saida.', exemplo: 'Ex.: a missao foi aberta logo apos o checklist de saida.', classe: 'status-base_joao_goulart' },
+    { termo: this.origemAberturaMissaoLabels.SEM_CHECKLIST, descricao: 'Inicio registrado sem checklist.', exemplo: 'Ex.: o motorista iniciou a missao sem checklist por excecao operacional.', classe: 'status-base_joao_goulart' },
+    { termo: this.origemAberturaMissaoLabels.CONTINGENCIA_ADMIN, descricao: 'Inicio registrado diretamente pela administracao.', exemplo: 'Ex.: a administracao abriu a missao manualmente para o motorista.', classe: 'status-base_joao_goulart' },
+    { termo: this.origemEncerramentoMissaoLabels.CHECKLIST, descricao: 'Fim registrado pelo checklist de chegada.', exemplo: 'Ex.: a missao foi finalizada quando o checklist de chegada foi enviado.', classe: 'status-no_patio' },
+    { termo: this.origemEncerramentoMissaoLabels.SEM_CHECKLIST, descricao: 'Fim registrado sem checklist.', exemplo: 'Ex.: o motorista registrou o fim sem checklist.', classe: 'status-no_patio' },
+    { termo: this.origemEncerramentoMissaoLabels.ADMINISTRATIVO, descricao: 'Fim registrado manualmente pela administracao.', exemplo: 'Ex.: a administracao finalizou a missao porque o motorista nao conseguiu encerrar pelo app.', classe: 'status-no_patio' },
+    { termo: 'DURACAO: 16 s', descricao: 'Tempo total entre o inicio e o fim da missao.', exemplo: 'Ex.: inicio 13:12:00 e fim 13:12:16.', classe: 'status-oficina' }
+  ];
+  readonly glossarioMissoesCampos: GlossarioItem[] = [
+    { termo: 'Destino | Setor | Solicitante', descricao: 'Dados da missao usados nos relatorios e no acompanhamento operacional.' },
+    { termo: 'Justificativa do registro manual', descricao: 'Texto explicando por que a missao foi registrada manualmente pela administracao.' },
+    { termo: 'Justificativa do encerramento manual', descricao: 'Texto explicando por que o encerramento precisou ser feito manualmente, e nao pelo motorista.' },
+    { termo: 'Registrada por', descricao: 'Quem registrou o inicio da missao, motorista ou administrador.' },
+    { termo: 'Finalizada por', descricao: 'Quem registrou o fim da missao. Enquanto a missao estiver em andamento, fica como "-".' },
+    { termo: 'Inicio | Fim', descricao: 'Horarios oficiais de inicio e fim da missao.' },
+    { termo: '-', descricao: 'Campo ainda nao informado ou nao aplicavel para aquela missao.' }
+  ];
+  readonly glossarioChecklistsBadges: GlossarioBadgeItem[] = [
+    { termo: 'COM CHECKLIST', descricao: 'Registro com checklist fotografico enviado pelo motorista.', exemplo: 'Ex.: saida ou chegada com fotos anexadas.', classe: 'status-circulando' },
+    { termo: 'SEM CHECKLIST', descricao: 'Registro sem checklist fotografico. Pode ser saida ou chegada regularizada sem fotos.', exemplo: 'Ex.: saida sem checklist por excecao operacional.', classe: 'status-oficina' },
+    { termo: 'REGULARIZADA', descricao: 'Registro concluido normalmente ou ja regularizado.', exemplo: 'Ex.: checklist enviado ou excecao ja fechada.', classe: 'status-base_joao_goulart' },
+    { termo: 'PENDENTE', descricao: 'Registro sem checklist ainda aguardando regularizacao.', exemplo: 'Ex.: saida sem checklist ainda em aberto.', classe: 'status-documental-pendente' },
+    { termo: 'ATRASADA', descricao: 'Registro sem checklist passou do prazo esperado de regularizacao.', exemplo: 'Ex.: saida sem checklist ainda aberta apos o prazo.', classe: 'status-bloqueado' },
+    { termo: 'SEM FOTOS', descricao: 'Registro nao possui fotos anexadas.', exemplo: 'Ex.: evento sem checklist ou checklist salvo sem imagens.', classe: 'status-no_patio' }
+  ];
+  readonly glossarioChecklistsCampos: GlossarioItem[] = [
+    { termo: 'SAIDA | CHEGADA', descricao: 'Tipo do registro operacional.' },
+    { termo: 'Resumo', descricao: 'Explica rapidamente o que aconteceu naquele registro.' },
+    { termo: 'Fotos', descricao: 'Abre as imagens quando o registro possui checklist fotografico.' },
+    { termo: 'Sem fotos', descricao: 'Aparece quando o registro nao tem nenhuma imagem vinculada.' }
+  ];
 
   readonly motoristaForm;
   readonly veiculoForm;
   readonly filtroForm;
   readonly missaoFiltroForm;
   readonly missaoDadosForm;
-  readonly excecaoFiltroForm;
+  readonly missaoContingenciaForm;
+  readonly missaoPendenteForm;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -191,6 +267,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: [0],
       veiculoId: [0],
       origemRegistro: ['' as '' | OrigemConsultaChecklist],
+      situacaoRegistro: ['' as SituacaoConsultaChecklist],
       tipoOperacao: ['' as '' | TipoOperacao],
       dataInicio: [''],
       dataFim: ['']
@@ -201,6 +278,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: [0],
       veiculoId: [0],
       status: ['' as '' | StatusMissao],
+      origemAbertura: ['' as '' | OrigemAberturaMissao],
       statusDocumental: ['' as '' | StatusDocumentalMissao],
       dataInicio: [hoje],
       dataFim: [hoje]
@@ -212,13 +290,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       solicitanteNome: ['']
     });
 
-    this.excecaoFiltroForm = this.fb.nonNullable.group({
-      busca: [''],
-      motoristaId: [0],
-      veiculoId: [0],
-      status: ['' as '' | StatusExcecaoMissao],
-      dataInicio: [''],
-      dataFim: ['']
+    this.missaoContingenciaForm = this.fb.nonNullable.group({
+      motoristaId: [0, [Validators.min(1)]],
+      veiculoId: [0, [Validators.min(1)]],
+      dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
+      justificativaAbertura: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]],
+      localDestino: [''],
+      setorSolicitante: [''],
+      solicitanteNome: ['']
+    });
+
+    this.missaoPendenteForm = this.fb.nonNullable.group({
+      missaoId: [0, [Validators.min(1)]],
+      dataHoraFim: [this.agoraDateTimeLocal(), [Validators.required]],
+      justificativaEncerramento: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
   }
 
@@ -227,7 +312,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menuParam === 'dashboard') {
       this.activeMenu = 'operacao';
     } else if (this.isAdminMenu(menuParam)) {
-      this.activeMenu = menuParam;
+      this.activeMenu = this.normalizarMenu(menuParam);
     }
     this.sincronizarMenusAgrupados(this.activeMenu);
     this.carregarRotulosStatus(false);
@@ -248,6 +333,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   setMenu(menu: AdminMenu): void {
+    menu = this.normalizarMenu(menu);
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { menu },
@@ -265,12 +351,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu !== 'missoes') {
       this.filtrosMissoesAbertos = false;
       this.fecharEdicaoDadosMissao();
+      if (this.showNovaMissaoModal) {
+        this.fecharNovaMissao();
+      }
     }
     if (menu !== 'checklists') {
       this.filtrosAbertos = false;
-    }
-    if (menu !== 'excecoes') {
-      this.filtrosExcecaoAbertos = false;
     }
 
     this.garantirDadosBasicos(menu);
@@ -298,10 +384,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   toggleFiltrosMotorista(): void {
     this.filtrosMotoristaAbertos = !this.filtrosMotoristaAbertos;
-  }
-
-  toggleFiltrosExcecao(): void {
-    this.filtrosExcecaoAbertos = !this.filtrosExcecaoAbertos;
   }
 
   toggleFiltrosMissoes(): void {
@@ -339,9 +421,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   isControleAtivo(): boolean {
     return this.activeMenu === 'missoes'
-      || this.activeMenu === 'tempo-real'
-      || this.activeMenu === 'checklists'
-      || this.activeMenu === 'excecoes';
+      || this.activeMenu === 'checklists';
   }
 
   abrirTelaRelatorio(): void {
@@ -364,6 +444,116 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.snackBar.open('Relatorio de missoes gerado com sucesso.', 'Fechar', { duration: 2200 });
         },
         error: () => this.snackBar.open('Falha ao gerar relatorio de missoes.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  abrirNovaMissao(modo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA'): void {
+    this.showNovaMissaoModal = true;
+    this.novaMissaoModo = modo;
+    if (modo === 'CONTINGENCIA') {
+      this.missaoContingenciaForm.patchValue({ dataHoraInicio: this.agoraDateTimeLocal() });
+      return;
+    }
+    const primeiraMissaoAtiva = this.missoesPendentesEncerramento()[0];
+    this.missaoPendenteForm.patchValue({
+      missaoId: primeiraMissaoAtiva ? primeiraMissaoAtiva.id : 0,
+      dataHoraFim: this.agoraDateTimeLocal()
+    });
+  }
+
+  abrirEncerramentoPendente(missaoId?: number): void {
+    this.abrirNovaMissao('PENDENTE');
+    this.missaoPendenteForm.patchValue({
+      missaoId: missaoId && missaoId > 0 ? missaoId : 0,
+      dataHoraFim: this.agoraDateTimeLocal()
+    });
+  }
+
+  fecharNovaMissao(): void {
+    this.showNovaMissaoModal = false;
+    this.novaMissaoModo = 'CONTINGENCIA';
+    this.missaoContingenciaForm.reset({
+      motoristaId: 0,
+      veiculoId: 0,
+      dataHoraInicio: this.agoraDateTimeLocal(),
+      justificativaAbertura: '',
+      localDestino: '',
+      setorSolicitante: '',
+      solicitanteNome: ''
+    });
+    this.missaoPendenteForm.reset({
+      missaoId: 0,
+      dataHoraFim: this.agoraDateTimeLocal(),
+      justificativaEncerramento: ''
+    });
+  }
+
+  salvarMissaoContingencia(): void {
+    if (this.missaoContingenciaForm.invalid) {
+      this.missaoContingenciaForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.missaoContingenciaForm.getRawValue();
+    if (raw.motoristaId <= 0 || raw.veiculoId <= 0) {
+      this.snackBar.open('Selecione motorista e veiculo para registrar a missao manual.', 'Fechar', { duration: 2600 });
+      return;
+    }
+
+    const payload: CriarMissaoContingenciaPayload = {
+      motoristaId: raw.motoristaId,
+      veiculoId: raw.veiculoId,
+      dataHoraInicio: raw.dataHoraInicio,
+      justificativaAbertura: raw.justificativaAbertura.trim(),
+      localDestino: this.toNullIfBlank(raw.localDestino),
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
+    };
+
+    this.salvandoNovaMissaoContingencia = true;
+    this.adminService.criarMissaoContingencia(payload)
+      .pipe(finalize(() => (this.salvandoNovaMissaoContingencia = false)))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Missao manual registrada com sucesso.', 'Fechar', { duration: 2400 });
+          this.fecharNovaMissao();
+          this.buscarMissoes();
+          this.carregarMissoesTempoReal(false);
+          this.carregarVeiculos(this.veiculoBusca);
+        },
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao registrar a missao manual.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  encerrarMissaoPendente(): void {
+    if (this.missaoPendenteForm.invalid) {
+      this.missaoPendenteForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.missaoPendenteForm.getRawValue();
+    if (raw.missaoId <= 0) {
+      this.snackBar.open('Selecione a missao em aberto para finalizar.', 'Fechar', { duration: 2400 });
+      return;
+    }
+
+    const payload: EncerrarMissaoPendentePayload = {
+      dataHoraFim: raw.dataHoraFim,
+      justificativaEncerramento: raw.justificativaEncerramento.trim()
+    };
+
+    this.encerrandoMissaoPendente = true;
+    this.adminService.encerrarMissaoPendente(raw.missaoId, payload)
+      .pipe(finalize(() => (this.encerrandoMissaoPendente = false)))
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Missao em aberto finalizada com sucesso.', 'Fechar', { duration: 2400 });
+          this.fecharNovaMissao();
+          this.buscarMissoes();
+          this.carregarMissoesTempoReal(false);
+          this.carregarVeiculos(this.veiculoBusca);
+        },
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao finalizar a missao em aberto.', 'Fechar', { duration: 3200 })
       });
   }
 
@@ -585,7 +775,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     if (veiculo.statusAutomatico === 'CIRCULANDO') {
-      this.snackBar.open('Veiculo com missao ativa nao pode ser movido manualmente de coluna.', 'Fechar', { duration: 3200 });
+      this.snackBar.open('Veiculo com missao em andamento nao pode ser movido manualmente de coluna.', 'Fechar', { duration: 3200 });
       return;
     }
 
@@ -834,7 +1024,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: ({ checklists, excecoes }) => {
           this.checklists = checklists;
-          this.consultaChecklist = this.montarConsultaChecklist(checklists, excecoes, raw.tipoOperacao || '');
+          this.consultaChecklist = this.filtrarConsultaChecklist(
+            this.montarConsultaChecklist(checklists, excecoes, raw.tipoOperacao || ''),
+            raw.situacaoRegistro
+          );
         },
         error: () => this.snackBar.open('Falha ao carregar checklists.', 'Fechar', { duration: 3000 })
       });
@@ -848,6 +1041,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: raw.motoristaId > 0 ? raw.motoristaId : undefined,
       veiculoId: raw.veiculoId > 0 ? raw.veiculoId : undefined,
       status: raw.status || undefined,
+      origemAbertura: raw.origemAbertura || undefined,
       statusDocumental: raw.statusDocumental || undefined,
       dataInicio: raw.dataInicio || undefined,
       dataFim: raw.dataFim || undefined
@@ -867,7 +1061,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         next: data => (this.missoesTempoReal = data),
         error: () => {
           if (showError) {
-            this.snackBar.open('Falha ao carregar missoes em tempo real.', 'Fechar', { duration: 2800 });
+            this.snackBar.open('Falha ao carregar missoes em andamento.', 'Fechar', { duration: 2800 });
           }
         }
       });
@@ -880,6 +1074,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: 0,
       veiculoId: 0,
       status: '',
+      origemAbertura: '',
       statusDocumental: '',
       dataInicio: hoje,
       dataFim: hoje
@@ -893,73 +1088,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: 0,
       veiculoId: 0,
       origemRegistro: '',
+      situacaoRegistro: '',
       tipoOperacao: '',
       dataInicio: '',
       dataFim: ''
     });
     this.buscarChecklists();
-  }
-
-  buscarExcecoes(): void {
-    this.loadingExcecoes = true;
-    const raw = this.excecaoFiltroForm.getRawValue();
-    this.missaoExcecaoService.listarAdmin({
-      busca: raw.busca || undefined,
-      motoristaId: raw.motoristaId > 0 ? raw.motoristaId : undefined,
-      veiculoId: raw.veiculoId > 0 ? raw.veiculoId : undefined,
-      status: raw.status || undefined,
-      dataInicio: raw.dataInicio || undefined,
-      dataFim: raw.dataFim || undefined
-    })
-      .pipe(finalize(() => (this.loadingExcecoes = false)))
-      .subscribe({
-        next: data => (this.excecoes = data),
-        error: () => this.snackBar.open('Falha ao carregar missoes em excecao.', 'Fechar', { duration: 3000 })
-      });
-  }
-
-  limparFiltrosExcecao(): void {
-    this.excecaoFiltroForm.reset({
-      busca: '',
-      motoristaId: 0,
-      veiculoId: 0,
-      status: '',
-      dataInicio: '',
-      dataFim: ''
-    });
-    this.buscarExcecoes();
-  }
-
-  abrirEncerramentoExcecao(excecao: MissaoExcecaoResponse): void {
-    this.selectedExcecaoEncerramento = excecao;
-    this.encerramentoJustificativa = '';
-  }
-
-  cancelarEncerramentoExcecao(): void {
-    this.selectedExcecaoEncerramento = null;
-    this.encerramentoJustificativa = '';
-  }
-
-  confirmarEncerramentoExcecao(): void {
-    const excecao = this.selectedExcecaoEncerramento;
-    const justificativa = this.encerramentoJustificativa.trim();
-    if (!excecao) {
-      return;
-    }
-    if (justificativa.length < 10) {
-      this.snackBar.open('Justificativa deve ter pelo menos 10 caracteres.', 'Fechar', { duration: 2600 });
-      return;
-    }
-
-    this.missaoExcecaoService.encerrarAdmin(excecao.id, justificativa).subscribe({
-      next: () => {
-        this.snackBar.open('Missao em excecao encerrada.', 'Fechar', { duration: 2400 });
-        this.cancelarEncerramentoExcecao();
-        this.buscarExcecoes();
-        this.carregarVeiculos(this.veiculoBusca);
-      },
-      error: (err) => this.snackBar.open(err.error?.message || 'Falha ao encerrar excecao.', 'Fechar', { duration: 3000 })
-    });
   }
 
   abrirChecklist(checklist: ChecklistResponse): void {
@@ -1028,6 +1162,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.veiculos.filter(v => v.desativado);
   }
 
+  motoristasElegiveisMissao(): Motorista[] {
+    return this.motoristas.filter(m => m.perfil === 'MOTORISTA');
+  }
+
+  veiculosElegiveisContingencia(): Veiculo[] {
+    return this.veiculosAtivos().filter(v => v.statusAutomatico !== 'CIRCULANDO');
+  }
+
   tipoOperacaoLabel(value: string): string {
     return value === 'ENTRADA' ? 'CHEGADA' : 'SAIDA';
   }
@@ -1036,8 +1178,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return origem === 'CHECKLIST' ? 'COM CHECKLIST' : 'SEM CHECKLIST';
   }
 
+  consultaChecklistOrdenada(): ConsultaChecklistItem[] {
+    return [...this.consultaChecklist].sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+  }
+
   missoesAtivas(): MissaoResponse[] {
     return this.missoes.filter(m => m.status === 'ATIVA');
+  }
+
+  missoesPendentesEncerramento(): MissaoResponse[] {
+    return this.missoesAtivas();
   }
 
   missoesFinalizadas(): MissaoResponse[] {
@@ -1048,10 +1198,30 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.missoes.filter(m => m.statusDocumental === 'PENDENTE_DADOS_ADMIN');
   }
 
+  missoesContingencia(): MissaoResponse[] {
+    return this.missoes.filter(m => m.origemAbertura === 'CONTINGENCIA_ADMIN');
+  }
+
+  missoesOrdenadasPorInicio(): MissaoResponse[] {
+    return [...this.missoes].sort((a, b) => b.dataHoraInicio.localeCompare(a.dataHoraInicio));
+  }
+
+  statusMissaoLabel(status: StatusMissao): string {
+    return this.statusMissaoLabels[status];
+  }
+
+  classeLinhaMissao(missao: MissaoResponse): string {
+    if (missao.statusDocumental === 'PENDENTE_DADOS_ADMIN') {
+      return 'missao-row-pendente';
+    }
+    if (missao.status === 'ATIVA') {
+      return 'missao-row-ativa';
+    }
+    return 'missao-row-finalizada';
+  }
+
   statusDocumentalMissaoLabel(status: StatusDocumentalMissao): string {
-    return status === 'DADOS_ADMIN_COMPLETOS'
-      ? 'DADOS ADMIN COMPLETOS'
-      : 'PENDENTE DADOS ADMIN';
+    return this.statusDocumentalMissaoLabels[status];
   }
 
   classeStatusDocumentalMissao(status: StatusDocumentalMissao): string {
@@ -1068,20 +1238,31 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   origemAberturaMissaoLabel(origem: OrigemAberturaMissao): string {
-    return origem === 'CHECKLIST' ? 'COM CHECKLIST' : 'SEM CHECKLIST';
+    return this.origemAberturaMissaoLabels[origem];
+  }
+
+  tipoMissaoLabel(missao: MissaoResponse): string {
+    return missao.origemAbertura === 'CONTINGENCIA_ADMIN'
+      ? this.tipoMissaoLabels.MANUAL
+      : '';
+  }
+
+  abertaPorMissaoLabel(missao: MissaoResponse): string {
+    return missao.administradorAberturaNome || missao.motoristaNome;
+  }
+
+  encerradaPorMissaoLabel(missao: MissaoResponse): string {
+    if (missao.status === 'ATIVA') {
+      return '-';
+    }
+    return missao.administradorEncerramentoNome || missao.motoristaNome;
   }
 
   origemEncerramentoMissaoLabel(origem: OrigemEncerramentoMissao | null): string {
     if (!origem) {
       return '-';
     }
-    if (origem === 'CHECKLIST') {
-      return 'CHECKLIST';
-    }
-    if (origem === 'SEM_CHECKLIST') {
-      return 'SEM CHECKLIST';
-    }
-    return 'ADMINISTRATIVO';
+    return this.origemEncerramentoMissaoLabels[origem];
   }
 
   abrirAuditoriaMissao(missao: MissaoResponse): void {
@@ -1092,7 +1273,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => (this.loadingAuditoriaMissao = false)))
       .subscribe({
         next: data => (this.auditoriaMissao = data),
-        error: () => this.snackBar.open('Falha ao carregar auditoria da missao.', 'Fechar', { duration: 2800 })
+        error: () => this.snackBar.open('Falha ao carregar o historico da missao.', 'Fechar', { duration: 2800 })
       });
   }
 
@@ -1143,22 +1324,24 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.selectedMissaoAuditoria = updated;
           this.abrirAuditoriaMissao(updated);
         }
-        this.snackBar.open('Dados administrativos da missao atualizados.', 'Fechar', { duration: 2200 });
+        this.snackBar.open('Dados da missao atualizados.', 'Fechar', { duration: 2200 });
         this.fecharEdicaoDadosMissao();
       },
-      error: (err) => this.snackBar.open(err.error?.message || 'Falha ao atualizar dados administrativos.', 'Fechar', { duration: 3000 })
+      error: (err) => this.snackBar.open(err.error?.message || 'Falha ao atualizar os dados da missao.', 'Fechar', { duration: 3000 })
     });
   }
 
   acaoAuditoriaMissaoLabel(acao: AcaoAuditoriaMissao): string {
     const labels: Record<AcaoAuditoriaMissao, string> = {
-      ABERTURA_CHECKLIST: 'ABERTURA (CHECKLIST)',
-      ABERTURA_SEM_CHECKLIST: 'ABERTURA (SEM CHECKLIST)',
-      ABERTURA_LEGADO_RECONSTRUIDA: 'ABERTURA (LEGADO RECONSTRUIDO)',
-      ENCERRAMENTO_CHECKLIST: 'ENCERRAMENTO (CHECKLIST)',
-      ENCERRAMENTO_SEM_CHECKLIST: 'ENCERRAMENTO (SEM CHECKLIST)',
-      ENCERRAMENTO_ADMINISTRATIVO: 'ENCERRAMENTO (ADMIN)',
-      ATUALIZACAO_DADOS_ADMINISTRATIVOS: 'ATUALIZACAO DE DADOS ADMIN'
+      ABERTURA_CHECKLIST: 'INICIO: COM CHECKLIST',
+      ABERTURA_SEM_CHECKLIST: 'INICIO: SEM CHECKLIST',
+      ABERTURA_CONTINGENCIA_ADMIN: 'INICIO: PELO ADMIN',
+      ABERTURA_LEGADO_RECONSTRUIDA: 'REGISTRO RECONSTRUIDO',
+      ENCERRAMENTO_CHECKLIST: 'FIM: COM CHECKLIST',
+      ENCERRAMENTO_SEM_CHECKLIST: 'FIM: SEM CHECKLIST',
+      ENCERRAMENTO_PENDENTE_ADMIN: 'FIM: PELO ADMIN (MISSAO EM ABERTO)',
+      ENCERRAMENTO_ADMINISTRATIVO: 'FIM: PELO ADMIN',
+      ATUALIZACAO_DADOS_ADMINISTRATIVOS: 'DADOS DA MISSAO ATUALIZADOS'
     };
     return labels[acao];
   }
@@ -1177,14 +1360,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   formatarDuracaoMissao(segundos: number): string {
     if (!segundos || segundos < 60) {
-      return `${Math.max(0, Math.floor(segundos || 0))}s`;
+      return `${Math.max(0, Math.floor(segundos || 0))} s`;
     }
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
     if (horas > 0) {
-      return `${horas}h ${minutos}min`;
+      return `${horas} h ${minutos} min`;
     }
-    return `${minutos}min`;
+    return `${minutos} min`;
   }
 
   registrosComChecklist(): ConsultaChecklistItem[] {
@@ -1193,6 +1376,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   registrosSemChecklist(): ConsultaChecklistItem[] {
     return this.consultaChecklist.filter(item => item.origem === 'SEM_CHECKLIST');
+  }
+
+  classeLinhaConsultaChecklist(item: ConsultaChecklistItem): string {
+    if (item.statusRegularizacao === 'ATRASADA') {
+      return 'checklist-consulta-atrasada';
+    }
+    if (item.origem === 'SEM_CHECKLIST') {
+      return 'checklist-consulta-sem-checklist';
+    }
+    if (!item.possuiFotos) {
+      return 'checklist-consulta-sem-fotos';
+    }
+    return 'checklist-consulta-com-checklist';
   }
 
   formatarDataHora(dataHoraIso: string): string {
@@ -1227,22 +1423,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       URGENCIA_OPERACIONAL: 'Urgencia operacional',
       SEM_TEMPO_OPERACIONAL: 'Sem tempo operacional',
       FALHA_CAMERA: 'Falha da camera',
+      SEM_INTERNET: 'Sem internet',
+      SEM_CELULAR: 'Sem celular',
+      BATERIA_DESCARREGADA: 'Bateria descarregada',
+      APP_INDISPONIVEL: 'App indisponivel',
       OUTROS: 'Outros'
     };
     return labels[motivo];
-  }
-
-  isExcecaoAberta(status: StatusExcecaoMissao): boolean {
-    return status === 'EXCECAO_ABERTA' || status === 'ATRASADA';
-  }
-
-  duracaoExcecaoLabel(minutos: number): string {
-    if (minutos < 60) {
-      return `${minutos} min`;
-    }
-    const horas = Math.floor(minutos / 60);
-    const resto = minutos % 60;
-    return resto > 0 ? `${horas}h ${resto}min` : `${horas}h`;
   }
 
   statusLabel(status: StatusVeiculo): string {
@@ -1257,6 +1444,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   missaoAtivaPorVeiculo(veiculoId: number): MissaoResponse | null {
     return this.missoesTempoReal.find(m => m.veiculoId === veiculoId) || null;
+  }
+
+  missaoAtivaContingencia(veiculoId: number): boolean {
+    return this.missaoAtivaPorVeiculo(veiculoId)?.origemAbertura === 'CONTINGENCIA_ADMIN';
   }
 
   motoristaEmMissao(veiculo: Veiculo): string {
@@ -1313,6 +1504,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return `${ano}-${mes}-${dia}`;
   }
 
+  private agoraDateTimeLocal(): string {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const minuto = String(agora.getMinutes()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+  }
+
   private isAdminMenu(value: string | null): value is AdminMenu {
     return value === 'operacao'
       || value === 'veiculos'
@@ -1339,7 +1540,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.cadastrosMenuAtivo = menu;
       return;
     }
-    if (menu === 'missoes' || menu === 'tempo-real' || menu === 'checklists' || menu === 'excecoes') {
+    if (menu === 'missoes' || menu === 'checklists') {
       this.controleMenuAtivo = menu;
     }
   }
@@ -1347,8 +1548,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private garantirDadosBasicos(menu: AdminMenu): void {
     const precisaMotoristas = menu === 'motoristas'
       || menu === 'missoes'
-      || menu === 'checklists'
-      || menu === 'excecoes';
+      || menu === 'checklists';
     const precisaVeiculos = menu !== 'motoristas';
 
     if (precisaMotoristas && this.motoristas.length === 0 && !this.loadingMotoristas) {
@@ -1372,10 +1572,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.carregarRotulosStatus();
       return;
     }
-    if (menu === 'excecoes' && (force || this.excecoes.length === 0) && !this.loadingExcecoes) {
-      this.buscarExcecoes();
-      return;
-    }
     if (menu === 'operacao' && (force || this.veiculos.length === 0) && !this.loadingVeiculos) {
       this.carregarVeiculos(this.veiculoBusca);
       this.carregarMissoesTempoReal(false);
@@ -1384,6 +1580,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu === 'tempo-real' && (force || this.missoesTempoReal.length === 0) && !this.loadingTempoReal) {
       this.carregarMissoesTempoReal();
     }
+  }
+
+  private normalizarMenu(menu: AdminMenu): AdminMenu {
+    if (menu === 'tempo-real') {
+      return 'missoes';
+    }
+    if (menu === 'excecoes') {
+      return 'checklists';
+    }
+    return menu;
   }
 
   private criarPainelVazio(): Record<PainelCategoria, Veiculo[]> {
@@ -1410,11 +1616,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private categoriaDoVeiculo(veiculo: Veiculo): PainelCategoria {
+    // Em caso de conflito com status administrativo, missao ativa sempre prevalece no painel.
+    if (veiculo.statusAutomatico === 'CIRCULANDO') {
+      return 'MISSAO';
+    }
     if (veiculo.statusAtual === 'BASE_JOAO_GOULART') {
       return 'DISPONIVEL';
-    }
-    if (veiculo.statusAtual === 'CIRCULANDO') {
-      return 'MISSAO';
     }
     if (veiculo.statusAtual === 'EM_VIAGEM') {
       return 'VIAGEM';
@@ -1486,6 +1693,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       veiculoPlaca: c.veiculoPlaca,
       resumo: 'Checklist fotografico enviado.',
       possuiFotos: c.fotos.length > 0,
+      quantidadeFotos: c.fotos.length,
       statusRegularizacao: 'REGULARIZADA',
       checklist: c
     }));
@@ -1496,6 +1704,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return [...registrosChecklist, ...registrosExcecao]
       // Ordenacao lexical de ISO local evita interpretacao de fuso pelo browser.
       .sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+  }
+
+  private filtrarConsultaChecklist(
+    registros: ConsultaChecklistItem[],
+    situacaoRegistro: SituacaoConsultaChecklist
+  ): ConsultaChecklistItem[] {
+    if (!situacaoRegistro) {
+      return registros;
+    }
+    return registros.filter(item => item.statusRegularizacao === situacaoRegistro);
   }
 
   private mapearEventosExcecao(excecao: MissaoExcecaoResponse): ConsultaChecklistItem[] {
@@ -1510,6 +1728,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       veiculoPlaca: excecao.veiculoPlaca,
       resumo: `Saida sem checklist. Motivo: ${this.motivoExcecaoLabel(excecao.motivo)}. Status: ${this.statusExcecaoLabel(excecao.status)}.`,
       possuiFotos: false,
+      quantidadeFotos: 0,
       statusRegularizacao: excecao.statusRegularizacao,
       excecao
     }];
@@ -1534,6 +1753,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         veiculoPlaca: excecao.veiculoPlaca,
         resumo: resumoChegada,
         possuiFotos: false,
+        quantidadeFotos: 0,
         statusRegularizacao: excecao.statusRegularizacao,
         excecao
       });

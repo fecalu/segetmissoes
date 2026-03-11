@@ -37,12 +37,13 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long>, Jpa
     );
 
     @Query("""
-            select c
+            select distinct c
             from Checklist c
             join fetch c.motorista
             join fetch c.veiculo
+            left join fetch c.fotos
             where c.dataHora between :inicio and :fim
-            order by c.dataHora asc
+            order by c.dataHora asc, c.id asc
             """)
     List<Checklist> buscarParaRelatorio(
             @Param("inicio") LocalDateTime inicio,

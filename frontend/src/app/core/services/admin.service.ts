@@ -3,7 +3,13 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ChecklistResponse, TipoOperacao } from '../models/checklist.model';
 import { EstatisticasMissoesResponse } from '../models/estatisticas-missoes.model';
-import { AuditoriaMissaoResponse, MissaoResponse, StatusDocumentalMissao, StatusMissao } from '../models/missao.model';
+import {
+  AuditoriaMissaoResponse,
+  MissaoResponse,
+  OrigemAberturaMissao,
+  StatusDocumentalMissao,
+  StatusMissao
+} from '../models/missao.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, Veiculo } from '../models/veiculo.model';
@@ -23,6 +29,7 @@ export interface MissaoFiltro {
   motoristaId?: number;
   veiculoId?: number;
   status?: StatusMissao;
+  origemAbertura?: OrigemAberturaMissao;
   statusDocumental?: StatusDocumentalMissao;
   dataInicio?: string;
   dataFim?: string;
@@ -32,6 +39,21 @@ export interface AtualizarDadosAdministrativosMissaoPayload {
   localDestino: string | null;
   setorSolicitante: string | null;
   solicitanteNome: string | null;
+}
+
+export interface CriarMissaoContingenciaPayload {
+  motoristaId: number;
+  veiculoId: number;
+  dataHoraInicio: string;
+  justificativaAbertura: string;
+  localDestino: string | null;
+  setorSolicitante: string | null;
+  solicitanteNome: string | null;
+}
+
+export interface EncerrarMissaoPendentePayload {
+  dataHoraFim: string;
+  justificativaEncerramento: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -96,6 +118,17 @@ export class AdminService {
     payload: AtualizarDadosAdministrativosMissaoPayload
   ): Observable<MissaoResponse> {
     return this.http.put<MissaoResponse>(`${this.missaoUrl}/${missaoId}/dados-administrativos`, payload);
+  }
+
+  criarMissaoContingencia(payload: CriarMissaoContingenciaPayload): Observable<MissaoResponse> {
+    return this.http.post<MissaoResponse>(`${this.missaoUrl}/contingencias`, payload);
+  }
+
+  encerrarMissaoPendente(
+    missaoId: number,
+    payload: EncerrarMissaoPendentePayload
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/encerrar-pendente`, payload);
   }
 
   gerarRelatorioChecklistPdf(dataInicial: string, dataFinal: string): Observable<Blob> {

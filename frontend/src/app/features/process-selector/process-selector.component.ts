@@ -36,10 +36,10 @@ export class ProcessSelectorComponent implements OnInit {
 
   selecionarFluxo(fluxo: 'INICIAR' | 'FINALIZAR'): void {
     if (fluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Voce possui missao ativa. Finalize a missao atual antes de iniciar outra.', 'Fechar', { duration: 2600 });
+      this.snackBar.open('Voce possui missao em andamento. Finalize a missao atual antes de iniciar outra.', 'Fechar', { duration: 2600 });
       return;
     }
-    this.selectedFluxo = fluxo;
+    this.selectedFluxo = this.selectedFluxo === fluxo ? null : fluxo;
   }
 
   irComChecklist(): void {
@@ -47,7 +47,7 @@ export class ProcessSelectorComponent implements OnInit {
       return;
     }
     if (this.selectedFluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Finalize sua missao atual antes de iniciar outra.', 'Fechar', { duration: 2600 });
+      this.snackBar.open('Finalize sua missao em andamento antes de iniciar outra.', 'Fechar', { duration: 2600 });
       return;
     }
     const operacao = this.selectedFluxo === 'INICIAR' ? 'SAIDA' : 'ENTRADA';
@@ -59,7 +59,7 @@ export class ProcessSelectorComponent implements OnInit {
       return;
     }
     if (this.selectedFluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Finalize sua missao atual antes de iniciar outra.', 'Fechar', { duration: 2600 });
+      this.snackBar.open('Finalize sua missao em andamento antes de iniciar outra.', 'Fechar', { duration: 2600 });
       return;
     }
     const operacao = this.selectedFluxo === 'INICIAR' ? 'SAIDA' : 'ENTRADA';
@@ -108,7 +108,7 @@ export class ProcessSelectorComponent implements OnInit {
           }
         },
         error: () => {
-          this.snackBar.open('Nao foi possivel validar sua missao ativa agora.', 'Fechar', { duration: 2600 });
+          this.snackBar.open('Nao foi possivel validar sua missao em andamento agora.', 'Fechar', { duration: 2600 });
         }
       });
   }
