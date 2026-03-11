@@ -17,6 +17,8 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
     public void run(String... args) {
         atualizarConstraintsStatusVeiculo();
         atualizarConstraintsHistoricoStatusVeiculo();
+        atualizarConstraintsConfigRotuloStatusVeiculo();
+        atualizarConstraintsConfigSugestaoMissao();
         atualizarConstraintsMissaoExcecao();
         atualizarConstraintsMissoes();
         atualizarConstraintsAuditoriaMissao();
@@ -59,6 +61,40 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 add constraint historico_status_veiculo_status_novo_check
                 check (status_novo in
                 """ + allowed + ")");
+    }
+
+    private void atualizarConstraintsConfigRotuloStatusVeiculo() {
+        executarSilencioso("alter table config_rotulo_status_veiculo drop constraint if exists config_rotulo_status_veiculo_status_check");
+        executarSilencioso("""
+                alter table config_rotulo_status_veiculo
+                add constraint config_rotulo_status_veiculo_status_check
+                check (status in (
+                    'CIRCULANDO',
+                    'BASE_JOAO_GOULART',
+                    'NO_PATIO',
+                    'AGUARDANDO_REALOCACAO',
+                    'OFICINA',
+                    'EM_VIAGEM',
+                    'MANUTENCAO',
+                    'BLOQUEADO',
+                    'ATIVO',
+                    'INATIVO'
+                ))
+                """);
+    }
+
+    private void atualizarConstraintsConfigSugestaoMissao() {
+        executarSilencioso("alter table config_sugestao_missao drop constraint if exists config_sugestao_missao_campo_check");
+        executarSilencioso("""
+                alter table config_sugestao_missao
+                add constraint config_sugestao_missao_campo_check
+                check (campo in (
+                    'DESTINO',
+                    'SETOR_SOLICITANTE',
+                    'SOLICITANTE',
+                    'JUSTIFICATIVA_REGISTRO_MANUAL'
+                ))
+                """);
     }
 
     private void atualizarConstraintsMissaoExcecao() {

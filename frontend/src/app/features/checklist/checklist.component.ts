@@ -65,6 +65,9 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   activeCameraKey: FotoKey | null = null;
   fallbackCaptureKey: FotoKey | null = null;
   cameraError: string | null = null;
+  lanternaDisponivel = false;
+  lanternaAtiva = false;
+  alternandoLanterna = false;
   private cameraStream: MediaStream | null = null;
   @ViewChild('cameraVideo') cameraVideo?: ElementRef<HTMLVideoElement>;
   @ViewChild('fallbackInput') fallbackInput?: ElementRef<HTMLInputElement>;
@@ -249,6 +252,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
         video: { facingMode: { ideal: 'environment' } },
         audio: false
       });
+      this.atualizarSuporteLanterna();
       this.attachStreamToVideo();
     } catch {
       this.closeCamera();
@@ -282,21 +286,22 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-    if (!blob) {
+    this.desenharCarimboDataHora(ctx, canvas.width, canvas.height);
+
+    const file = await this.gerarArquivoJpeg(canvas, this.activeCameraKey);
+    if (!file) {
       this.snackBar.open('Falha ao gerar imagem.', 'Fechar', { duration: 1600 });
       return;
     }
 
     const key = this.activeCameraKey;
-    const file = new File([blob], `${key}_${Date.now()}.jpg`, { type: 'image/jpeg' });
     this.applyCapturedFile(key, file);
 
     this.snackBar.open('Foto capturada com sucesso.', 'Fechar', { duration: 1500 });
     this.closeCamera();
   }
 
-  onFallbackFileChange(event: Event): void {
+  async onFallbackFileChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     const key = this.fallbackCaptureKey;
@@ -306,11 +311,45 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       return;
     }
 
-    this.applyCapturedFile(key, file);
+    const arquivoCarimbado = await this.carimbarArquivoImagem(file, key);
+    if (!arquivoCarimbado) {
+      this.snackBar.open('Falha ao preparar imagem.', 'Fechar', { duration: 1800 });
+      input.value = '';
+      return;
+    }
+
+    this.applyCapturedFile(key, arquivoCarimbado);
     this.fallbackCaptureKey = null;
     this.cameraError = null;
     input.value = '';
     this.snackBar.open('Foto capturada com sucesso.', 'Fechar', { duration: 1500 });
+  }
+
+  async alternarLanterna(): Promise<void> {
+    if (!this.lanternaDisponivel || this.alternandoLanterna || !this.cameraStream) {
+      return;
+    }
+
+    const trilha = this.cameraStream.getVideoTracks()[0];
+    if (!trilha) {
+      return;
+    }
+
+    this.alternandoLanterna = true;
+    const novoEstado = !this.lanternaAtiva;
+
+    try {
+      await trilha.applyConstraints({
+        advanced: [{ torch: novoEstado } as MediaTrackConstraintSet & { torch: boolean }]
+      });
+      this.lanternaAtiva = novoEstado;
+    } catch {
+      this.snackBar.open('Lanterna nao suportada neste aparelho ou navegador.', 'Fechar', { duration: 2200 });
+      this.lanternaDisponivel = false;
+      this.lanternaAtiva = false;
+    } finally {
+      this.alternandoLanterna = false;
+    }
   }
 
   clearPhoto(key: FotoKey): void {
@@ -464,6 +503,9 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private stopCamera(): void {
+    this.lanternaDisponivel = false;
+    this.lanternaAtiva = false;
+    this.alternandoLanterna = false;
     if (this.cameraStream) {
       this.cameraStream.getTracks().forEach(track => track.stop());
       this.cameraStream = null;
@@ -479,5 +521,98 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   isStep2Externa(): boolean {
     return !this.isStep1Externa();
+  }
+
+  private atualizarSuporteLanterna(): void {
+    const trilha = this.cameraStream?.getVideoTracks()[0];
+    if (!trilha || typeof trilha.getCapabilities !== 'function') {
+      this.lanternaDisponivel = false;
+      this.lanternaAtiva = false;
+      return;
+    }
+
+    const capacidades = trilha.getCapabilities() as MediaTrackCapabilities & { torch?: boolean };
+    this.lanternaDisponivel = !!capacidades.torch;
+    if (!this.lanternaDisponivel) {
+      this.lanternaAtiva = false;
+    }
+  }
+
+  private desenharCarimboDataHora(ctx: CanvasRenderingContext2D, largura: number, altura: number): void {
+    const texto = this.dataHoraCarimbo();
+    const padding = Math.max(14, Math.round(largura * 0.015));
+    const fontSize = Math.max(20, Math.round(largura * 0.024));
+
+    ctx.save();
+    ctx.font = `700 ${fontSize}px Arial, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+
+    const metrics = ctx.measureText(texto);
+    const boxWidth = metrics.width + padding * 2;
+    const boxHeight = fontSize + padding * 1.4;
+    const x = largura - padding;
+    const y = altura - padding;
+
+    ctx.fillStyle = 'rgba(8, 17, 11, 0.72)';
+    ctx.fillRect(largura - boxWidth - padding / 2, altura - boxHeight - padding / 2, boxWidth, boxHeight);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(texto, x, y);
+    ctx.restore();
+  }
+
+  private dataHoraCarimbo(): string {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(new Date());
+  }
+
+  private async gerarArquivoJpeg(canvas: HTMLCanvasElement, key: FotoKey): Promise<File | null> {
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) {
+      return null;
+    }
+
+    return new File([blob], `${key}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+  }
+
+  private async carimbarArquivoImagem(file: File, key: FotoKey): Promise<File | null> {
+    const imagem = await this.carregarImagem(file);
+    if (!imagem) {
+      return null;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = imagem.naturalWidth || imagem.width;
+    canvas.height = imagem.naturalHeight || imagem.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+
+    ctx.drawImage(imagem, 0, 0, canvas.width, canvas.height);
+    this.desenharCarimboDataHora(ctx, canvas.width, canvas.height);
+    return this.gerarArquivoJpeg(canvas, key);
+  }
+
+  private carregarImagem(file: File): Promise<HTMLImageElement | null> {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const imagem = new Image();
+      imagem.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(imagem);
+      };
+      imagem.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      imagem.src = url;
+    });
   }
 }

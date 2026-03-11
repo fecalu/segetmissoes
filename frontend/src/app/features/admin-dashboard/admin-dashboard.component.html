@@ -18,7 +18,7 @@
     <nav class="admin-submenu" *ngIf="isCadastrosAtivo()">
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'veiculos'" (click)="setCadastroMenu('veiculos')">Veiculos</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'motoristas'" (click)="setCadastroMenu('motoristas')">Motoristas</button>
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'rotulos-status'" (click)="setCadastroMenu('rotulos-status')">Rotulos status</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'rotulos-status'" (click)="setCadastroMenu('rotulos-status')">Rotulos e sugestoes</button>
     </nav>
 
     <nav class="admin-submenu" *ngIf="isControleAtivo()">
@@ -154,7 +154,7 @@
             </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="editarVeiculo(v)">Editar</button>
-              <button mat-stroked-button type="button" (click)="desativarVeiculo(v)">Baixar</button>
+              <button mat-stroked-button type="button" (click)="desativarVeiculo(v)">Dar baixa</button>
             </div>
           </article>
         </div>
@@ -224,8 +224,8 @@
       <mat-card class="panel-card">
         <div class="checklist-topline">
           <div>
-            <h3>Rotulos de status dos veiculos</h3>
-            <p class="panel-helper">Edite os nomes exibidos nas etiquetas de status em todo o painel administrativo.</p>
+            <h3>Rotulos e sugestoes operacionais</h3>
+            <p class="panel-helper">Edite os nomes dos status dos veiculos e mantenha listas de sugestoes para destino, setor solicitante, quem solicitou e justificativas do registro manual.</p>
           </div>
           <div class="checklist-actions">
             <button mat-stroked-button type="button" (click)="carregarRotulosStatus()">Atualizar</button>
@@ -249,6 +249,53 @@
             <button mat-stroked-button type="button" (click)="restaurarRotuloPadrao(item)">Padrao</button>
           </article>
           <p class="empty-column" *ngIf="!loadingRotulosStatus && rotulosStatusEditor.length === 0">Nenhum rotulo encontrado.</p>
+        </div>
+
+        <div class="list-header">
+          <strong>Sugestoes para missoes</strong>
+          <span *ngIf="loadingSugestoesMissao">Carregando...</span>
+        </div>
+        <div class="sugestoes-missao-grid">
+          <section class="sugestao-missao-card" *ngFor="let campo of camposSugestaoMissao">
+            <div class="sugestao-missao-head">
+              <strong>{{ campo.titulo }}</strong>
+              <span>{{ sugestoesMissaoEditor[campo.key].length }} sugestoes</span>
+            </div>
+
+            <div class="sugestao-missao-add">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>{{ campo.placeholder }}</mat-label>
+                <textarea
+                  *ngIf="campo.key === 'justificativasRegistroManual'; else inputSugestaoMissao"
+                  matInput
+                  rows="3"
+                  maxlength="700"
+                  [(ngModel)]="novaSugestaoMissao[campo.key]"
+                  [ngModelOptions]="{standalone: true}"
+                ></textarea>
+                <ng-template #inputSugestaoMissao>
+                  <input
+                    matInput
+                    [(ngModel)]="novaSugestaoMissao[campo.key]"
+                    [ngModelOptions]="{standalone: true}"
+                    (keydown.enter)="adicionarSugestaoMissao(campo.key); $event.preventDefault()"
+                  >
+                </ng-template>
+                <mat-hint align="end" *ngIf="campo.key === 'justificativasRegistroManual'">
+                  {{ novaSugestaoMissao[campo.key].length }}/700
+                </mat-hint>
+              </mat-form-field>
+              <button mat-stroked-button type="button" (click)="adicionarSugestaoMissao(campo.key)">Adicionar</button>
+            </div>
+
+            <div class="sugestao-missao-lista">
+              <article class="sugestao-missao-item" *ngFor="let valor of sugestoesMissaoEditor[campo.key]">
+                <span>{{ valor }}</span>
+                <button mat-stroked-button type="button" (click)="removerSugestaoMissao(campo.key, valor)">Remover</button>
+              </article>
+              <p class="empty-column" *ngIf="sugestoesMissaoEditor[campo.key].length === 0">Nenhuma sugestao cadastrada.</p>
+            </div>
+          </section>
         </div>
       </mat-card>
     </section>
@@ -590,24 +637,44 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Destino</mat-label>
-        <input matInput maxlength="180" formControlName="localDestino">
+        <input matInput maxlength="180" formControlName="localDestino" [matAutocomplete]="autoDestinoContingencia">
       </mat-form-field>
+      <mat-autocomplete #autoDestinoContingencia="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('destinos', missaoContingenciaForm.getRawValue().localDestino)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
 
       <mat-form-field appearance="outline">
         <mat-label>Setor solicitante</mat-label>
-        <input matInput maxlength="160" formControlName="setorSolicitante">
+        <input matInput maxlength="160" formControlName="setorSolicitante" [matAutocomplete]="autoSetorContingencia">
       </mat-form-field>
+      <mat-autocomplete #autoSetorContingencia="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('setoresSolicitantes', missaoContingenciaForm.getRawValue().setorSolicitante)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
 
       <mat-form-field appearance="outline">
         <mat-label>Quem solicitou</mat-label>
-        <input matInput maxlength="160" formControlName="solicitanteNome">
+        <input matInput maxlength="160" formControlName="solicitanteNome" [matAutocomplete]="autoSolicitanteContingencia">
       </mat-form-field>
+      <mat-autocomplete #autoSolicitanteContingencia="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('solicitantes', missaoContingenciaForm.getRawValue().solicitanteNome)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Justificativa do registro manual</mat-label>
-        <textarea matInput rows="4" maxlength="700" formControlName="justificativaAbertura"></textarea>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativaAbertura" [matAutocomplete]="autoJustificativaContingencia"></textarea>
         <mat-hint align="end">{{ missaoContingenciaForm.getRawValue().justificativaAbertura.length }}/700</mat-hint>
       </mat-form-field>
+      <mat-autocomplete #autoJustificativaContingencia="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('justificativasRegistroManual', missaoContingenciaForm.getRawValue().justificativaAbertura)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
 
       <div class="row-actions">
         <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Cancelar</button>
@@ -679,16 +746,31 @@
     <form [formGroup]="missaoDadosForm" class="form-grid">
       <mat-form-field appearance="outline">
         <mat-label>Local de destino</mat-label>
-        <input matInput formControlName="localDestino" maxlength="180">
+        <input matInput formControlName="localDestino" maxlength="180" [matAutocomplete]="autoDestinoDados">
       </mat-form-field>
+      <mat-autocomplete #autoDestinoDados="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('destinos', missaoDadosForm.getRawValue().localDestino)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
       <mat-form-field appearance="outline">
         <mat-label>Setor solicitante</mat-label>
-        <input matInput formControlName="setorSolicitante" maxlength="160">
+        <input matInput formControlName="setorSolicitante" maxlength="160" [matAutocomplete]="autoSetorDados">
       </mat-form-field>
+      <mat-autocomplete #autoSetorDados="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('setoresSolicitantes', missaoDadosForm.getRawValue().setorSolicitante)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
       <mat-form-field appearance="outline">
         <mat-label>Nome de quem solicitou</mat-label>
-        <input matInput formControlName="solicitanteNome" maxlength="160">
+        <input matInput formControlName="solicitanteNome" maxlength="160" [matAutocomplete]="autoSolicitanteDados">
       </mat-form-field>
+      <mat-autocomplete #autoSolicitanteDados="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('solicitantes', missaoDadosForm.getRawValue().solicitanteNome)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
     </form>
 
     <div class="row-actions">

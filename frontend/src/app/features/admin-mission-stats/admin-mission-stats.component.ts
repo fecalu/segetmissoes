@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -35,6 +35,7 @@ export class AdminMissionStatsComponent {
   constructor(
     private readonly fb: FormBuilder,
     private readonly adminService: AdminService,
+    private readonly location: Location,
     private readonly router: Router,
     private readonly snackBar: MatSnackBar
   ) {
@@ -47,7 +48,12 @@ export class AdminMissionStatsComponent {
   }
 
   voltar(): void {
-    this.router.navigate(['/admin'], { queryParams: { menu: 'checklists' } });
+    if (window.history.length > 1) {
+      this.location.back();
+      return;
+    }
+
+    this.router.navigate(['/admin']);
   }
 
   buscar(): void {

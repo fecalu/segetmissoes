@@ -4,6 +4,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, Router } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MatCardModule } from '@angular/material/card';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -21,6 +22,7 @@ import {
   StatusDocumentalMissao,
   StatusMissao
 } from '../../core/models/missao.model';
+import { SugestoesCamposMissaoResponse } from '../../core/models/missao-suggestion.model';
 import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from '../../core/models/missao-excecao.model';
 import { Motorista } from '../../core/models/motorista.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
@@ -46,6 +48,7 @@ type ControleMenu = 'missoes' | 'checklists';
 type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
+type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -82,6 +85,7 @@ interface GlossarioBadgeItem extends GlossarioItem {
     ReactiveFormsModule,
     DragDropModule,
     MatCardModule,
+    MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -116,6 +120,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadingAuditoriaMissao = false;
   loadingHistoricoStatus = false;
   loadingRotulosStatus = false;
+  loadingSugestoesMissao = false;
   gerandoRelatorioMissoes = false;
   salvandoRotulosStatus = false;
 
@@ -138,6 +143,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   auditoriaMissao: AuditoriaMissaoResponse[] = [];
   historicoStatus: HistoricoStatusVeiculo[] = [];
   rotulosStatusEditor: RotuloStatusVeiculoResponse[] = [];
+  sugestoesMissaoEditor: SugestoesCamposMissaoResponse = {
+    destinos: [],
+    setoresSolicitantes: [],
+    solicitantes: [],
+    justificativasRegistroManual: []
+  };
+  novaSugestaoMissao: Record<CampoSugestaoMissaoEditor, string> = {
+    destinos: '',
+    setoresSolicitantes: '',
+    solicitantes: '',
+    justificativasRegistroManual: ''
+  };
   dataRelatorioMissoes = this.hojeIso();
   showNovaMissaoModal = false;
   novaMissaoModo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA';
@@ -226,6 +243,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: 'Resumo', descricao: 'Explica rapidamente o que aconteceu naquele registro.' },
     { termo: 'Fotos', descricao: 'Abre as imagens quando o registro possui checklist fotografico.' },
     { termo: 'Sem fotos', descricao: 'Aparece quando o registro nao tem nenhuma imagem vinculada.' }
+  ];
+  readonly camposSugestaoMissao: Array<{ key: CampoSugestaoMissaoEditor; titulo: string; placeholder: string }> = [
+    { key: 'destinos', titulo: 'Destino', placeholder: 'Adicionar destino' },
+    { key: 'setoresSolicitantes', titulo: 'Setor solicitante', placeholder: 'Adicionar setor' },
+    { key: 'solicitantes', titulo: 'Quem solicitou', placeholder: 'Adicionar solicitante' },
+    { key: 'justificativasRegistroManual', titulo: 'Justificativa do registro manual', placeholder: 'Adicionar frase pronta' }
   ];
 
   readonly motoristaForm;
@@ -563,20 +586,30 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   carregarRotulosStatus(showError = true): void {
     this.loadingRotulosStatus = true;
-    this.adminService.listarRotulosStatusVeiculo()
-      .pipe(finalize(() => (this.loadingRotulosStatus = false)))
+    this.loadingSugestoesMissao = true;
+    forkJoin({
+      rotulos: this.adminService.listarRotulosStatusVeiculo(),
+      sugestoes: this.adminService.listarSugestoesCamposMissao()
+    })
+      .pipe(finalize(() => {
+        this.loadingRotulosStatus = false;
+        this.loadingSugestoesMissao = false;
+      }))
       .subscribe({
-        next: data => this.aplicarRotulosStatus(data),
+        next: ({ rotulos, sugestoes }) => {
+          this.aplicarRotulosStatus(rotulos);
+          this.aplicarSugestoesMissao(sugestoes);
+        },
         error: () => {
           if (showError) {
-            this.snackBar.open('Falha ao carregar rotulos de status.', 'Fechar', { duration: 2800 });
+            this.snackBar.open('Falha ao carregar rotulos e sugestoes.', 'Fechar', { duration: 2800 });
           }
         }
       });
   }
 
   salvarRotulosStatus(): void {
-    if (this.rotulosStatusEditor.length === 0) {
+    if (this.rotulosStatusEditor.length === 0 && this.totalSugestoesMissao() === 0) {
       return;
     }
 
@@ -593,19 +626,68 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.salvandoRotulosStatus = true;
-    this.adminService.salvarRotulosStatusVeiculo(payload)
+    forkJoin({
+      rotulos: this.adminService.salvarRotulosStatusVeiculo(payload),
+      sugestoes: this.adminService.salvarSugestoesCamposMissao(this.sugestoesMissaoEditor)
+    })
       .pipe(finalize(() => (this.salvandoRotulosStatus = false)))
       .subscribe({
-        next: data => {
-          this.aplicarRotulosStatus(data);
-          this.snackBar.open('Rotulos de status atualizados.', 'Fechar', { duration: 2200 });
+        next: ({ rotulos, sugestoes }) => {
+          this.aplicarRotulosStatus(rotulos);
+          this.aplicarSugestoesMissao(sugestoes);
+          this.snackBar.open('Rotulos e sugestoes atualizados.', 'Fechar', { duration: 2200 });
         },
-        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao salvar rotulos de status.', 'Fechar', { duration: 3200 })
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao salvar configuracoes.', 'Fechar', { duration: 3200 })
       });
   }
 
   restaurarRotuloPadrao(item: RotuloStatusVeiculoResponse): void {
     item.rotulo = item.rotuloPadrao;
+  }
+
+  adicionarSugestaoMissao(campo: CampoSugestaoMissaoEditor): void {
+    const valor = (this.novaSugestaoMissao[campo] || '').trim();
+    if (!valor) {
+      return;
+    }
+
+    const maximo = this.tamanhoMaximoSugestaoMissao(campo);
+    if (valor.length > maximo) {
+      this.snackBar.open(`Valor deve ter no maximo ${maximo} caracteres.`, 'Fechar', { duration: 2400 });
+      return;
+    }
+
+    const jaExiste = this.sugestoesMissaoEditor[campo]
+      .some(item => item.toUpperCase() === valor.toUpperCase());
+    if (jaExiste) {
+      this.snackBar.open('Sugestao ja cadastrada nesta lista.', 'Fechar', { duration: 2200 });
+      return;
+    }
+
+    this.sugestoesMissaoEditor = {
+      ...this.sugestoesMissaoEditor,
+      [campo]: [...this.sugestoesMissaoEditor[campo], valor].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
+    };
+    this.novaSugestaoMissao[campo] = '';
+  }
+
+  removerSugestaoMissao(campo: CampoSugestaoMissaoEditor, valor: string): void {
+    this.sugestoesMissaoEditor = {
+      ...this.sugestoesMissaoEditor,
+      [campo]: this.sugestoesMissaoEditor[campo].filter(item => item !== valor)
+    };
+  }
+
+  sugestoesFiltradasMissao(campo: CampoSugestaoMissaoEditor, termo: string | null | undefined): string[] {
+    const valor = (termo || '').trim().toUpperCase();
+    return this.sugestoesMissaoEditor[campo].filter(item => item.toUpperCase().includes(valor));
+  }
+
+  totalSugestoesMissao(): number {
+    return this.sugestoesMissaoEditor.destinos.length
+      + this.sugestoesMissaoEditor.setoresSolicitantes.length
+      + this.sugestoesMissaoEditor.solicitantes.length
+      + this.sugestoesMissaoEditor.justificativasRegistroManual.length;
   }
 
   carregarMotoristas(busca?: string): void {
@@ -920,9 +1002,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.abrirConfirmacao({
-      title: 'Baixar/desativar veiculo',
+      title: 'Dar baixa/desativar veiculo',
       message: `Deseja baixar/desativar o veiculo ${veiculo.placa}?`,
-      confirmText: 'Baixar',
+      confirmText: 'Dar baixa',
       confirmColor: 'warn'
     }, () => {
       this.adminService.desativarVeiculo(veiculo.id).subscribe({
@@ -1590,6 +1672,31 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return 'checklists';
     }
     return menu;
+  }
+
+  private aplicarSugestoesMissao(sugestoes: SugestoesCamposMissaoResponse): void {
+    this.sugestoesMissaoEditor = {
+      destinos: [...(sugestoes.destinos || [])],
+      setoresSolicitantes: [...(sugestoes.setoresSolicitantes || [])],
+      solicitantes: [...(sugestoes.solicitantes || [])],
+      justificativasRegistroManual: [...(sugestoes.justificativasRegistroManual || [])]
+    };
+    this.novaSugestaoMissao = {
+      destinos: '',
+      setoresSolicitantes: '',
+      solicitantes: '',
+      justificativasRegistroManual: ''
+    };
+  }
+
+  private tamanhoMaximoSugestaoMissao(campo: CampoSugestaoMissaoEditor): number {
+    if (campo === 'destinos') {
+      return 180;
+    }
+    if (campo === 'justificativasRegistroManual') {
+      return 700;
+    }
+    return 160;
   }
 
   private criarPainelVazio(): Record<PainelCategoria, Veiculo[]> {

@@ -199,13 +199,26 @@
 <section class="camera-overlay" *ngIf="activeCameraKey">
   <article class="camera-card">
     <header>
-      <h3>Capturar: {{ getActivePhotoLabel() }}</h3>
+      <div>
+        <h3>Capturar: {{ getActivePhotoLabel() }}</h3>
+        <p class="camera-note camera-overlay-note">Data e hora serao gravadas automaticamente na foto.</p>
+      </div>
       <button mat-stroked-button type="button" (click)="closeCamera()">Fechar</button>
     </header>
 
     <video #cameraVideo autoplay playsinline muted></video>
 
     <div class="camera-controls">
+      <button
+        mat-stroked-button
+        type="button"
+        class="camera-flash-btn"
+        *ngIf="lanternaDisponivel"
+        [disabled]="alternandoLanterna"
+        (click)="alternarLanterna()"
+      >
+        {{ lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna' }}
+      </button>
       <button
         mat-flat-button
         color="primary"

@@ -284,6 +284,68 @@
   flex: 1 1 260px;
 }
 
+.sugestoes-missao-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.sugestao-missao-card {
+  border: 1px solid #dce5fb;
+  border-radius: 12px;
+  background: #f9fbff;
+  padding: 10px;
+}
+
+.sugestao-missao-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.sugestao-missao-head span {
+  font-size: 0.78rem;
+  color: #5b6688;
+}
+
+.sugestao-missao-add {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.sugestao-missao-add button {
+  min-height: 40px;
+  font-weight: 700;
+}
+
+.sugestao-missao-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sugestao-missao-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #d6e0f8;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.sugestao-missao-item span {
+  color: #30456f;
+  font-size: 0.86rem;
+  word-break: break-word;
+}
+
 .checklist-row {
   align-items: flex-start;
 }
@@ -975,6 +1037,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .sugestoes-missao-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sugestao-missao-add {
+    grid-template-columns: 1fr auto;
+  }
+
   .operacao-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1033,6 +1103,10 @@
 
   .operacao-kpis {
     grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .sugestoes-missao-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .form-grid,

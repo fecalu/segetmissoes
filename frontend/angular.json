@@ -25,7 +25,6 @@
             "styles": [
               "src/styles.css"
             ],
-            "serviceWorker": "ngsw-config.json",
             "optimization": {
               "scripts": true,
               "styles": true,

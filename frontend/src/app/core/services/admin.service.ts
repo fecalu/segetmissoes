@@ -10,6 +10,7 @@ import {
   StatusDocumentalMissao,
   StatusMissao
 } from '../models/missao.model';
+import { SalvarSugestoesCamposMissaoRequest, SugestoesCamposMissaoResponse } from '../models/missao-suggestion.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, Veiculo } from '../models/veiculo.model';
@@ -63,6 +64,7 @@ export class AdminService {
   private readonly missaoUrl = `${environment.apiBaseUrl}/admin/missoes`;
   private readonly veiculoUrl = `${environment.apiBaseUrl}/admin/veiculos`;
   private readonly configuracaoRotuloStatusVeiculoUrl = `${environment.apiBaseUrl}/admin/configuracoes/rotulos-status-veiculo`;
+  private readonly configuracaoSugestoesMissaoUrl = `${environment.apiBaseUrl}/admin/configuracoes/sugestoes-missao`;
   private readonly relatorioChecklistUrl = `${environment.apiBaseUrl}/admin/relatorios/checklists/pdf`;
   private readonly relatorioMissaoUrl = `${environment.apiBaseUrl}/admin/relatorios/missoes/pdf`;
   private readonly estatisticasMissoesUrl = `${environment.apiBaseUrl}/admin/estatisticas/missoes`;
@@ -206,5 +208,13 @@ export class AdminService {
 
   salvarRotulosStatusVeiculo(payload: SalvarRotulosStatusVeiculoRequest): Observable<RotuloStatusVeiculoResponse[]> {
     return this.http.put<RotuloStatusVeiculoResponse[]>(this.configuracaoRotuloStatusVeiculoUrl, payload);
+  }
+
+  listarSugestoesCamposMissao(): Observable<SugestoesCamposMissaoResponse> {
+    return this.http.get<SugestoesCamposMissaoResponse>(this.configuracaoSugestoesMissaoUrl);
+  }
+
+  salvarSugestoesCamposMissao(payload: SalvarSugestoesCamposMissaoRequest): Observable<SugestoesCamposMissaoResponse> {
+    return this.http.put<SugestoesCamposMissaoResponse>(this.configuracaoSugestoesMissaoUrl, payload);
   }
 }
