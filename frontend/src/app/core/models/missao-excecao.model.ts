@@ -39,4 +39,5 @@ export interface MissaoExcecaoResponse {
   ipOrigem: string | null;
   dispositivo: string | null;
   localizacao: string | null;
+  somenteEncerramentoSemChecklist: boolean;
 }

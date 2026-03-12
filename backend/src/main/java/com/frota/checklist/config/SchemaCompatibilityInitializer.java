@@ -3,11 +3,13 @@ package com.frota.checklist.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Order(0)
 @Slf4j
 public class SchemaCompatibilityInitializer implements CommandLineRunner {
 
@@ -100,6 +102,10 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
     }
 
     private void atualizarConstraintsMissaoExcecao() {
+        executarSilencioso("""
+                alter table missoes_excecao
+                add column if not exists somente_encerramento_sem_checklist boolean not null default false
+                """);
         executarSilencioso("alter table missoes_excecao drop constraint if exists missoes_excecao_status_check");
         executarSilencioso("""
                 alter table missoes_excecao

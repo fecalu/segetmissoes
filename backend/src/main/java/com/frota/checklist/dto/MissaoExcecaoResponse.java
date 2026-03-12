@@ -26,6 +26,7 @@ public record MissaoExcecaoResponse(
         Long checklistRegularizacaoId,
         String ipOrigem,
         String dispositivo,
-        String localizacao
+        String localizacao,
+        boolean somenteEncerramentoSemChecklist
 ) {
 }

@@ -77,6 +77,9 @@ public class MissaoExcecao {
     @Column(length = 140)
     private String localizacao;
 
+    @Column(nullable = false, columnDefinition = "boolean not null default false")
+    private boolean somenteEncerramentoSemChecklist;
+
     @PrePersist
     public void prePersist() {
         if (dataHoraAbertura == null) {

@@ -133,6 +133,7 @@ public class MissaoExcecaoService {
             regularizacao.setAceiteResponsabilidade(true);
             regularizacao.setStatus(StatusExcecaoMissao.REGULARIZADA_SEM_CHECKLIST);
             regularizacao.setDataHoraRegularizacao(agora);
+            regularizacao.setSomenteEncerramentoSemChecklist(true);
             registro = missaoExcecaoRepository.save(regularizacao);
         }
 
@@ -321,7 +322,8 @@ public class MissaoExcecaoService {
                 missao.getChecklistRegularizacaoId(),
                 missao.getIpOrigem(),
                 missao.getDispositivo(),
-                missao.getLocalizacao()
+                missao.getLocalizacao(),
+                missao.isSomenteEncerramentoSemChecklist()
         );
     }
 

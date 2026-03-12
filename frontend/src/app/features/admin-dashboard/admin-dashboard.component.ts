@@ -2647,21 +2647,25 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private mapearEventosExcecao(excecao: MissaoExcecaoResponse): ConsultaChecklistItem[] {
-    const eventos: ConsultaChecklistItem[] = [{
-      idExibicao: `E-${excecao.id}-S`,
-      origem: 'SEM_CHECKLIST',
-      tipoOperacao: 'SAIDA',
-      dataHora: excecao.dataHoraAbertura,
-      motoristaId: excecao.motoristaId,
-      motoristaNome: excecao.motoristaNome,
-      veiculoId: excecao.veiculoId,
-      veiculoPlaca: excecao.veiculoPlaca,
-      resumo: `Saida sem checklist. Motivo: ${this.motivoExcecaoLabel(excecao.motivo)}. Status: ${this.statusExcecaoLabel(excecao.status)}.`,
-      possuiFotos: false,
-      quantidadeFotos: 0,
-      statusRegularizacao: excecao.statusRegularizacao,
-      excecao
-    }];
+    const eventos: ConsultaChecklistItem[] = [];
+
+    if (!excecao.somenteEncerramentoSemChecklist) {
+      eventos.push({
+        idExibicao: `E-${excecao.id}-S`,
+        origem: 'SEM_CHECKLIST',
+        tipoOperacao: 'SAIDA',
+        dataHora: excecao.dataHoraAbertura,
+        motoristaId: excecao.motoristaId,
+        motoristaNome: excecao.motoristaNome,
+        veiculoId: excecao.veiculoId,
+        veiculoPlaca: excecao.veiculoPlaca,
+        resumo: `Saida sem checklist. Motivo: ${this.motivoExcecaoLabel(excecao.motivo)}. Status: ${this.statusExcecaoLabel(excecao.status)}.`,
+        possuiFotos: false,
+        quantidadeFotos: 0,
+        statusRegularizacao: excecao.statusRegularizacao,
+        excecao
+      });
+    }
 
     const geraChegadaSemChecklist =
       (excecao.status === 'REGULARIZADA_SEM_CHECKLIST' || excecao.status === 'ENCERRADA_ADMIN')

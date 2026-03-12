@@ -346,19 +346,21 @@ public class RelatorioChecklistPdfService {
 
     private List<RegistroConsultaChecklistPdf> mapearEventosExcecao(MissaoExcecao excecao) {
         List<RegistroConsultaChecklistPdf> eventos = new java.util.ArrayList<>();
-        eventos.add(new RegistroConsultaChecklistPdf(
-                "E-" + excecao.getId() + "-S",
-                excecao.getDataHoraAbertura(),
-                TipoOperacao.SAIDA,
-                false,
-                statusRegularizacaoExcecao(excecao),
-                excecao.getMotorista().getNome(),
-                excecao.getVeiculo().getMarca() + " " + excecao.getVeiculo().getModelo(),
-                excecao.getVeiculo().getPlaca(),
-                "Saida sem checklist. Motivo: " + motivoExcecaoLabel(excecao.getMotivo()) + ".",
-                0,
-                List.of()
-        ));
+        if (!excecao.isSomenteEncerramentoSemChecklist()) {
+            eventos.add(new RegistroConsultaChecklistPdf(
+                    "E-" + excecao.getId() + "-S",
+                    excecao.getDataHoraAbertura(),
+                    TipoOperacao.SAIDA,
+                    false,
+                    statusRegularizacaoExcecao(excecao),
+                    excecao.getMotorista().getNome(),
+                    excecao.getVeiculo().getMarca() + " " + excecao.getVeiculo().getModelo(),
+                    excecao.getVeiculo().getPlaca(),
+                    "Saida sem checklist. Motivo: " + motivoExcecaoLabel(excecao.getMotivo()) + ".",
+                    0,
+                    List.of()
+            ));
+        }
 
         boolean geraChegadaSemChecklist =
                 (excecao.getStatus() == StatusExcecaoMissao.REGULARIZADA_SEM_CHECKLIST
