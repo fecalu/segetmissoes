@@ -102,6 +102,7 @@ public class VeiculoStatusResolver {
         StatusVeiculo statusAutomatico = StatusVeiculo.BASE_JOAO_GOULART;
         Long motoristaAtualId = null;
         String motoristaAtualNome = null;
+        boolean excecaoAbertaVigente = excecaoAberta != null && !excecaoFoiSuperada(excecaoAberta, veiculo, ultimoChecklist);
 
         if (missaoAtiva != null) {
             statusAutomatico = missaoAtiva.getTipoDeslocamento() == null || missaoAtiva.getTipoDeslocamento() == TipoDeslocamentoMissao.NA_CIDADE
@@ -109,7 +110,7 @@ public class VeiculoStatusResolver {
                     : StatusVeiculo.EM_VIAGEM;
             motoristaAtualId = missaoAtiva.getMotorista().getId();
             motoristaAtualNome = missaoAtiva.getMotorista().getNome();
-        } else if (excecaoAberta != null) {
+        } else if (excecaoAbertaVigente) {
             statusAutomatico = StatusVeiculo.CIRCULANDO;
             motoristaAtualId = excecaoAberta.getMotorista().getId();
             motoristaAtualNome = excecaoAberta.getMotorista().getNome();
@@ -164,5 +165,20 @@ public class VeiculoStatusResolver {
         } catch (IllegalArgumentException ex) {
             return null;
         }
+    }
+
+    private boolean excecaoFoiSuperada(
+            MissaoExcecao excecaoAberta,
+            Veiculo veiculo,
+            UltimoChecklistStatusProjection ultimoChecklist
+    ) {
+        if (veiculo.getDataHoraUltimoEncerramentoSemChecklist() != null
+                && !veiculo.getDataHoraUltimoEncerramentoSemChecklist().isBefore(excecaoAberta.getDataHoraAbertura())) {
+            return true;
+        }
+        TipoOperacao tipoUltimoChecklist = ultimoChecklist == null ? null : parseTipoOperacao(ultimoChecklist.getTipoOperacao());
+        return tipoUltimoChecklist == TipoOperacao.ENTRADA
+                && ultimoChecklist.getDataHora() != null
+                && !ultimoChecklist.getDataHora().isBefore(excecaoAberta.getDataHoraAbertura());
     }
 }

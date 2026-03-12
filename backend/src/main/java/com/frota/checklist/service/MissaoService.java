@@ -7,6 +7,7 @@ import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
+import com.frota.checklist.entity.StatusExcecaoMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.TipoDeslocamentoMissao;
@@ -14,6 +15,7 @@ import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.ChecklistRepository;
+import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MissaoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import jakarta.transaction.Transactional;
@@ -29,6 +31,7 @@ public class MissaoService {
 
     private final MissaoRepository missaoRepository;
     private final ChecklistRepository checklistRepository;
+    private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final VeiculoRepository veiculoRepository;
     private final MissaoAuditoriaService missaoAuditoriaService;
 
@@ -335,6 +338,7 @@ public class MissaoService {
         missao.setAdministradorEncerramento(administrador);
         missao.setJustificativaContingenciaEncerramento(justificativaNormalizada);
         Missao saved = missaoRepository.save(missao);
+        encerrarExcecaoAbertaVinculadaSeNecessario(saved, administrador, dataHoraFimEfetiva, justificativaNormalizada);
         moverVeiculoParaAguardandoRealocacaoSeViagem(saved);
         registrarEncerramentoSemChecklistNoVeiculo(missao.getVeiculo(), missao.getMotorista(), dataHoraFimEfetiva);
         missaoAuditoriaService.registrar(
@@ -448,6 +452,30 @@ public class MissaoService {
         }
         veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
         veiculoRepository.save(veiculo);
+    }
+
+    private void encerrarExcecaoAbertaVinculadaSeNecessario(
+            Missao missao,
+            Motorista administrador,
+            LocalDateTime dataHoraRegularizacao,
+            String justificativaEncerramento
+    ) {
+        if (missao.getMissaoExcecaoId() == null) {
+            return;
+        }
+        missaoExcecaoRepository.findById(missao.getMissaoExcecaoId())
+                .filter(excecao -> excecao.getStatus().isAberta())
+                .ifPresent(excecao -> {
+                    excecao.setStatus(StatusExcecaoMissao.ENCERRADA_ADMIN);
+                    excecao.setDataHoraRegularizacao(dataHoraRegularizacao);
+                    excecao.setAdministradorEncerramento(administrador);
+                    excecao.setJustificativaEncerramentoAdmin(
+                            justificativaEncerramento == null || justificativaEncerramento.isBlank()
+                                    ? "Missao vinculada encerrada manualmente pela administracao."
+                                    : justificativaEncerramento
+                    );
+                    missaoExcecaoRepository.save(excecao);
+                });
     }
 
     private String trimToNull(String value) {

@@ -28,8 +28,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -101,9 +103,44 @@ public class AdminMissaoService {
         };
 
         return missaoRepository.findAll(spec).stream()
-                .sorted(Comparator.comparing(Missao::getDataHoraInicio).reversed())
+                .collect(java.util.stream.Collectors.toMap(
+                        this::chaveDedupeMissao,
+                        Function.identity(),
+                        this::selecionarMissaoMaisConfiavel,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(Missao::getDataHoraInicio).thenComparing(Missao::getId).reversed())
                 .map(this::toResponse)
                 .toList();
+    }
+
+    private String chaveDedupeMissao(Missao missao) {
+        return missao.getMissaoExcecaoId() != null
+                ? "EXCECAO:" + missao.getMissaoExcecaoId()
+                : "MISSAO:" + missao.getId();
+    }
+
+    private Missao selecionarMissaoMaisConfiavel(Missao atual, Missao candidata) {
+        if (atual.getStatus() != candidata.getStatus()) {
+            return atual.getStatus() == StatusMissao.ATIVA ? atual : candidata;
+        }
+
+        LocalDateTime dataAtual = dataComparacaoDedupe(atual);
+        LocalDateTime dataCandidata = dataComparacaoDedupe(candidata);
+        int comparacaoData = dataAtual.compareTo(dataCandidata);
+        if (comparacaoData != 0) {
+            return comparacaoData >= 0 ? atual : candidata;
+        }
+        return atual.getId() >= candidata.getId() ? atual : candidata;
+    }
+
+    private LocalDateTime dataComparacaoDedupe(Missao missao) {
+        if (missao.getDataHoraFim() != null) {
+            return missao.getDataHoraFim();
+        }
+        return missao.getDataHoraInicio();
     }
 
     private MissaoResponse toResponse(Missao missao) {
