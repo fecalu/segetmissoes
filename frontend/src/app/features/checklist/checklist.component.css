@@ -390,32 +390,78 @@
 
 .camera-controls {
   margin-top: 10px;
+}
+
+.camera-controls-main {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 56px auto 56px;
+  gap: 14px;
+}
+
+.camera-icon-btn,
+.camera-shot-btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.camera-icon-btn:disabled,
+.camera-shot-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.camera-flash-btn,
+.camera-flash-placeholder {
+  width: 56px;
+  height: 56px;
 }
 
 .camera-flash-btn {
-  min-height: 46px;
+  border-radius: 50%;
+  border: 1px solid #d6e8dc;
+  background: #f4fbf6;
+  color: #1d7a43;
+  box-shadow: 0 8px 20px rgba(8, 17, 11, 0.14);
+}
+
+.camera-flash-btn mat-icon,
+.camera-shot-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-flash-btn mat-icon {
+  font-size: 26px;
+  width: 26px;
+  height: 26px;
 }
 
 .camera-shot-btn {
+  justify-self: center;
   width: 84px;
   height: 84px;
   min-width: 84px;
   border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  background: linear-gradient(180deg, #2f9958, #1f7a43);
+  color: #ffffff;
   box-shadow: 0 10px 24px rgba(22, 101, 52, 0.35);
 }
 
-.camera-shot-btn mat-icon {
+.camera-shot-icon {
   font-size: 36px;
   width: 36px;
   height: 36px;
+  line-height: 1;
 }
 
 .camera-input-fallback {
@@ -445,7 +491,8 @@
 }
 
 @media (max-width: 779px) {
-  .camera-controls {
-    justify-content: center;
+  .camera-controls-main {
+    gap: 10px;
+    grid-template-columns: 52px auto 52px;
   }
 }

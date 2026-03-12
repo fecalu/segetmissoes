@@ -209,26 +209,36 @@
     <video #cameraVideo autoplay playsinline muted></video>
 
     <div class="camera-controls">
-      <button
-        mat-stroked-button
-        type="button"
-        class="camera-flash-btn"
-        *ngIf="lanternaDisponivel"
-        [disabled]="alternandoLanterna"
-        (click)="alternarLanterna()"
-      >
-        {{ lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna' }}
-      </button>
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        class="camera-shot-btn"
-        (click)="captureFromCamera()"
-        aria-label="Capturar foto"
-      >
-        <mat-icon fontSet="material-symbols-rounded">photo_camera</mat-icon>
-      </button>
+      <div class="camera-controls-main">
+        <button
+          type="button"
+          class="camera-icon-btn camera-flash-btn"
+          *ngIf="lanternaDisponivel; else cameraFlashPlaceholder"
+          [disabled]="alternandoLanterna"
+          (click)="alternarLanterna()"
+          [attr.aria-label]="lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna'"
+          [attr.title]="lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna'"
+        >
+          <mat-icon fontSet="material-symbols-rounded">
+            {{ lanternaAtiva ? 'flash_on' : 'flash_off' }}
+          </mat-icon>
+        </button>
+        <ng-template #cameraFlashPlaceholder>
+          <span class="camera-flash-placeholder" aria-hidden="true"></span>
+        </ng-template>
+
+        <button
+          type="button"
+          class="camera-shot-btn"
+          (click)="captureFromCamera()"
+          aria-label="Capturar foto"
+          title="Capturar foto"
+        >
+          <mat-icon fontSet="material-symbols-rounded" class="camera-shot-icon">photo_camera</mat-icon>
+        </button>
+
+        <span class="camera-flash-placeholder" aria-hidden="true"></span>
+      </div>
     </div>
   </article>
 </section>
