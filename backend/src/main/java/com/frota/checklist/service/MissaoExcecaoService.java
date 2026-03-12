@@ -323,7 +323,7 @@ public class MissaoExcecaoService {
                 missao.getIpOrigem(),
                 missao.getDispositivo(),
                 missao.getLocalizacao(),
-                missao.isSomenteEncerramentoSemChecklist()
+                missao.isSomenteEventoEncerramentoSemChecklist()
         );
     }
 

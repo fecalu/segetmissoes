@@ -86,7 +86,7 @@ public class AdminHistoricoVeiculoService {
         checklists.forEach(checklist -> eventos.add(mapearChecklist(checklist)));
 
         excecoes.forEach(excecao -> {
-            if (!excecao.isSomenteEncerramentoSemChecklist()) {
+            if (!excecao.isSomenteEventoEncerramentoSemChecklist()) {
                 eventos.add(mapearExcecaoAbertura(excecao));
             }
             if (excecao.getDataHoraRegularizacao() != null) {

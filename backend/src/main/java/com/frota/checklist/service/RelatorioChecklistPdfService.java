@@ -346,7 +346,7 @@ public class RelatorioChecklistPdfService {
 
     private List<RegistroConsultaChecklistPdf> mapearEventosExcecao(MissaoExcecao excecao) {
         List<RegistroConsultaChecklistPdf> eventos = new java.util.ArrayList<>();
-        if (!excecao.isSomenteEncerramentoSemChecklist()) {
+        if (!excecao.isSomenteEventoEncerramentoSemChecklist()) {
             eventos.add(new RegistroConsultaChecklistPdf(
                     "E-" + excecao.getId() + "-S",
                     excecao.getDataHoraAbertura(),

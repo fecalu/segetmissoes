@@ -80,6 +80,15 @@ public class MissaoExcecao {
     @Column(nullable = false, columnDefinition = "boolean not null default false")
     private boolean somenteEncerramentoSemChecklist;
 
+    public boolean isSomenteEventoEncerramentoSemChecklist() {
+        if (somenteEncerramentoSemChecklist) {
+            return true;
+        }
+        return dataHoraRegularizacao != null
+                && dataHoraAbertura != null
+                && !dataHoraRegularizacao.isAfter(dataHoraAbertura);
+    }
+
     @PrePersist
     public void prePersist() {
         if (dataHoraAbertura == null) {

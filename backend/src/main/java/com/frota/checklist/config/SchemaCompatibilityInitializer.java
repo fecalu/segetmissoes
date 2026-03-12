@@ -106,6 +106,13 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 alter table missoes_excecao
                 add column if not exists somente_encerramento_sem_checklist boolean not null default false
                 """);
+        executarSilencioso("""
+                update missoes_excecao
+                   set somente_encerramento_sem_checklist = true
+                 where somente_encerramento_sem_checklist = false
+                   and data_hora_regularizacao is not null
+                   and data_hora_regularizacao <= data_hora_abertura
+                """);
         executarSilencioso("alter table missoes_excecao drop constraint if exists missoes_excecao_status_check");
         executarSilencioso("""
                 alter table missoes_excecao
