@@ -38,6 +38,7 @@ import {
   AjustarHorarioMissaoPayload,
   AtualizarContraparteVistoriaCompletaPayload,
   CriarMissaoContingenciaPayload,
+  EditarMissaoManualPayload,
   EncerrarMissaoPendentePayload,
   RegistrarVeiculoEmViagemPayload
 } from '../../core/services/admin.service';
@@ -137,6 +138,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   salvandoRotulosStatus = false;
   salvandoContraparteVistoria = false;
   salvandoHorarioMissao = false;
+  salvandoEdicaoMissaoManual = false;
 
   editingMotoristaId: number | null = null;
   editingVeiculoId: number | null = null;
@@ -148,6 +150,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   selectedVistoriaCompleta: VistoriaCompletaResponse | null = null;
   selectedMissaoAuditoria: MissaoResponse | null = null;
   selectedMissaoDadosAdmin: MissaoResponse | null = null;
+  selectedMissaoEdicaoManual: MissaoResponse | null = null;
   selectedMissaoHorario: MissaoResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
   selectedCategoriaInclusao: PainelCategoria | null = null;
@@ -312,6 +315,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   readonly missaoFiltroForm;
   readonly vistoriaCompletaFiltroForm;
   readonly missaoDadosForm;
+  readonly missaoEdicaoManualForm;
   readonly missaoHorarioForm;
   readonly missaoContingenciaForm;
   readonly missaoPendenteForm;
@@ -379,6 +383,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       localDestino: [''],
       setorSolicitante: [''],
       solicitanteNome: ['']
+    });
+
+    this.missaoEdicaoManualForm = this.fb.nonNullable.group({
+      motoristaId: [0, [Validators.min(1)]],
+      veiculoId: [0, [Validators.min(1)]],
+      dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
+      dataHoraFim: [this.agoraDateTimeLocal()],
+      justificativaAbertura: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]],
+      justificativaEncerramento: ['', [Validators.maxLength(700)]],
+      localDestino: [''],
+      setorSolicitante: [''],
+      solicitanteNome: [''],
+      justificativaEdicao: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
 
     this.missaoHorarioForm = this.fb.nonNullable.group({
@@ -455,6 +472,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu !== 'missoes') {
       this.filtrosMissoesAbertos = false;
       this.fecharEdicaoDadosMissao();
+      this.fecharEdicaoManualMissao();
+      this.fecharAjusteHorarioMissao();
       if (this.showNovaMissaoModal) {
         this.fecharNovaMissao();
       }
@@ -1211,6 +1230,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case 'MISSAO_INICIADA':
       case 'MISSAO_FINALIZADA':
       case 'MISSAO_HORARIO_AJUSTADO':
+      case 'MISSAO_EDITADA_ADMIN':
         return 'MISSAO';
       case 'CHECKLIST_SAIDA':
       case 'CHECKLIST_CHEGADA':
@@ -1237,6 +1257,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         return evento.detalhe?.origemEncerramentoMissao ? this.origemEncerramentoMissaoLabel(evento.detalhe.origemEncerramentoMissao) : null;
       case 'MISSAO_HORARIO_AJUSTADO':
         return 'HORARIO AJUSTADO';
+      case 'MISSAO_EDITADA_ADMIN':
+        return 'DADOS AJUSTADOS';
       case 'CHECKLIST_SAIDA':
       case 'VISTORIA_COMPLETA_SAIDA':
         return 'SAIDA';
@@ -1261,6 +1283,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case 'MISSAO_INICIADA':
       case 'MISSAO_FINALIZADA':
       case 'MISSAO_HORARIO_AJUSTADO':
+      case 'MISSAO_EDITADA_ADMIN':
         return 'status-circulando';
       case 'CHECKLIST_SAIDA':
       case 'CHECKLIST_CHEGADA':
@@ -1919,6 +1942,137 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  podeEditarMissaoManual(missao: MissaoResponse): boolean {
+    return missao.origemAbertura === 'CONTINGENCIA_ADMIN';
+  }
+
+  podeReatribuirMissaoManual(missao: MissaoResponse): boolean {
+    return this.podeEditarMissaoManual(missao) && missao.status === 'ATIVA';
+  }
+
+  podeEditarEncerramentoManual(missao: MissaoResponse): boolean {
+    return this.podeEditarMissaoManual(missao)
+      && missao.status === 'FINALIZADA'
+      && missao.origemEncerramento === 'ADMINISTRATIVO';
+  }
+
+  abrirEdicaoManualMissao(missao: MissaoResponse): void {
+    this.selectedMissaoEdicaoManual = missao;
+    this.missaoEdicaoManualForm.reset({
+      motoristaId: missao.motoristaId,
+      veiculoId: missao.veiculoId,
+      dataHoraInicio: this.toDateTimeLocalValue(missao.dataHoraInicio),
+      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal(),
+      justificativaAbertura: missao.justificativaContingenciaAbertura || '',
+      justificativaEncerramento: missao.justificativaContingenciaEncerramento || '',
+      localDestino: missao.localDestino || '',
+      setorSolicitante: missao.setorSolicitante || '',
+      solicitanteNome: missao.solicitanteNome || '',
+      justificativaEdicao: ''
+    });
+
+    if (this.podeReatribuirMissaoManual(missao)) {
+      this.missaoEdicaoManualForm.controls.motoristaId.enable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.veiculoId.enable({ emitEvent: false });
+    } else {
+      this.missaoEdicaoManualForm.controls.motoristaId.disable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.veiculoId.disable({ emitEvent: false });
+    }
+
+    if (this.podeEditarEncerramentoManual(missao)) {
+      this.missaoEdicaoManualForm.controls.dataHoraFim.enable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.justificativaEncerramento.enable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.justificativaEncerramento.setValidators([Validators.minLength(10), Validators.maxLength(700)]);
+    } else {
+      this.missaoEdicaoManualForm.controls.dataHoraFim.disable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.justificativaEncerramento.disable({ emitEvent: false });
+      this.missaoEdicaoManualForm.controls.justificativaEncerramento.setValidators([Validators.maxLength(700)]);
+    }
+
+    this.missaoEdicaoManualForm.controls.justificativaEncerramento.updateValueAndValidity({ emitEvent: false });
+  }
+
+  fecharEdicaoManualMissao(): void {
+    this.selectedMissaoEdicaoManual = null;
+    this.missaoEdicaoManualForm.reset({
+      motoristaId: 0,
+      veiculoId: 0,
+      dataHoraInicio: this.agoraDateTimeLocal(),
+      dataHoraFim: this.agoraDateTimeLocal(),
+      justificativaAbertura: '',
+      justificativaEncerramento: '',
+      localDestino: '',
+      setorSolicitante: '',
+      solicitanteNome: '',
+      justificativaEdicao: ''
+    });
+    this.missaoEdicaoManualForm.controls.motoristaId.enable({ emitEvent: false });
+    this.missaoEdicaoManualForm.controls.veiculoId.enable({ emitEvent: false });
+    this.missaoEdicaoManualForm.controls.dataHoraFim.enable({ emitEvent: false });
+    this.missaoEdicaoManualForm.controls.justificativaEncerramento.enable({ emitEvent: false });
+    this.missaoEdicaoManualForm.controls.justificativaEncerramento.setValidators([Validators.maxLength(700)]);
+    this.missaoEdicaoManualForm.controls.justificativaEncerramento.updateValueAndValidity({ emitEvent: false });
+  }
+
+  salvarEdicaoManualMissao(): void {
+    const missao = this.selectedMissaoEdicaoManual;
+    if (!missao) {
+      return;
+    }
+    if (this.missaoEdicaoManualForm.invalid) {
+      this.missaoEdicaoManualForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.missaoEdicaoManualForm.getRawValue();
+    const payload: EditarMissaoManualPayload = {
+      motoristaId: raw.motoristaId,
+      veiculoId: raw.veiculoId,
+      dataHoraInicio: raw.dataHoraInicio,
+      dataHoraFim: this.podeEditarEncerramentoManual(missao) ? raw.dataHoraFim : missao.dataHoraFim,
+      justificativaAbertura: raw.justificativaAbertura.trim(),
+      justificativaEncerramento: this.podeEditarEncerramentoManual(missao)
+        ? this.toNullIfBlank(raw.justificativaEncerramento)
+        : missao.justificativaContingenciaEncerramento,
+      localDestino: this.toNullIfBlank(raw.localDestino),
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome),
+      justificativaEdicao: raw.justificativaEdicao.trim()
+    };
+
+    const veiculoHistorico = this.selectedVeiculoHistorico;
+    const recarregarHistorico = !!veiculoHistorico
+      && (veiculoHistorico.id === missao.veiculoId || veiculoHistorico.id === raw.veiculoId);
+
+    this.salvandoEdicaoMissaoManual = true;
+    this.adminService.editarMissaoManual(missao.id, payload)
+      .pipe(finalize(() => (this.salvandoEdicaoMissaoManual = false)))
+      .subscribe({
+        next: updated => {
+          if (this.selectedMissaoAuditoria?.id === updated.id) {
+            this.selectedMissaoAuditoria = updated;
+            this.abrirAuditoriaMissao(updated);
+          }
+          this.buscarMissoes();
+          this.carregarMissoesTempoReal(false);
+          this.carregarVeiculos(this.veiculoBusca);
+          if (recarregarHistorico && veiculoHistorico) {
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+          this.snackBar.open('Missao manual atualizada.', 'Fechar', { duration: 2400 });
+          this.fecharEdicaoManualMissao();
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao atualizar a missao manual.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  veiculosElegiveisEdicaoManual(missao: MissaoResponse): Veiculo[] {
+    const veiculos = this.veiculosAtivos()
+      .filter(veiculo => veiculo.id === missao.veiculoId || this.veiculoDisponivelParaNovaMissao(veiculo))
+      .sort((a, b) => a.placa.localeCompare(b.placa));
+    return veiculos;
+  }
+
   podeAjustarHorarioMissao(missao: MissaoResponse): boolean {
     return missao.origemAbertura === 'CONTINGENCIA_ADMIN';
   }
@@ -2017,9 +2171,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return '-';
     }
     const labels: Record<string, string> = {
+      motorista: 'Motorista',
+      veiculo: 'Veiculo',
       localDestino: 'Destino',
       setorSolicitante: 'Setor solicitante',
       solicitanteNome: 'Quem solicitou',
+      justificativaContingenciaAbertura: 'Justificativa do registro manual',
+      justificativaContingenciaEncerramento: 'Justificativa do encerramento manual',
       statusDocumental: 'Status dos dados da missao',
       dataHoraInicio: 'Data/hora de inicio',
       dataHoraFim: 'Data/hora de fim'
@@ -2182,7 +2340,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case 'MISSOES':
         return evento.tipo === 'MISSAO_INICIADA'
           || evento.tipo === 'MISSAO_FINALIZADA'
-          || evento.tipo === 'MISSAO_HORARIO_AJUSTADO';
+          || evento.tipo === 'MISSAO_HORARIO_AJUSTADO'
+          || evento.tipo === 'MISSAO_EDITADA_ADMIN';
       case 'CHECKLISTS':
         return evento.tipo === 'CHECKLIST_SAIDA' || evento.tipo === 'CHECKLIST_CHEGADA';
       case 'SEM_CHECKLIST':

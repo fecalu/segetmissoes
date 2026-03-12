@@ -4,6 +4,7 @@ import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
+import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
 import com.frota.checklist.dto.MissaoResponse;
 import com.frota.checklist.entity.OrigemAberturaMissao;
@@ -126,6 +127,29 @@ public class AdminMissaoController {
                 request.dataHoraInicio(),
                 request.dataHoraFim(),
                 request.justificativa()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/edicao-manual")
+    public ResponseEntity<MissaoResponse> editarMissaoManual(
+            @PathVariable Long id,
+            @Valid @RequestBody EditarMissaoManualAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        MissaoResponse response = adminMissaoService.editarMissaoManual(
+                id,
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.veiculoId(),
+                request.dataHoraInicio(),
+                request.dataHoraFim(),
+                request.justificativaAbertura(),
+                request.justificativaEncerramento(),
+                request.localDestino(),
+                request.setorSolicitante(),
+                request.solicitanteNome(),
+                request.justificativaEdicao()
         );
         return ResponseEntity.ok(response);
     }

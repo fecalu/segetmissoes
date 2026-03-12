@@ -313,6 +313,206 @@ public class AdminMissaoService {
     }
 
     @Transactional
+    public MissaoResponse editarMissaoManual(
+            Long missaoId,
+            Long administradorId,
+            Long motoristaId,
+            Long veiculoId,
+            LocalDateTime dataHoraInicio,
+            LocalDateTime dataHoraFim,
+            String justificativaAbertura,
+            String justificativaEncerramento,
+            String localDestino,
+            String setorSolicitante,
+            String solicitanteNome,
+            String justificativaEdicao
+    ) {
+        Missao missao = missaoRepository.findById(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+            throw new BusinessException("Somente missoes registradas manualmente podem ser editadas por este fluxo");
+        }
+
+        String justificativaEdicaoNormalizada = trimToNull(justificativaEdicao);
+        if (justificativaEdicaoNormalizada == null || justificativaEdicaoNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa da edicao com pelo menos 10 caracteres");
+        }
+
+        boolean permiteReatribuicao = missao.getStatus() == StatusMissao.ATIVA;
+        boolean permiteEdicaoEncerramento = missao.getStatus() == StatusMissao.FINALIZADA
+                && missao.getOrigemEncerramento() == OrigemEncerramentoMissao.ADMINISTRATIVO;
+
+        if (!permiteReatribuicao) {
+            if (!missao.getMotorista().getId().equals(motoristaId)) {
+                throw new BusinessException("Motorista so pode ser alterado enquanto a missao manual estiver em andamento");
+            }
+            if (!missao.getVeiculo().getId().equals(veiculoId)) {
+                throw new BusinessException("Veiculo so pode ser alterado enquanto a missao manual estiver em andamento");
+            }
+        }
+
+        LocalDateTime novoInicio = dataHoraInicio;
+        LocalDateTime novoFim = missao.getDataHoraFim();
+        if (permiteEdicaoEncerramento) {
+            novoFim = dataHoraFim;
+        } else if (dataHoraFim != null && missao.getDataHoraFim() != null && !dataHoraFim.equals(missao.getDataHoraFim())) {
+            throw new BusinessException("Horario de fim so pode ser alterado quando o encerramento tambem foi manual pelo administrador");
+        }
+
+        if (novoFim != null && !novoFim.isAfter(novoInicio)) {
+            throw new BusinessException("Data/hora de fim deve ser posterior ao inicio da missao");
+        }
+
+        String justificativaAberturaNormalizada = trimToNull(justificativaAbertura);
+        if (justificativaAberturaNormalizada == null || justificativaAberturaNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa do registro manual com pelo menos 10 caracteres");
+        }
+
+        String justificativaEncerramentoNormalizada = trimToNull(justificativaEncerramento);
+        if (permiteEdicaoEncerramento
+                && justificativaEncerramentoNormalizada != null
+                && justificativaEncerramentoNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa do encerramento manual com pelo menos 10 caracteres");
+        }
+
+        if (permiteReatribuicao && !missao.getMotorista().getId().equals(motoristaId)) {
+            Motorista novoMotorista = motoristaRepository.findById(motoristaId)
+                    .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+            if (novoMotorista.getPerfil() != Perfil.MOTORISTA) {
+                throw new BusinessException("Selecione um motorista valido para a missao");
+            }
+            missaoService.buscarMissaoAtivaPorMotorista(novoMotorista.getId())
+                    .filter(ativa -> !ativa.getId().equals(missao.getId()))
+                    .ifPresent(ativa -> {
+                        throw new BusinessException("Motorista ja possui outra missao em andamento");
+                    });
+            missaoAuditoriaService.registrarAlteracaoCampo(
+                    missao,
+                    administrador,
+                    "motorista",
+                    formatarMotoristaAuditoria(missao.getMotorista()),
+                    formatarMotoristaAuditoria(novoMotorista),
+                    detalheEdicaoManual(justificativaEdicaoNormalizada)
+            );
+            missao.setMotorista(novoMotorista);
+        }
+
+        if (permiteReatribuicao && !missao.getVeiculo().getId().equals(veiculoId)) {
+            Veiculo novoVeiculo = veiculoRepository.findById(veiculoId)
+                    .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+            validarVeiculoParaEdicaoManual(missao, novoVeiculo);
+            liberarVeiculoParaMissaoAdministrativa(novoVeiculo);
+            missaoAuditoriaService.registrarAlteracaoCampo(
+                    missao,
+                    administrador,
+                    "veiculo",
+                    formatarVeiculoAuditoria(missao.getVeiculo()),
+                    formatarVeiculoAuditoria(novoVeiculo),
+                    detalheEdicaoManual(justificativaEdicaoNormalizada)
+            );
+            missao.setVeiculo(novoVeiculo);
+        }
+
+        registrarAlteracaoHorarioSeNecessario(
+                missao,
+                administrador,
+                "dataHoraInicio",
+                missao.getDataHoraInicio(),
+                novoInicio,
+                justificativaEdicaoNormalizada
+        );
+        missao.setDataHoraInicio(novoInicio);
+
+        if (permiteEdicaoEncerramento) {
+            registrarAlteracaoHorarioSeNecessario(
+                    missao,
+                    administrador,
+                    "dataHoraFim",
+                    missao.getDataHoraFim(),
+                    novoFim,
+                    justificativaEdicaoNormalizada
+            );
+            missao.setDataHoraFim(novoFim);
+        }
+
+        registrarAlteracaoTextoComDetalhe(
+                missao,
+                administrador,
+                "justificativaContingenciaAbertura",
+                missao.getJustificativaContingenciaAbertura(),
+                justificativaAberturaNormalizada,
+                justificativaEdicaoNormalizada
+        );
+        missao.setJustificativaContingenciaAbertura(justificativaAberturaNormalizada);
+
+        registrarAlteracaoTextoComDetalhe(
+                missao,
+                administrador,
+                "localDestino",
+                missao.getLocalDestino(),
+                trimToNull(localDestino),
+                justificativaEdicaoNormalizada
+        );
+        missao.setLocalDestino(trimToNull(localDestino));
+
+        registrarAlteracaoTextoComDetalhe(
+                missao,
+                administrador,
+                "setorSolicitante",
+                missao.getSetorSolicitante(),
+                trimToNull(setorSolicitante),
+                justificativaEdicaoNormalizada
+        );
+        missao.setSetorSolicitante(trimToNull(setorSolicitante));
+
+        registrarAlteracaoTextoComDetalhe(
+                missao,
+                administrador,
+                "solicitanteNome",
+                missao.getSolicitanteNome(),
+                trimToNull(solicitanteNome),
+                justificativaEdicaoNormalizada
+        );
+        missao.setSolicitanteNome(trimToNull(solicitanteNome));
+
+        if (permiteEdicaoEncerramento) {
+            registrarAlteracaoTextoComDetalhe(
+                    missao,
+                    administrador,
+                    "justificativaContingenciaEncerramento",
+                    missao.getJustificativaContingenciaEncerramento(),
+                    justificativaEncerramentoNormalizada,
+                    justificativaEdicaoNormalizada
+            );
+            missao.setJustificativaContingenciaEncerramento(justificativaEncerramentoNormalizada);
+        }
+
+        StatusDocumentalMissao statusDocumentalAnterior = missao.getStatusDocumental() == null
+                ? StatusDocumentalMissao.PENDENTE_DADOS_ADMIN
+                : missao.getStatusDocumental();
+        missao.atualizarStatusDocumental();
+        if (statusDocumentalAnterior != missao.getStatusDocumental()) {
+            missaoAuditoriaService.registrarAlteracaoCampo(
+                    missao,
+                    administrador,
+                    "statusDocumental",
+                    statusDocumentalAnterior.name(),
+                    missao.getStatusDocumental().name(),
+                    detalheEdicaoManual(justificativaEdicaoNormalizada)
+            );
+        }
+
+        Missao salva = missaoRepository.save(missao);
+        return toResponse(salva);
+    }
+
+    @Transactional
     public MissaoResponse criarContingencia(
             Long administradorId,
             Long motoristaId,
@@ -423,6 +623,27 @@ public class AdminMissaoService {
         );
     }
 
+    private void registrarAlteracaoTextoComDetalhe(
+            Missao missao,
+            Motorista administrador,
+            String campo,
+            String valorAnterior,
+            String valorNovo,
+            String justificativaEdicao
+    ) {
+        if (equalsNormalized(valorAnterior, valorNovo)) {
+            return;
+        }
+        missaoAuditoriaService.registrarAlteracaoCampo(
+                missao,
+                administrador,
+                campo,
+                normalizeForAudit(valorAnterior),
+                normalizeForAudit(valorNovo),
+                detalheEdicaoManual(justificativaEdicao)
+        );
+    }
+
     private String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -476,6 +697,40 @@ public class AdminMissaoService {
 
     private String formatarDataHoraAuditoria(LocalDateTime value) {
         return value == null ? "(vazio)" : value.format(AUDITORIA_DATA_HORA_FORMATTER);
+    }
+
+    private void validarVeiculoParaEdicaoManual(Missao missao, Veiculo novoVeiculo) {
+        if (Boolean.TRUE.equals(novoVeiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode receber registro manual");
+        }
+        missaoService.buscarMissaoAtivaPorVeiculo(novoVeiculo.getId())
+                .filter(ativa -> !ativa.getId().equals(missao.getId()))
+                .ifPresent(ativa -> {
+                    throw new BusinessException("Veiculo ja possui outra missao em andamento");
+                });
+        StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(novoVeiculo.getStatusAdministrativo());
+        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoAdministrativa()) {
+            throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusAdministrativo);
+        }
+    }
+
+    private void liberarVeiculoParaMissaoAdministrativa(Veiculo veiculo) {
+        if (veiculo.getStatusAdministrativo() == StatusVeiculo.NO_PATIO
+                || veiculo.getStatusAdministrativo() == StatusVeiculo.AGUARDANDO_REALOCACAO) {
+            veiculo.setStatusAdministrativo(null);
+        }
+    }
+
+    private String formatarMotoristaAuditoria(Motorista motorista) {
+        return motorista == null ? "(vazio)" : motorista.getNome();
+    }
+
+    private String formatarVeiculoAuditoria(Veiculo veiculo) {
+        return veiculo == null ? "(vazio)" : "%s - %s %s".formatted(veiculo.getPlaca(), veiculo.getMarca(), veiculo.getModelo());
+    }
+
+    private String detalheEdicaoManual(String justificativaEdicao) {
+        return "Missao manual editada pela administracao. Justificativa: %s".formatted(justificativaEdicao);
     }
 
     private StatusDocumentalMissao statusDocumentalEfetivo(Missao missao) {

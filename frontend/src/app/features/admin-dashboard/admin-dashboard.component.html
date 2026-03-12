@@ -432,8 +432,9 @@
               </div>
             </div>
             <div class="inline-buttons">
-              <button mat-flat-button color="primary" type="button" (click)="abrirEdicaoDadosMissao(m)">Completar dados</button>
-              <button mat-stroked-button type="button" *ngIf="podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horario</button>
+              <button mat-flat-button color="primary" type="button" *ngIf="!podeEditarMissaoManual(m)" (click)="abrirEdicaoDadosMissao(m)">Completar dados</button>
+              <button mat-flat-button color="primary" type="button" *ngIf="podeEditarMissaoManual(m)" (click)="abrirEdicaoManualMissao(m)">Editar missao manual</button>
+              <button mat-stroked-button type="button" *ngIf="!podeEditarMissaoManual(m) && podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horario</button>
               <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA'" (click)="abrirEncerramentoPendente(m.id)">Finalizar em aberto</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Historico</button>
             </div>
@@ -880,6 +881,119 @@
     <div class="row-actions">
       <button mat-stroked-button type="button" (click)="fecharEdicaoDadosMissao()">Cancelar</button>
       <button mat-flat-button color="primary" type="button" (click)="salvarDadosAdministrativosMissao()">Salvar dados</button>
+    </div>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedMissaoEdicaoManual as missaoEdicaoManual">
+  <article class="detail-card history-card">
+    <header>
+      <h3>Editar missao manual #{{ missaoEdicaoManual.id }}</h3>
+      <button mat-stroked-button type="button" (click)="fecharEdicaoManualMissao()">Fechar</button>
+    </header>
+
+    <p><strong>Veiculo atual:</strong> {{ missaoEdicaoManual.veiculoPlaca }} - {{ missaoEdicaoManual.veiculoMarca }} {{ missaoEdicaoManual.veiculoModelo }}</p>
+    <p><strong>Motorista atual:</strong> {{ missaoEdicaoManual.motoristaNome }}</p>
+    <p><strong>Regra:</strong> este fluxo vale apenas para missoes registradas manualmente pela administracao.</p>
+
+    <form [formGroup]="missaoEdicaoManualForm" class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Motorista</mat-label>
+        <mat-select formControlName="motoristaId">
+          <mat-option *ngFor="let motorista of motoristasElegiveisMissao()" [value]="motorista.id">{{ motorista.nome }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Veiculo</mat-label>
+        <mat-select formControlName="veiculoId">
+          <mat-option *ngFor="let veiculo of veiculosElegiveisEdicaoManual(missaoEdicaoManual)" [value]="veiculo.id">
+            {{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data/hora de inicio</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraInicio">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data/hora de fim</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraFim">
+      </mat-form-field>
+
+      <p class="panel-helper full-width" *ngIf="!podeReatribuirMissaoManual(missaoEdicaoManual)">
+        Motorista e veiculo so podem ser trocados enquanto a missao manual estiver em andamento.
+      </p>
+      <p class="panel-helper full-width" *ngIf="missaoEdicaoManual.status === 'FINALIZADA' && !podeEditarEncerramentoManual(missaoEdicaoManual)">
+        O horario de fim e a justificativa do encerramento so podem ser ajustados quando o encerramento tambem foi manual pelo administrador.
+      </p>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Destino</mat-label>
+        <input matInput maxlength="180" formControlName="localDestino" [matAutocomplete]="autoDestinoEdicaoManual">
+      </mat-form-field>
+      <mat-autocomplete #autoDestinoEdicaoManual="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('destinos', missaoEdicaoManualForm.getRawValue().localDestino)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Setor solicitante</mat-label>
+        <input matInput maxlength="160" formControlName="setorSolicitante" [matAutocomplete]="autoSetorEdicaoManual">
+      </mat-form-field>
+      <mat-autocomplete #autoSetorEdicaoManual="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('setoresSolicitantes', missaoEdicaoManualForm.getRawValue().setorSolicitante)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Quem solicitou</mat-label>
+        <input matInput maxlength="160" formControlName="solicitanteNome" [matAutocomplete]="autoSolicitanteEdicaoManual">
+      </mat-form-field>
+      <mat-autocomplete #autoSolicitanteEdicaoManual="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('solicitantes', missaoEdicaoManualForm.getRawValue().solicitanteNome)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa do registro manual</mat-label>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativaAbertura" [matAutocomplete]="autoJustificativaAberturaEdicaoManual"></textarea>
+        <mat-hint align="end">{{ missaoEdicaoManualForm.getRawValue().justificativaAbertura.length }}/700</mat-hint>
+      </mat-form-field>
+      <mat-autocomplete #autoJustificativaAberturaEdicaoManual="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('justificativasRegistroManual', missaoEdicaoManualForm.getRawValue().justificativaAbertura)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa do encerramento manual</mat-label>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativaEncerramento" [matAutocomplete]="autoJustificativaEncerramentoEdicaoManual"></textarea>
+        <mat-hint align="end">{{ missaoEdicaoManualForm.getRawValue().justificativaEncerramento.length }}/700</mat-hint>
+      </mat-form-field>
+      <mat-autocomplete #autoJustificativaEncerramentoEdicaoManual="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('justificativasRegistroManual', missaoEdicaoManualForm.getRawValue().justificativaEncerramento)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa da edicao</mat-label>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativaEdicao"></textarea>
+        <mat-hint align="end">{{ missaoEdicaoManualForm.getRawValue().justificativaEdicao.length }}/700</mat-hint>
+      </mat-form-field>
+    </form>
+
+    <div class="row-actions">
+      <button mat-stroked-button type="button" (click)="fecharEdicaoManualMissao()">Cancelar</button>
+      <button mat-flat-button color="primary" type="button" [disabled]="salvandoEdicaoMissaoManual" (click)="salvarEdicaoManualMissao()">
+        {{ salvandoEdicaoMissaoManual ? 'Salvando...' : 'Salvar alteracoes' }}
+      </button>
     </div>
   </article>
 </section>

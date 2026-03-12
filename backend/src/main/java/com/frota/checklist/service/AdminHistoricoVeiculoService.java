@@ -79,6 +79,9 @@ public class AdminHistoricoVeiculoService {
         auditoriasMissao.stream()
                 .filter(this::isAjusteHorarioMissao)
                 .forEach(auditoria -> eventos.add(mapearAjusteHorarioMissao(auditoria)));
+        auditoriasMissao.stream()
+                .filter(this::isEdicaoAdministrativaMissao)
+                .forEach(auditoria -> eventos.add(mapearEdicaoAdministrativaMissao(auditoria)));
 
         checklists.forEach(checklist -> eventos.add(mapearChecklist(checklist)));
 
@@ -289,6 +292,54 @@ public class AdminHistoricoVeiculoService {
                 auditoria.getDataHora(),
                 "Horario da missao ajustado",
                 descricaoCampoHorario(campo) + ". " + descricao,
+                auditoria.getMissao().getMotorista().getNome(),
+                auditoria.getUsuarioAcao() != null ? auditoria.getUsuarioAcao().getNome() : null,
+                false,
+                0,
+                false,
+                0,
+                auditoria.getMissao().getId(),
+                null,
+                auditoria.getMissao().getMissaoExcecaoId(),
+                null,
+                null,
+                new HistoricoVeiculoResponse.Detalhe(
+                        null,
+                        auditoria.getMissao().getOrigemAbertura(),
+                        auditoria.getMissao().getOrigemEncerramento(),
+                        auditoria.getMissao().getStatusDocumental(),
+                        null,
+                        null,
+                        auditoria.getMissao().getMotivoContingencia(),
+                        auditoria.getMissao().getLocalDestino(),
+                        auditoria.getMissao().getSetorSolicitante(),
+                        auditoria.getMissao().getSolicitanteNome(),
+                        auditoria.getDetalhe(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+    }
+
+    private HistoricoVeiculoResponse.Evento mapearEdicaoAdministrativaMissao(AuditoriaMissao auditoria) {
+        String campo = auditoria.getCampoAlterado();
+        String descricao = "%s: %s -> %s".formatted(
+                labelCampoEdicaoMissao(campo),
+                valorOuTraco(auditoria.getValorAnterior()),
+                valorOuTraco(auditoria.getValorNovo())
+        );
+
+        return new HistoricoVeiculoResponse.Evento(
+                "MISSAO-EDICAO-" + auditoria.getId(),
+                TipoEventoHistoricoVeiculo.MISSAO_EDITADA_ADMIN,
+                auditoria.getDataHora(),
+                "Dados da missao ajustados",
+                descricao,
                 auditoria.getMissao().getMotorista().getNome(),
                 auditoria.getUsuarioAcao() != null ? auditoria.getUsuarioAcao().getNome() : null,
                 false,
@@ -661,11 +712,29 @@ public class AdminHistoricoVeiculoService {
         return "dataHoraInicio".equals(auditoria.getCampoAlterado()) || "dataHoraFim".equals(auditoria.getCampoAlterado());
     }
 
+    private boolean isEdicaoAdministrativaMissao(AuditoriaMissao auditoria) {
+        return auditoria.getCampoAlterado() != null && !isAjusteHorarioMissao(auditoria);
+    }
+
     private String descricaoCampoHorario(String campo) {
         return switch (campo) {
             case "dataHoraInicio" -> "Data/hora de inicio corrigida";
             case "dataHoraFim" -> "Data/hora de fim corrigida";
             default -> "Horario corrigido";
+        };
+    }
+
+    private String labelCampoEdicaoMissao(String campo) {
+        return switch (campo) {
+            case "motorista" -> "Motorista corrigido";
+            case "veiculo" -> "Veiculo corrigido";
+            case "justificativaContingenciaAbertura" -> "Justificativa do registro manual corrigida";
+            case "justificativaContingenciaEncerramento" -> "Justificativa do encerramento manual corrigida";
+            case "localDestino" -> "Destino corrigido";
+            case "setorSolicitante" -> "Setor solicitante corrigido";
+            case "solicitanteNome" -> "Quem solicitou corrigido";
+            case "statusDocumental" -> "Status dos dados da missao atualizado";
+            default -> "Campo da missao ajustado";
         };
     }
 }

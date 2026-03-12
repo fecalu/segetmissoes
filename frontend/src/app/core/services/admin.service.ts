@@ -86,6 +86,19 @@ export interface AjustarHorarioMissaoPayload {
   justificativa: string;
 }
 
+export interface EditarMissaoManualPayload {
+  motoristaId: number;
+  veiculoId: number;
+  dataHoraInicio: string;
+  dataHoraFim: string | null;
+  justificativaAbertura: string;
+  justificativaEncerramento: string | null;
+  localDestino: string | null;
+  setorSolicitante: string | null;
+  solicitanteNome: string | null;
+  justificativaEdicao: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly motoristaUrl = `${environment.apiBaseUrl}/admin/motoristas`;
@@ -185,6 +198,13 @@ export class AdminService {
     payload: AjustarHorarioMissaoPayload
   ): Observable<MissaoResponse> {
     return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/horario`, payload);
+  }
+
+  editarMissaoManual(
+    missaoId: number,
+    payload: EditarMissaoManualPayload
+  ): Observable<MissaoResponse> {
+    return this.http.put<MissaoResponse>(`${this.missaoUrl}/${missaoId}/edicao-manual`, payload);
   }
 
   gerarRelatorioChecklistPdf(dataInicial: string, dataFinal: string): Observable<Blob> {
