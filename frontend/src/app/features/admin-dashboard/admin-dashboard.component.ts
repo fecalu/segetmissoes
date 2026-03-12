@@ -1593,7 +1593,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private veiculoDisponivelParaNovaMissao(veiculo: Veiculo): boolean {
-    return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
+    return veiculo.statusAtual === 'BASE_JOAO_GOULART'
+      || veiculo.statusAtual === 'NO_PATIO'
+      || veiculo.statusAtual === 'AGUARDANDO_REALOCACAO';
   }
 
   veiculosDesativados(): Veiculo[] {

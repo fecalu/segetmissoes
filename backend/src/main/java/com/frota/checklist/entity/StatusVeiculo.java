@@ -33,6 +33,12 @@ public enum StatusVeiculo {
         return this == BASE_JOAO_GOULART || this == NO_PATIO;
     }
 
+    public boolean permiteInicioMissaoAdministrativa() {
+        return this == BASE_JOAO_GOULART
+                || this == NO_PATIO
+                || this == AGUARDANDO_REALOCACAO;
+    }
+
     public boolean isBloqueanteMissao() {
         return !permiteInicioMissaoMotorista() && !isDeslocamentoAtivo();
     }

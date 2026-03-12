@@ -265,7 +265,7 @@ public class AdminMissaoService {
             throw new BusinessException("Veiculo desativado nao pode receber registro manual");
         }
         StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
-        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoMotorista()) {
+        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoAdministrativa()) {
             throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusAdministrativo);
         }
         MotivoExcecaoMissao motivoContingenciaNormalizado =

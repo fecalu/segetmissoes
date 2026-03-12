@@ -427,7 +427,8 @@ public class MissaoService {
     }
 
     private void liberarVeiculoParaMissao(Veiculo veiculo) {
-        if (veiculo.getStatusAdministrativo() == StatusVeiculo.NO_PATIO) {
+        if (veiculo.getStatusAdministrativo() == StatusVeiculo.NO_PATIO
+                || veiculo.getStatusAdministrativo() == StatusVeiculo.AGUARDANDO_REALOCACAO) {
             veiculo.setStatusAdministrativo(null);
         }
     }
