@@ -5,6 +5,8 @@ import com.frota.checklist.dto.AtualizarStatusAdministrativoRequest;
 import com.frota.checklist.dto.ExclusaoDefinitivaVeiculoRequest;
 import com.frota.checklist.dto.HistoricoVeiculoResponse;
 import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
+import com.frota.checklist.dto.RegistrarRetornoUsoExternoRequest;
+import com.frota.checklist.dto.RegistrarVeiculoEmUsoExternoRequest;
 import com.frota.checklist.dto.RegistrarVeiculoEmViagemRequest;
 import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.security.CustomUserDetails;
@@ -71,6 +73,24 @@ public class AdminVeiculoController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(adminVeiculoService.registrarEmViagem(id, request, userDetails.getMotoristaId()));
+    }
+
+    @PostMapping("/{id}/em-uso-externo")
+    public ResponseEntity<VeiculoResponse> registrarEmUsoExterno(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrarVeiculoEmUsoExternoRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.registrarEmUsoExterno(id, request, userDetails.getMotoristaId()));
+    }
+
+    @PostMapping("/{id}/retorno-uso-externo")
+    public ResponseEntity<VeiculoResponse> registrarRetornoUsoExterno(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrarRetornoUsoExternoRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.registrarRetornoUsoExterno(id, request, userDetails.getMotoristaId()));
     }
 
     @PatchMapping("/{id}/desativar")

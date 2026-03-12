@@ -38,6 +38,10 @@ export interface Veiculo {
   viagemLocalDestino?: string | null;
   viagemObservacao?: string | null;
   viagemDataHoraSaida?: string | null;
+  usoExternoId?: number | null;
+  usoExternoEntreguePara?: string | null;
+  usoExternoObservacaoSaida?: string | null;
+  usoExternoDataHoraSaida?: string | null;
 }
 
 export interface HistoricoStatusVeiculo {

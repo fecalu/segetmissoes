@@ -112,6 +112,10 @@
                       <p class="vehicle-missao-meta">{{ resumoDadosAdministrativosPainel(v.id) }}</p>
                     </ng-template>
                   </ng-container>
+                  <ng-container *ngIf="v.statusAtual === 'EM_USO_EXTERNO'">
+                    <p class="vehicle-missao-meta"><strong>Entregue para:</strong> {{ contraparteUsoExternoLabel(v) }}</p>
+                    <p class="vehicle-missao-meta" *ngIf="v.usoExternoDataHoraSaida"><strong>Saida:</strong> {{ v.usoExternoDataHoraSaida | date:'dd/MM/yyyy HH:mm' }}</p>
+                  </ng-container>
                   <p class="vehicle-admin-state">
                     <strong>Status administrativo:</strong>
                     {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
@@ -1194,6 +1198,80 @@
           {{ salvandoRegistroViagem ? 'Salvando...' : 'Salvar viagem' }}
         </button>
         <button mat-stroked-button type="button" (click)="fecharRegistroViagem()">Cancelar</button>
+      </div>
+    </form>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="showRegistroUsoExternoModal && selectedVeiculoUsoExterno">
+  <article class="detail-card viagem-card">
+    <header>
+      <div>
+        <h3>Registrar uso externo - {{ selectedVeiculoUsoExterno.placa }}</h3>
+        <p class="history-card-subtitle">{{ selectedVeiculoUsoExterno.marca }} {{ selectedVeiculoUsoExterno.modelo }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="fecharRegistroUsoExterno()">Fechar</button>
+    </header>
+
+    <form [formGroup]="usoExternoForm" class="form-grid" (ngSubmit)="salvarRegistroUsoExterno()">
+      <mat-form-field appearance="outline">
+        <mat-label>Entregue para / Em uso por</mat-label>
+        <input matInput formControlName="nomeEntreguePara" maxlength="180">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data e hora da saida</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraSaida">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Observacao</mat-label>
+        <textarea matInput rows="3" formControlName="observacao" maxlength="700"></textarea>
+      </mat-form-field>
+
+      <div class="row-actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="salvandoRegistroUsoExterno">
+          {{ salvandoRegistroUsoExterno ? 'Salvando...' : 'Salvar uso externo' }}
+        </button>
+        <button mat-stroked-button type="button" (click)="fecharRegistroUsoExterno()">Cancelar</button>
+      </div>
+    </form>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="showRetornoUsoExternoModal && selectedVeiculoRetornoUsoExterno">
+  <article class="detail-card viagem-card">
+    <header>
+      <div>
+        <h3>Registrar retorno do uso externo - {{ selectedVeiculoRetornoUsoExterno.placa }}</h3>
+        <p class="history-card-subtitle">{{ selectedVeiculoRetornoUsoExterno.marca }} {{ selectedVeiculoRetornoUsoExterno.modelo }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="fecharRetornoUsoExterno()">Fechar</button>
+    </header>
+
+    <p><strong>Destino apos o retorno:</strong> {{ destinoRetornoUsoExternoLabel() }}</p>
+
+    <form [formGroup]="retornoUsoExternoForm" class="form-grid" (ngSubmit)="salvarRetornoUsoExterno()">
+      <mat-form-field appearance="outline">
+        <mat-label>Recebido de</mat-label>
+        <input matInput formControlName="nomeRecebidoDe" maxlength="180">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data e hora do retorno</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraRetorno">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Observacao</mat-label>
+        <textarea matInput rows="3" formControlName="observacao" maxlength="700"></textarea>
+      </mat-form-field>
+
+      <div class="row-actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="salvandoRetornoUsoExterno">
+          {{ salvandoRetornoUsoExterno ? 'Salvando...' : 'Salvar retorno' }}
+        </button>
+        <button mat-stroked-button type="button" (click)="fecharRetornoUsoExterno()">Cancelar</button>
       </div>
     </form>
   </article>

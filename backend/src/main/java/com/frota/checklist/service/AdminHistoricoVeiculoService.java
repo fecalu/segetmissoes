@@ -9,6 +9,7 @@ import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.MissaoExcecao;
 import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.ResultadoVistoriaCompleta;
+import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
 import com.frota.checklist.entity.RegistroViagemVeiculo;
 import com.frota.checklist.entity.StatusExcecaoMissao;
 import com.frota.checklist.entity.StatusVeiculo;
@@ -23,6 +24,7 @@ import com.frota.checklist.repository.HistoricoStatusVeiculoRepository;
 import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MissaoRepository;
 import com.frota.checklist.repository.RegistroViagemVeiculoRepository;
+import com.frota.checklist.repository.RegistroUsoExternoVeiculoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import com.frota.checklist.repository.VistoriaCompletaRepository;
 import jakarta.transaction.Transactional;
@@ -30,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -47,6 +50,7 @@ public class AdminHistoricoVeiculoService {
     private final AuditoriaMissaoRepository auditoriaMissaoRepository;
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
+    private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
     private final VistoriaCompletaRepository vistoriaCompletaRepository;
     private final HistoricoStatusVeiculoRepository historicoStatusVeiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
@@ -62,6 +66,7 @@ public class AdminHistoricoVeiculoService {
         List<AuditoriaMissao> auditoriasMissao = auditoriaMissaoRepository.findByMissaoVeiculoIdOrderByDataHoraDesc(veiculoId);
         List<MissaoExcecao> excecoes = missaoExcecaoRepository.findByVeiculoIdOrderByDataHoraAberturaDescIdDesc(veiculoId);
         List<RegistroViagemVeiculo> viagens = registroViagemVeiculoRepository.findByVeiculoIdOrderByDataHoraSaidaDescIdDesc(veiculoId);
+        List<RegistroUsoExternoVeiculo> usosExternos = registroUsoExternoVeiculoRepository.findByVeiculoIdOrderByDataHoraSaidaDescIdDesc(veiculoId);
         List<VistoriaCompleta> vistorias = vistoriaCompletaRepository.findByVeiculoIdOrderByDataHoraDescIdDesc(veiculoId);
         List<HistoricoStatusVeiculo> historicoStatus = historicoStatusVeiculoRepository.findByVeiculoIdOrderByDataHoraDesc(veiculoId);
 
@@ -100,6 +105,12 @@ public class AdminHistoricoVeiculoService {
                 eventos.add(mapearViagemFinalizada(viagem));
             }
         });
+        usosExternos.forEach(registro -> {
+            eventos.add(mapearUsoExternoIniciado(registro));
+            if (registro.getDataHoraRetorno() != null) {
+                eventos.add(mapearUsoExternoFinalizado(registro, historicoStatus));
+            }
+        });
 
         vistorias.forEach(vistoria -> eventos.add(mapearVistoria(vistoria)));
         historicoStatus.forEach(item -> eventos.add(mapearHistoricoStatus(item)));
@@ -122,7 +133,7 @@ public class AdminHistoricoVeiculoService {
                 checklists.size(),
                 excecoes.size(),
                 vistorias.size(),
-                (int) vistorias.stream().filter(v -> v.getTipoOperacao() == TipoOperacao.SAIDA).count(),
+                usosExternos.size() + (int) vistorias.stream().filter(v -> v.getTipoOperacao() == TipoOperacao.SAIDA).count(),
                 (int) historicoStatus.stream().filter(h -> h.getStatusNovo() == StatusVeiculo.OFICINA).count(),
                 missoes.stream()
                         .map(this::ultimaDataMissao)
@@ -591,6 +602,98 @@ public class AdminHistoricoVeiculoService {
                         viagem.getObservacao(),
                         null,
                         null
+                )
+        );
+    }
+
+    private HistoricoVeiculoResponse.Evento mapearUsoExternoIniciado(RegistroUsoExternoVeiculo registro) {
+        return new HistoricoVeiculoResponse.Evento(
+                "USO-EXTERNO-INICIO-" + registro.getId(),
+                TipoEventoHistoricoVeiculo.USO_EXTERNO_INICIADO,
+                registro.getDataHoraSaida(),
+                "Uso externo iniciado",
+                "Entregue para: %s".formatted(valorOuTraco(registro.getNomeEntreguePara())),
+                null,
+                registro.getAdministradorRegistro().getNome(),
+                false,
+                0,
+                false,
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new HistoricoVeiculoResponse.Detalhe(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        registro.getNomeEntreguePara(),
+                        null,
+                        null,
+                        registro.getObservacaoSaida(),
+                        null,
+                        StatusVeiculo.EM_USO_EXTERNO
+                )
+        );
+    }
+
+    private HistoricoVeiculoResponse.Evento mapearUsoExternoFinalizado(
+            RegistroUsoExternoVeiculo registro,
+            List<HistoricoStatusVeiculo> historicoStatus
+    ) {
+        StatusVeiculo destino = historicoStatus.stream()
+                .filter(item -> item.getDataHora() != null && registro.getDataHoraRetorno() != null)
+                .filter(item -> !item.getDataHora().isBefore(registro.getDataHoraRetorno().minusSeconds(1)))
+                .min(Comparator.comparingLong(item -> Math.abs(ChronoUnit.SECONDS.between(registro.getDataHoraRetorno(), item.getDataHora()))))
+                .map(HistoricoStatusVeiculo::getStatusNovo)
+                .orElse(null);
+
+        return new HistoricoVeiculoResponse.Evento(
+                "USO-EXTERNO-FIM-" + registro.getId(),
+                TipoEventoHistoricoVeiculo.USO_EXTERNO_FINALIZADO,
+                registro.getDataHoraRetorno(),
+                "Uso externo finalizado",
+                "Recebido de: %s".formatted(valorOuTraco(registro.getNomeRecebidoDe())),
+                null,
+                registro.getAdministradorEncerramento() != null ? registro.getAdministradorEncerramento().getNome() : null,
+                false,
+                0,
+                false,
+                0,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new HistoricoVeiculoResponse.Detalhe(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        registro.getNomeRecebidoDe(),
+                        null,
+                        null,
+                        registro.getObservacaoRetorno(),
+                        StatusVeiculo.EM_USO_EXTERNO,
+                        destino
                 )
         );
     }

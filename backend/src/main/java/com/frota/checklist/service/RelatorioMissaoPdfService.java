@@ -143,19 +143,18 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarTabela(Document document, List<Missao> missoes) throws DocumentException {
-        PdfPTable tabela = new PdfPTable(new float[]{2.15f, 1.55f, 0.95f, 3.7f, 1.15f, 1.15f});
+        PdfPTable tabela = new PdfPTable(new float[]{2.2f, 1.6f, 4.95f, 1.2f, 1.2f});
         tabela.setWidthPercentage(100);
 
         adicionarHeaderTabela(tabela, "Veiculo");
         adicionarHeaderTabela(tabela, "Motorista");
-        adicionarHeaderTabela(tabela, "Situacao");
         adicionarHeaderTabela(tabela, "Destino | Setor | Solicitante");
         adicionarHeaderTabela(tabela, "Inicio");
         adicionarHeaderTabela(tabela, "Fim");
 
         if (missoes.isEmpty()) {
             PdfPCell empty = new PdfPCell(new Phrase("Nenhuma missao encontrada para o dia informado.", font(10, Font.NORMAL, TEXT)));
-            empty.setColspan(6);
+            empty.setColspan(5);
             empty.setPadding(12);
             empty.setHorizontalAlignment(Element.ALIGN_CENTER);
             empty.setBorderColor(BORDER);
@@ -171,7 +170,6 @@ public class RelatorioMissaoPdfService {
                                 + missao.getVeiculo().getModelo()
                 );
                 adicionarBodyTabela(tabela, missao.getMotorista().getNome());
-                adicionarBodyTabela(tabela, statusLabel(missao.getStatus()));
                 adicionarBodyTabela(tabela, dadosMissaoResumidos(missao));
                 adicionarBodyTabela(tabela, missao.getDataHoraInicio().format(DATE_TIME_FORMATTER));
                 adicionarBodyTabela(tabela, formatarChegada(missao.getDataHoraFim()));
@@ -204,10 +202,6 @@ public class RelatorioMissaoPdfService {
             return "EM ANDAMENTO";
         }
         return dataHoraFim.format(DATE_TIME_FORMATTER);
-    }
-
-    private String statusLabel(StatusMissao status) {
-        return status == StatusMissao.ATIVA ? "EM ANDAMENTO" : "FINALIZADA";
     }
 
     private String dadosMissaoResumidos(Missao missao) {

@@ -40,6 +40,8 @@ import {
   CriarMissaoContingenciaPayload,
   EditarMissaoManualPayload,
   EncerrarMissaoPendentePayload,
+  RegistrarRetornoUsoExternoPayload,
+  RegistrarVeiculoEmUsoExternoPayload,
   RegistrarVeiculoEmViagemPayload
 } from '../../core/services/admin.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -59,7 +61,7 @@ type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'USO_EXTERNO' | 'VIAGEM' | 'PAT
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
-type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'VISTORIAS' | 'STATUS';
+type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'USO_EXTERNO' | 'VISTORIAS' | 'STATUS';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -181,6 +183,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   salvandoNovaMissaoContingencia = false;
   encerrandoMissaoPendente = false;
   salvandoRegistroViagem = false;
+  salvandoRegistroUsoExterno = false;
+  salvandoRetornoUsoExterno = false;
   glossarioMissoesAberto = false;
   glossarioChecklistsAberto = false;
   glossarioVistoriasAberto = false;
@@ -188,6 +192,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   contraparteVistoriaEdicao = '';
   showRegistroViagemModal = false;
   selectedVeiculoViagem: Veiculo | null = null;
+  showRegistroUsoExternoModal = false;
+  selectedVeiculoUsoExterno: Veiculo | null = null;
+  showRetornoUsoExternoModal = false;
+  selectedVeiculoRetornoUsoExterno: Veiculo | null = null;
+  statusDestinoRetornoUsoExterno: StatusAdministrativoVeiculo | null = null;
   filtroHistoricoVeiculo: FiltroHistoricoVeiculo = '';
   filtroHistoricoSomenteComFotos = false;
   filtroHistoricoSomenteComAvarias = false;
@@ -210,6 +219,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { value: 'CHECKLISTS', label: 'Checklists' },
     { value: 'SEM_CHECKLIST', label: 'Sem checklist' },
     { value: 'VIAGENS', label: 'Viagens' },
+    { value: 'USO_EXTERNO', label: 'Uso externo' },
     { value: 'VISTORIAS', label: 'Vistorias completas' },
     { value: 'STATUS', label: 'Mudancas de status' }
   ];
@@ -320,6 +330,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   readonly missaoContingenciaForm;
   readonly missaoPendenteForm;
   readonly viagemForm;
+  readonly usoExternoForm;
+  readonly retornoUsoExternoForm;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -424,6 +436,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: [0, [Validators.min(1)]],
       localDestino: ['', [Validators.required, Validators.maxLength(180)]],
       dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
+      observacao: ['', [Validators.maxLength(700)]]
+    });
+
+    this.usoExternoForm = this.fb.nonNullable.group({
+      nomeEntreguePara: ['', [Validators.required, Validators.maxLength(180)]],
+      dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
+      observacao: ['', [Validators.maxLength(700)]]
+    });
+
+    this.retornoUsoExternoForm = this.fb.nonNullable.group({
+      nomeRecebidoDe: ['', [Validators.required, Validators.maxLength(180)]],
+      dataHoraRetorno: [this.agoraDateTimeLocal(), [Validators.required]],
       observacao: ['', [Validators.maxLength(700)]]
     });
   }
@@ -970,8 +994,23 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (categoriaOrigem === 'USO_EXTERNO' && categoriaDestino === 'VIAGEM') {
+      this.snackBar.open('Receba o veiculo do uso externo antes de registrar uma nova viagem.', 'Fechar', { duration: 3200 });
+      return;
+    }
+
     if (categoriaDestino === 'VIAGEM') {
       this.abrirRegistroViagem(veiculo);
+      return;
+    }
+
+    if (categoriaDestino === 'USO_EXTERNO') {
+      this.abrirRegistroUsoExterno(veiculo);
+      return;
+    }
+
+    if (categoriaOrigem === 'USO_EXTERNO') {
+      this.abrirRetornoUsoExterno(veiculo, categoriaDestino);
       return;
     }
 
@@ -1074,6 +1113,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (this.selectedCategoriaInclusao === 'VIAGEM') {
       this.fecharInclusaoCategoria();
       this.abrirRegistroViagem(veiculo);
+      return;
+    }
+
+    if (this.selectedCategoriaInclusao === 'USO_EXTERNO') {
+      this.fecharInclusaoCategoria();
+      this.abrirRegistroUsoExterno(veiculo);
+      return;
+    }
+
+    if (veiculo.statusAtual === 'EM_USO_EXTERNO') {
+      const categoriaDestino = this.selectedCategoriaInclusao;
+      this.fecharInclusaoCategoria();
+      this.abrirRetornoUsoExterno(veiculo, categoriaDestino);
       return;
     }
 
@@ -1193,6 +1245,126 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  abrirRegistroUsoExterno(veiculo: Veiculo): void {
+    this.selectedVeiculoUsoExterno = veiculo;
+    this.showRegistroUsoExternoModal = true;
+    this.usoExternoForm.reset({
+      nomeEntreguePara: veiculo.usoExternoEntreguePara || '',
+      dataHoraSaida: this.agoraDateTimeLocal(),
+      observacao: veiculo.usoExternoObservacaoSaida || ''
+    });
+  }
+
+  fecharRegistroUsoExterno(): void {
+    this.showRegistroUsoExternoModal = false;
+    this.selectedVeiculoUsoExterno = null;
+    this.usoExternoForm.reset({
+      nomeEntreguePara: '',
+      dataHoraSaida: this.agoraDateTimeLocal(),
+      observacao: ''
+    });
+  }
+
+  salvarRegistroUsoExterno(): void {
+    if (!this.selectedVeiculoUsoExterno) {
+      return;
+    }
+    if (this.usoExternoForm.invalid) {
+      this.usoExternoForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.usoExternoForm.getRawValue();
+    const payload: RegistrarVeiculoEmUsoExternoPayload = {
+      nomeEntreguePara: raw.nomeEntreguePara.trim(),
+      dataHoraSaida: raw.dataHoraSaida,
+      observacao: this.toNullIfBlank(raw.observacao)
+    };
+
+    this.salvandoRegistroUsoExterno = true;
+    this.adminService.registrarVeiculoEmUsoExterno(this.selectedVeiculoUsoExterno.id, payload)
+      .pipe(finalize(() => (this.salvandoRegistroUsoExterno = false)))
+      .subscribe({
+        next: () => {
+          const historicoAbertoParaMesmoVeiculo = this.selectedVeiculoHistorico?.id === this.selectedVeiculoUsoExterno?.id;
+          const veiculoHistorico = this.selectedVeiculoHistorico;
+          this.snackBar.open('Uso externo registrado com sucesso.', 'Fechar', { duration: 2400 });
+          this.fecharRegistroUsoExterno();
+          this.carregarVeiculos(this.veiculoBusca);
+          if (historicoAbertoParaMesmoVeiculo && veiculoHistorico) {
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar o uso externo.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  abrirRetornoUsoExterno(veiculo: Veiculo, categoriaDestino: PainelCategoria): void {
+    const statusDestino = this.statusAdministrativoAlvoPorCategoria(categoriaDestino);
+    if (categoriaDestino === 'VIAGEM') {
+      this.snackBar.open('Receba o veiculo do uso externo antes de registrar uma viagem.', 'Fechar', { duration: 3200 });
+      return;
+    }
+    if (statusDestino === undefined) {
+      this.snackBar.open('Nao foi possivel definir o status de retorno do uso externo.', 'Fechar', { duration: 2800 });
+      return;
+    }
+    this.selectedVeiculoRetornoUsoExterno = veiculo;
+    this.statusDestinoRetornoUsoExterno = statusDestino;
+    this.showRetornoUsoExternoModal = true;
+    this.retornoUsoExternoForm.reset({
+      nomeRecebidoDe: '',
+      dataHoraRetorno: this.agoraDateTimeLocal(),
+      observacao: ''
+    });
+  }
+
+  fecharRetornoUsoExterno(): void {
+    this.showRetornoUsoExternoModal = false;
+    this.selectedVeiculoRetornoUsoExterno = null;
+    this.statusDestinoRetornoUsoExterno = null;
+    this.retornoUsoExternoForm.reset({
+      nomeRecebidoDe: '',
+      dataHoraRetorno: this.agoraDateTimeLocal(),
+      observacao: ''
+    });
+  }
+
+  salvarRetornoUsoExterno(): void {
+    if (!this.selectedVeiculoRetornoUsoExterno) {
+      return;
+    }
+    if (this.retornoUsoExternoForm.invalid) {
+      this.retornoUsoExternoForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.retornoUsoExternoForm.getRawValue();
+    const payload: RegistrarRetornoUsoExternoPayload = {
+      statusAdministrativoDestino: this.statusDestinoRetornoUsoExterno,
+      nomeRecebidoDe: raw.nomeRecebidoDe.trim(),
+      dataHoraRetorno: raw.dataHoraRetorno,
+      observacao: this.toNullIfBlank(raw.observacao)
+    };
+
+    this.salvandoRetornoUsoExterno = true;
+    this.adminService.registrarRetornoUsoExterno(this.selectedVeiculoRetornoUsoExterno.id, payload)
+      .pipe(finalize(() => (this.salvandoRetornoUsoExterno = false)))
+      .subscribe({
+        next: () => {
+          const historicoAbertoParaMesmoVeiculo = this.selectedVeiculoHistorico?.id === this.selectedVeiculoRetornoUsoExterno?.id;
+          const veiculoHistorico = this.selectedVeiculoHistorico;
+          this.snackBar.open('Retorno do uso externo registrado com sucesso.', 'Fechar', { duration: 2400 });
+          this.fecharRetornoUsoExterno();
+          this.carregarVeiculos(this.veiculoBusca);
+          if (historicoAbertoParaMesmoVeiculo && veiculoHistorico) {
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar o retorno do uso externo.', 'Fechar', { duration: 3200 })
+      });
+  }
+
   eventosHistoricoFiltrados(): EventoHistoricoVeiculo[] {
     const eventos = this.historicoVeiculo?.eventos || [];
     return eventos.filter(evento => {
@@ -1241,6 +1413,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case 'VIAGEM_INICIADA':
       case 'VIAGEM_FINALIZADA':
         return 'VIAGEM';
+      case 'USO_EXTERNO_INICIADO':
+      case 'USO_EXTERNO_FINALIZADO':
+        return 'USO EXTERNO';
       case 'VISTORIA_COMPLETA_SAIDA':
       case 'VISTORIA_COMPLETA_CHEGADA':
         return 'VISTORIA COMPLETA';
@@ -1273,6 +1448,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         return 'INICIO';
       case 'VIAGEM_FINALIZADA':
         return 'RETORNO';
+      case 'USO_EXTERNO_INICIADO':
+        return 'SAIDA';
+      case 'USO_EXTERNO_FINALIZADO':
+        return 'RETORNO';
       case 'STATUS_ALTERADO':
         return evento.detalhe?.statusNovo ? this.statusLabel(evento.detalhe.statusNovo) : null;
     }
@@ -1294,6 +1473,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case 'VIAGEM_INICIADA':
       case 'VIAGEM_FINALIZADA':
         return 'status-em_viagem';
+      case 'USO_EXTERNO_INICIADO':
+      case 'USO_EXTERNO_FINALIZADO':
+        return 'status-em_uso_externo';
       case 'VISTORIA_COMPLETA_SAIDA':
       case 'VISTORIA_COMPLETA_CHEGADA':
         return 'status-em_uso_externo';
@@ -1308,6 +1490,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
       return 'status-em_viagem';
+    }
+    if (evento.tipo === 'USO_EXTERNO_FINALIZADO' && evento.detalhe?.statusNovo) {
+      return this.statusClass(evento.detalhe.statusNovo);
+    }
+    if (evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO') {
+      return 'status-em_uso_externo';
     }
     if (evento.tipo === 'CHECKLIST_CHEGADA' || evento.tipo === 'VISTORIA_COMPLETA_CHEGADA') {
       return 'status-no_patio';
@@ -1334,6 +1522,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   destinoViagemLabel(veiculo: Veiculo): string {
     return veiculo.viagemLocalDestino || '-';
+  }
+
+  contraparteUsoExternoLabel(veiculo: Veiculo): string {
+    return veiculo.usoExternoEntreguePara || '-';
+  }
+
+  destinoRetornoUsoExternoLabel(): string {
+    if (this.statusDestinoRetornoUsoExterno === null) {
+      return 'DISPONIVEL';
+    }
+    return this.statusLabel(this.statusDestinoRetornoUsoExterno);
   }
 
   desativarVeiculo(veiculo: Veiculo): void {
@@ -2348,6 +2547,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         return evento.tipo === 'EXCECAO_ABERTA' || evento.tipo === 'EXCECAO_REGULARIZADA';
       case 'VIAGENS':
         return evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA';
+      case 'USO_EXTERNO':
+        return evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO';
       case 'VISTORIAS':
         return evento.tipo === 'VISTORIA_COMPLETA_SAIDA' || evento.tipo === 'VISTORIA_COMPLETA_CHEGADA';
       case 'STATUS':
@@ -2573,6 +2774,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     return this.veiculosAtivos()
       .filter(v => !this.veiculoComDeslocamentoAutomatico(v))
+      .filter(v => categoria !== 'VIAGEM' || v.statusAtual !== 'EM_USO_EXTERNO')
       .filter(v => {
         if (categoria === 'DISPONIVEL') {
           return v.statusAdministrativo !== null;

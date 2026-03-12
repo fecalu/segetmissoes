@@ -23,6 +23,10 @@ public record VeiculoResponse(
         String viagemMotoristaNome,
         String viagemLocalDestino,
         String viagemObservacao,
-        LocalDateTime viagemDataHoraSaida
+        LocalDateTime viagemDataHoraSaida,
+        Long usoExternoId,
+        String usoExternoEntreguePara,
+        String usoExternoObservacaoSaida,
+        LocalDateTime usoExternoDataHoraSaida
 ) {
 }

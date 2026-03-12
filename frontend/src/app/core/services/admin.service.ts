@@ -59,6 +59,19 @@ export interface RegistrarVeiculoEmViagemPayload {
   observacao: string | null;
 }
 
+export interface RegistrarVeiculoEmUsoExternoPayload {
+  nomeEntreguePara: string;
+  dataHoraSaida: string;
+  observacao: string | null;
+}
+
+export interface RegistrarRetornoUsoExternoPayload {
+  statusAdministrativoDestino: StatusAdministrativoVeiculo | null;
+  nomeRecebidoDe: string;
+  dataHoraRetorno: string;
+  observacao: string | null;
+}
+
 export interface AtualizarDadosAdministrativosMissaoPayload {
   localDestino: string | null;
   setorSolicitante: string | null;
@@ -255,6 +268,14 @@ export class AdminService {
 
   registrarVeiculoEmViagem(id: number, payload: RegistrarVeiculoEmViagemPayload): Observable<Veiculo> {
     return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/em-viagem`, payload);
+  }
+
+  registrarVeiculoEmUsoExterno(id: number, payload: RegistrarVeiculoEmUsoExternoPayload): Observable<Veiculo> {
+    return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/em-uso-externo`, payload);
+  }
+
+  registrarRetornoUsoExterno(id: number, payload: RegistrarRetornoUsoExternoPayload): Observable<Veiculo> {
+    return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/retorno-uso-externo`, payload);
   }
 
   listarHistoricoStatusVeiculo(id: number): Observable<HistoricoStatusVeiculo[]> {
