@@ -3,11 +3,13 @@ package com.frota.checklist.service;
 import com.frota.checklist.dto.AdminVeiculoRequest;
 import com.frota.checklist.entity.AuditoriaExclusaoVeiculo;
 import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
+import com.frota.checklist.dto.RegistrarVeiculoEmViagemRequest;
 import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.HistoricoStatusVeiculo;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.Perfil;
+import com.frota.checklist.entity.RegistroViagemVeiculo;
 import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
@@ -17,6 +19,7 @@ import com.frota.checklist.repository.ChecklistRepository;
 import com.frota.checklist.repository.HistoricoStatusVeiculoRepository;
 import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.RegistroViagemVeiculoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +41,7 @@ public class AdminVeiculoService {
     private final MotoristaRepository motoristaRepository;
     private final HistoricoStatusVeiculoRepository historicoStatusVeiculoRepository;
     private final MissaoExcecaoRepository missaoExcecaoRepository;
+    private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
     private final AuditoriaExclusaoVeiculoRepository auditoriaExclusaoVeiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
@@ -49,9 +53,10 @@ public class AdminVeiculoService {
                 .filter(v -> filtro.isBlank() || normalizarPlaca(v.getPlaca()).contains(filtro))
                 .toList();
         Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
+        Map<Long, RegistroViagemVeiculo> viagensAtivas = carregarViagensAtivasPorVeiculo(veiculos);
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return veiculos.stream()
-                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos))
+                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos, viagensAtivas.get(v.getId())))
                 .toList();
     }
 
@@ -66,7 +71,7 @@ public class AdminVeiculoService {
         veiculo.setModelo(request.modelo().trim());
         veiculo.setMarca(request.marca().trim());
         veiculo.setDesativado(false);
-        veiculo.setStatusAdministrativo(null);
+        veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
 
         return toResponse(veiculoRepository.save(veiculo));
     }
@@ -91,30 +96,22 @@ public class AdminVeiculoService {
     public VeiculoResponse desativar(Long id, Long administradorId) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        Motorista administrador = motoristaRepository.findById(administradorId)
-                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem desativar veiculo");
-        }
+        Motorista administrador = validarAdministrador(administradorId);
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
             return toResponse(veiculo);
         }
 
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
-        if (snapshotAntes.statusAutomatico() == StatusVeiculo.CIRCULANDO) {
+        if (snapshotAntes.statusAutomatico().isDeslocamentoAtivo()) {
             throw new BusinessException("Nao e possivel desativar veiculo em missao. Registre a chegada primeiro");
         }
 
         veiculo.setDesativado(true);
         veiculo.setStatusAdministrativo(StatusVeiculo.BLOQUEADO);
         Veiculo salvo = veiculoRepository.save(veiculo);
+        encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), StatusVeiculo.BLOQUEADO, administrador);
 
-        HistoricoStatusVeiculo historico = new HistoricoStatusVeiculo();
-        historico.setVeiculo(salvo);
-        historico.setAdministrador(administrador);
-        historico.setStatusAnterior(snapshotAntes.statusAtual());
-        historico.setStatusNovo(StatusVeiculo.BLOQUEADO);
-        historicoStatusVeiculoRepository.save(historico);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), StatusVeiculo.BLOQUEADO);
 
         return toResponse(salvo);
     }
@@ -123,11 +120,7 @@ public class AdminVeiculoService {
     public VeiculoResponse reativar(Long id, Long administradorId) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        Motorista administrador = motoristaRepository.findById(administradorId)
-                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem reativar veiculo");
-        }
+        Motorista administrador = validarAdministrador(administradorId);
         if (!Boolean.TRUE.equals(veiculo.getDesativado())) {
             return toResponse(veiculo);
         }
@@ -137,13 +130,9 @@ public class AdminVeiculoService {
         veiculo.setStatusAdministrativo(null);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
+        encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), administrador);
 
-        HistoricoStatusVeiculo historico = new HistoricoStatusVeiculo();
-        historico.setVeiculo(salvo);
-        historico.setAdministrador(administrador);
-        historico.setStatusAnterior(snapshotAntes.statusAtual());
-        historico.setStatusNovo(snapshotDepois.statusAtual());
-        historicoStatusVeiculoRepository.save(historico);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
 
         return toResponse(salvo);
     }
@@ -152,16 +141,14 @@ public class AdminVeiculoService {
     public VeiculoResponse atualizarStatusAdministrativo(Long id, StatusVeiculo novoStatusAdministrativo, Long administradorId) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        Motorista administrador = motoristaRepository.findById(administradorId)
-                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem alterar status administrativo");
-        }
+        Motorista administrador = validarAdministrador(administradorId);
 
         StatusVeiculo novoStatusNormalizado = StatusVeiculo.normalizarStatusAdministrativo(novoStatusAdministrativo);
         if (novoStatusAdministrativo != null && novoStatusNormalizado == null) {
             throw new BusinessException("Status administrativo invalido");
+        }
+        if (novoStatusNormalizado == StatusVeiculo.EM_VIAGEM) {
+            throw new BusinessException("Use o registro de viagem para colocar o veiculo em viagem");
         }
 
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
@@ -173,13 +160,49 @@ public class AdminVeiculoService {
         Veiculo salvo = veiculoRepository.save(veiculo);
 
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
+        encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), administrador);
 
-        HistoricoStatusVeiculo historico = new HistoricoStatusVeiculo();
-        historico.setVeiculo(salvo);
-        historico.setAdministrador(administrador);
-        historico.setStatusAnterior(snapshotAntes.statusAtual());
-        historico.setStatusNovo(snapshotDepois.statusAtual());
-        historicoStatusVeiculoRepository.save(historico);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
+
+        return toResponse(salvo);
+    }
+
+    @Transactional
+    public VeiculoResponse registrarEmViagem(Long id, RegistrarVeiculoEmViagemRequest request, Long administradorId) {
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        Motorista administrador = validarAdministrador(administradorId);
+        Motorista motoristaViagem = motoristaRepository.findById(request.motoristaId())
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+
+        if (Boolean.TRUE.equals(veiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode ser colocado em viagem");
+        }
+
+        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        if (snapshotAntes.statusAutomatico().isDeslocamentoAtivo()) {
+            throw new BusinessException("Nao e possivel colocar em viagem um veiculo com missao em andamento");
+        }
+        if (snapshotAntes.statusAtual() == StatusVeiculo.EM_VIAGEM) {
+            throw new BusinessException("Este veiculo ja esta em viagem");
+        }
+        if (registroViagemVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id).isPresent()) {
+            throw new BusinessException("Ja existe um registro de viagem em aberto para este veiculo");
+        }
+
+        RegistroViagemVeiculo viagem = new RegistroViagemVeiculo();
+        viagem.setVeiculo(veiculo);
+        viagem.setMotorista(motoristaViagem);
+        viagem.setAdministradorRegistro(administrador);
+        viagem.setLocalDestino(request.localDestino().trim());
+        viagem.setObservacao(trimToNull(request.observacao()));
+        viagem.setDataHoraSaida(request.dataHoraSaida());
+        registroViagemVeiculoRepository.save(viagem);
+
+        veiculo.setStatusAdministrativo(StatusVeiculo.EM_VIAGEM);
+        Veiculo salvo = veiculoRepository.save(veiculo);
+
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), StatusVeiculo.EM_VIAGEM);
 
         return toResponse(salvo);
     }
@@ -209,6 +232,7 @@ public class AdminVeiculoService {
         if (checklistRepository.existsByVeiculoId(id)) {
             throw new BusinessException("Nao e possivel excluir veiculo com checklists vinculados");
         }
+        registroViagemVeiculoRepository.deleteByVeiculoId(id);
         historicoStatusVeiculoRepository.deleteByVeiculoId(id);
         veiculoRepository.delete(veiculo);
     }
@@ -234,7 +258,7 @@ public class AdminVeiculoService {
         }
 
         VeiculoStatusSnapshot snapshot = veiculoStatusResolver.resolver(veiculo);
-        if (snapshot.statusAutomatico() == StatusVeiculo.CIRCULANDO) {
+        if (snapshot.statusAutomatico().isDeslocamentoAtivo()) {
             throw new BusinessException("Nao e possivel excluir definitivamente um veiculo com missao em aberto");
         }
 
@@ -260,6 +284,7 @@ public class AdminVeiculoService {
 
         missaoExcecaoRepository.deleteAll(missaoExcecaoRepository.findByVeiculoId(id));
         checklistRepository.deleteAll(checklistRepository.findByVeiculoId(id));
+        registroViagemVeiculoRepository.deleteByVeiculoId(id);
         historicoStatusVeiculoRepository.deleteByVeiculoId(id);
         veiculoRepository.delete(veiculo);
     }
@@ -270,13 +295,19 @@ public class AdminVeiculoService {
 
     private VeiculoResponse toResponse(Veiculo veiculo) {
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
-        return toResponse(veiculo, veiculoStatusResolver.resolver(veiculo), rotulos);
+        return toResponse(
+                veiculo,
+                veiculoStatusResolver.resolver(veiculo),
+                rotulos,
+                registroViagemVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId()).orElse(null)
+        );
     }
 
     private VeiculoResponse toResponse(
             Veiculo veiculo,
             VeiculoStatusSnapshot snapshot,
-            Map<StatusVeiculo, String> rotulos
+            Map<StatusVeiculo, String> rotulos,
+            RegistroViagemVeiculo viagemAtiva
     ) {
         String statusAtualRotulo = rotulos.getOrDefault(snapshot.statusAtual(), snapshot.statusAtual().name());
         String statusAutomaticoRotulo = rotulos.getOrDefault(snapshot.statusAutomatico(), snapshot.statusAutomatico().name());
@@ -297,7 +328,73 @@ public class AdminVeiculoService {
                 snapshot.motoristaAtualNome(),
                 statusAtualRotulo,
                 statusAutomaticoRotulo,
-                statusAdministrativoRotulo
+                statusAdministrativoRotulo,
+                viagemAtiva != null ? viagemAtiva.getId() : null,
+                viagemAtiva != null ? viagemAtiva.getMotorista().getId() : null,
+                viagemAtiva != null ? viagemAtiva.getMotorista().getNome() : null,
+                viagemAtiva != null ? viagemAtiva.getLocalDestino() : null,
+                viagemAtiva != null ? viagemAtiva.getObservacao() : null,
+                viagemAtiva != null ? viagemAtiva.getDataHoraSaida() : null
         );
+    }
+
+    private Motorista validarAdministrador(Long administradorId) {
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Somente administradores podem alterar dados do veiculo");
+        }
+        return administrador;
+    }
+
+    private void registrarHistoricoStatus(
+            Veiculo veiculo,
+            Motorista administrador,
+            StatusVeiculo statusAnterior,
+            StatusVeiculo statusNovo
+    ) {
+        HistoricoStatusVeiculo historico = new HistoricoStatusVeiculo();
+        historico.setVeiculo(veiculo);
+        historico.setAdministrador(administrador);
+        historico.setStatusAnterior(statusAnterior);
+        historico.setStatusNovo(statusNovo);
+        historicoStatusVeiculoRepository.save(historico);
+    }
+
+    private void encerrarViagemAtivaSeNecessario(
+            Veiculo veiculo,
+            StatusVeiculo statusAnterior,
+            StatusVeiculo statusNovo,
+            Motorista administrador
+    ) {
+        if (statusAnterior != StatusVeiculo.EM_VIAGEM || statusNovo == StatusVeiculo.EM_VIAGEM) {
+            return;
+        }
+        registroViagemVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId())
+                .ifPresent(viagem -> {
+                    viagem.setDataHoraRetorno(java.time.LocalDateTime.now());
+                    viagem.setAdministradorEncerramento(administrador);
+                    registroViagemVeiculoRepository.save(viagem);
+                });
+    }
+
+    private Map<Long, RegistroViagemVeiculo> carregarViagensAtivasPorVeiculo(List<Veiculo> veiculos) {
+        if (veiculos.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = veiculos.stream().map(Veiculo::getId).toList();
+        Map<Long, RegistroViagemVeiculo> viagens = new java.util.HashMap<>();
+        registroViagemVeiculoRepository.findByVeiculoIdInAndDataHoraRetornoIsNull(ids)
+                .forEach(viagem -> viagens.put(viagem.getVeiculo().getId(), viagem));
+        return viagens;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -24,6 +24,7 @@
     <nav class="admin-submenu" *ngIf="isControleAtivo()">
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'missoes'" (click)="setControleMenu('missoes')">Missoes</button>
       <button mat-stroked-button type="button" [class.active]="activeMenu === 'checklists'" (click)="setControleMenu('checklists')">Checklists</button>
+      <button mat-stroked-button type="button" [class.active]="activeMenu === 'vistorias-completas'" (click)="setControleMenu('vistorias-completas')">Vistorias completas</button>
     </nav>
 
     <section class="content" *ngIf="activeMenu === 'operacao'">
@@ -39,10 +40,11 @@
         <div class="kpi-grid operacao-kpis">
           <article class="kpi"><h3>{{ totalVeiculosDisponiveis() }}</h3><p>Disponiveis</p></article>
           <article class="kpi"><h3>{{ totalVeiculosEmMissao() }}</h3><p>Em missao</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
           <article class="kpi"><h3>{{ totalVeiculosNoPatio() }}</h3><p>No patio</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosAguardandoRealocacao() }}</h3><p>Aguardando realocacao</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
           <article class="kpi"><h3>{{ totalVeiculosOficina() }}</h3><p>Oficina</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosAguardandoRealocacao() }}</h3><p>Aguardando realocacao</p></article>
+          <article class="kpi"><h3>{{ totalVeiculosEmUsoExterno() }}</h3><p>Em uso externo</p></article>
           <article class="kpi"><h3>{{ totalVeiculosBloqueados() }}</h3><p>Bloqueados</p></article>
           <article class="kpi kpi-desativado"><h3>{{ totalVeiculosDesativados() }}</h3><p>Baixados/Desativados</p></article>
         </div>
@@ -99,6 +101,17 @@
                 </ng-container>
                 <ng-template #dadosPadraoStatus>
                   <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
+                  <ng-container *ngIf="v.statusAtual === 'EM_VIAGEM'">
+                    <ng-container *ngIf="v.viagemId; else viagemPorMissao">
+                      <p class="vehicle-missao-meta"><strong>Motorista da viagem:</strong> {{ motoristaViagemLabel(v) }}</p>
+                      <p class="vehicle-missao-meta"><strong>Destino:</strong> {{ destinoViagemLabel(v) }}</p>
+                      <p class="vehicle-missao-meta" *ngIf="v.viagemDataHoraSaida"><strong>Saida:</strong> {{ v.viagemDataHoraSaida | date:'dd/MM/yyyy HH:mm' }}</p>
+                    </ng-container>
+                    <ng-template #viagemPorMissao>
+                      <p class="vehicle-missao-meta"><strong>Inicio:</strong> {{ inicioMissaoPainelLabel(v.id) }} | <strong>Em andamento ha:</strong> {{ duracaoMissaoPainelLabel(v.id) }}</p>
+                      <p class="vehicle-missao-meta">{{ resumoDadosAdministrativosPainel(v.id) }}</p>
+                    </ng-template>
+                  </ng-container>
                   <p class="vehicle-admin-state">
                     <strong>Status administrativo:</strong>
                     {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
@@ -106,7 +119,7 @@
                 </ng-template>
 
                 <div class="inline-buttons">
-                  <button mat-stroked-button type="button" class="historico-btn" (click)="abrirHistoricoStatus(v)">Historico</button>
+                  <button mat-stroked-button type="button" class="historico-btn" (click)="abrirHistoricoVeiculo(v)">Historico</button>
                 </div>
               </article>
               <p class="empty-column" *ngIf="veiculosDaCategoria(categoria.id).length === 0">Sem veiculos nesta categoria.</p>
@@ -533,6 +546,91 @@
         </div>
       </mat-card>
     </section>
+
+    <section class="content" *ngIf="activeMenu === 'vistorias-completas'">
+      <mat-card class="panel-card">
+        <div class="checklist-topline">
+          <div>
+            <h3>Vistorias completas</h3>
+            <p class="panel-helper">Consulta das vistorias detalhadas registradas pelo motorista para entrega e retorno de uso externo.</p>
+          </div>
+          <div class="checklist-actions">
+            <button mat-stroked-button type="button" (click)="toggleFiltrosVistorias()">
+              {{ filtrosVistoriasAbertos ? 'Ocultar filtros' : 'Filtros' }}
+            </button>
+          </div>
+        </div>
+
+        <section class="filters-panel" *ngIf="filtrosVistoriasAbertos">
+          <form [formGroup]="vistoriaCompletaFiltroForm" class="filter-grid">
+            <mat-form-field appearance="outline"><mat-label>Busca (placa, nome, CPF)</mat-label><input matInput formControlName="busca"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Motorista</mat-label><mat-select formControlName="motoristaId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let m of motoristas" [value]="m.id">{{ m.nome }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Veiculo</mat-label><mat-select formControlName="veiculoId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let v of veiculos" [value]="v.id">{{ v.placa }}</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Operacao</mat-label><mat-select formControlName="tipoOperacao"><mat-option value="">Todas</mat-option><mat-option value="SAIDA">SAIDA</mat-option><mat-option value="ENTRADA">CHEGADA</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Resultado</mat-label><mat-select formControlName="resultado"><mat-option value="">Todos</mat-option><mat-option value="APROVADO">Aprovado</mat-option><mat-option value="RESSALVA">Com ressalva</mat-option><mat-option value="REPROVADO">Reprovado</mat-option></mat-select></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data inicio</mat-label><input matInput type="date" formControlName="dataInicio"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Data fim</mat-label><input matInput type="date" formControlName="dataFim"></mat-form-field>
+            <div class="row-actions"><button mat-flat-button color="primary" type="button" (click)="buscarVistoriasCompletas()">Filtrar</button><button mat-stroked-button type="button" (click)="limparFiltrosVistoriasCompletas()">Limpar</button></div>
+          </form>
+        </section>
+
+        <div class="kpi-grid checklist-kpis">
+          <article class="kpi"><h3>{{ vistoriasCompletas.length }}</h3><p>Total</p></article>
+          <article class="kpi"><h3>{{ vistoriasCompletasSaida().length }}</h3><p>Saida</p></article>
+          <article class="kpi"><h3>{{ vistoriasCompletasChegada().length }}</h3><p>Chegada</p></article>
+          <article class="kpi"><h3>{{ vistoriasCompletasReprovadas().length }}</h3><p>Reprovadas</p></article>
+        </div>
+
+        <div class="missao-glossario-toggle">
+          <button mat-stroked-button type="button" (click)="glossarioVistoriasAberto = !glossarioVistoriasAberto">
+            {{ glossarioVistoriasAberto ? 'Ocultar legenda e explicacoes' : 'Como ler badges e campos' }}
+          </button>
+        </div>
+
+        <div class="missao-glossario" *ngIf="glossarioVistoriasAberto">
+          <p class="missao-glossario-title">Legenda e explicacoes</p>
+          <div class="missao-glossario-bloco">
+            <p class="missao-glossario-subtitle">Badges e etiquetas</p>
+            <div class="missao-glossario-grid">
+              <div class="missao-glossario-item" *ngFor="let item of glossarioVistoriasBadges">
+                <span class="status-pill missao-glossario-pill" [ngClass]="item.classe">{{ item.termo }}</span>
+                <div class="missao-glossario-copy">
+                  <p>{{ item.descricao }}</p>
+                  <p class="missao-glossario-exemplo" *ngIf="item.exemplo">{{ item.exemplo }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="missao-glossario-bloco">
+            <p class="missao-glossario-subtitle">Campos do card</p>
+            <div class="missao-glossario-grid">
+              <p *ngFor="let item of glossarioVistoriasCampos"><strong>{{ item.termo }}</strong>: {{ item.descricao }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-header"><strong>Lista de vistorias (mais recentes primeiro)</strong><span *ngIf="loadingVistoriasCompletas">Carregando...</span></div>
+        <div class="table">
+          <article class="table-row checklist-row missao-lista-row" [ngClass]="classeLinhaVistoria(v)" *ngFor="let v of vistoriasCompletasOrdenadas()">
+            <div class="checklist-row-content">
+              <strong>{{ tipoOperacaoLabel(v.tipoOperacao) }} - {{ v.veiculoPlaca }}</strong>
+              <p><strong>Veiculo:</strong> {{ v.veiculoMarca }} {{ v.veiculoModelo }} | <strong>Motorista:</strong> {{ v.motoristaNome }}</p>
+              <p><strong>Registro:</strong> {{ formatarDataHora(v.dataHora) }} | <strong>Quilometragem:</strong> {{ v.quilometragem }}</p>
+              <p><strong>Localizacao:</strong> {{ v.localizacao || '-' }}</p>
+              <p><strong>{{ labelContraparteVistoria(v.tipoOperacao) }}:</strong> {{ v.nomeContraparte || '-' }}</p>
+              <div class="row-badges">
+                <span class="status-pill" [ngClass]="v.tipoOperacao === 'SAIDA' ? 'status-circulando' : 'status-no_patio'">{{ tipoOperacaoLabel(v.tipoOperacao) }}</span>
+                <span class="status-pill" [ngClass]="classeResultadoVistoria(v.resultado)">{{ resultadoVistoriaLabel(v.resultado) }}</span>
+                <span class="status-pill" [ngClass]="statusPosVistoriaClasse(v.tipoOperacao)">{{ statusPosVistoriaLabel(v.tipoOperacao) }}</span>
+              </div>
+              <p><strong>Itens faltando:</strong> {{ quantidadeItensFaltandoVistoria(v) }} | <strong>Avarias:</strong> {{ v.avarias.length }}</p>
+            </div>
+            <button mat-stroked-button type="button" (click)="abrirVistoriaCompleta(v)">Ver detalhes</button>
+          </article>
+          <p class="empty-column" *ngIf="!loadingVistoriasCompletas && vistoriasCompletasOrdenadas().length === 0">Nenhuma vistoria completa encontrada no periodo.</p>
+        </div>
+      </mat-card>
+    </section>
   </mat-card>
 </section>
 
@@ -712,9 +810,14 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Justificativa do encerramento manual</mat-label>
-        <textarea matInput rows="4" maxlength="700" formControlName="justificativaEncerramento"></textarea>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativaEncerramento" [matAutocomplete]="autoJustificativaEncerramento"></textarea>
         <mat-hint align="end">{{ missaoPendenteForm.getRawValue().justificativaEncerramento.length }}/700</mat-hint>
       </mat-form-field>
+      <mat-autocomplete #autoJustificativaEncerramento="matAutocomplete">
+        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('justificativasRegistroManual', missaoPendenteForm.getRawValue().justificativaEncerramento)" [value]="sugestao">
+          {{ sugestao }}
+        </mat-option>
+      </mat-autocomplete>
 
       <div class="row-actions">
         <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Cancelar</button>
@@ -807,6 +910,75 @@
   </article>
 </section>
 
+<section class="detail-overlay" *ngIf="selectedVistoriaCompleta">
+  <article class="detail-card history-card">
+    <header>
+      <h3>Vistoria completa #{{ selectedVistoriaCompleta.id }}</h3>
+      <button mat-stroked-button type="button" (click)="fecharVistoriaCompleta()">Fechar</button>
+    </header>
+
+    <p><strong>Motorista:</strong> {{ selectedVistoriaCompleta.motoristaNome }}</p>
+    <p><strong>Veiculo:</strong> {{ selectedVistoriaCompleta.veiculoPlaca }} - {{ selectedVistoriaCompleta.veiculoMarca }} {{ selectedVistoriaCompleta.veiculoModelo }}</p>
+    <p><strong>Operacao:</strong> {{ tipoOperacaoLabel(selectedVistoriaCompleta.tipoOperacao) }} | <strong>Data:</strong> {{ selectedVistoriaCompleta.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
+    <p><strong>Quilometragem:</strong> {{ selectedVistoriaCompleta.quilometragem }} | <strong>Localizacao:</strong> {{ selectedVistoriaCompleta.localizacao || '-' }}</p>
+    <div class="row-actions align-start">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ labelContraparteVistoria(selectedVistoriaCompleta.tipoOperacao) }}</mat-label>
+        <input matInput maxlength="180" [(ngModel)]="contraparteVistoriaEdicao" [ngModelOptions]="{standalone: true}">
+      </mat-form-field>
+      <button mat-flat-button color="primary" type="button" [disabled]="salvandoContraparteVistoria" (click)="salvarContraparteVistoria()">
+        {{ salvandoContraparteVistoria ? 'Salvando...' : 'Salvar' }}
+      </button>
+    </div>
+    <p><strong>Resultado:</strong> <span class="status-pill" [ngClass]="classeResultadoVistoria(selectedVistoriaCompleta.resultado)">{{ resultadoVistoriaLabel(selectedVistoriaCompleta.resultado) }}</span></p>
+    <p><strong>Observacao geral:</strong> {{ selectedVistoriaCompleta.observacaoGeral || '-' }}</p>
+
+    <div class="missao-glossario-bloco">
+      <p class="missao-glossario-subtitle">Itens obrigatorios</p>
+      <div class="table">
+        <article class="table-row" *ngFor="let item of selectedVistoriaCompleta.itens">
+          <div>
+            <strong>{{ tipoItemVistoriaLabel(item.tipoItem) }}</strong>
+            <p>{{ item.observacao || '-' }}</p>
+          </div>
+          <span class="status-pill" [ngClass]="item.status === 'OK' ? 'status-base_joao_goulart' : item.status === 'FALTANDO' ? 'status-bloqueado' : 'status-no_patio'">
+            {{ item.status === 'NAO_SE_APLICA' ? 'NAO SE APLICA' : item.status }}
+          </span>
+        </article>
+      </div>
+    </div>
+
+    <div class="missao-glossario-bloco" *ngIf="selectedVistoriaCompleta.avarias.length > 0">
+      <p class="missao-glossario-subtitle">Avarias</p>
+      <div class="table">
+        <article class="table-row" *ngFor="let avaria of selectedVistoriaCompleta.avarias">
+          <div>
+            <strong>{{ tipoAvariaVistoriaLabel(avaria.tipoAvaria) }} - {{ avaria.local }}</strong>
+            <p>{{ avaria.descricao }}</p>
+            <p>{{ avaria.jaExistia ? 'Ja existia' : 'Identificada agora' }}</p>
+          </div>
+        </article>
+      </div>
+      <div class="photo-grid">
+        <figure *ngFor="let avaria of selectedVistoriaCompleta.avarias">
+          <img [src]="fotoUrl(avaria.caminhoArquivoFoto)" [alt]="avaria.local">
+          <figcaption>{{ avaria.local }}</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="missao-glossario-bloco">
+      <p class="missao-glossario-subtitle">Fotos da vistoria</p>
+      <div class="photo-grid">
+        <figure *ngFor="let foto of selectedVistoriaCompleta.fotos">
+          <img [src]="fotoUrl(foto.caminhoArquivo)" [alt]="tipoFotoVistoriaLabel(foto.tipoFoto)">
+          <figcaption>{{ tipoFotoVistoriaLabel(foto.tipoFoto) }}</figcaption>
+        </figure>
+      </div>
+    </div>
+  </article>
+</section>
+
 <section class="detail-overlay" *ngIf="selectedChecklist">
   <article class="detail-card">
     <header><h3>Checklist #{{ selectedChecklist.id }}</h3><button mat-stroked-button type="button" (click)="fecharChecklist()">Fechar</button></header>
@@ -823,22 +995,211 @@
   </article>
 </section>
 
+<section class="detail-overlay" *ngIf="showRegistroViagemModal && selectedVeiculoViagem">
+  <article class="detail-card viagem-card">
+    <header>
+      <div>
+        <h3>Registrar viagem - {{ selectedVeiculoViagem.placa }}</h3>
+        <p class="history-card-subtitle">{{ selectedVeiculoViagem.marca }} {{ selectedVeiculoViagem.modelo }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="fecharRegistroViagem()">Fechar</button>
+    </header>
+
+    <form [formGroup]="viagemForm" class="form-grid" (ngSubmit)="salvarRegistroViagem()">
+      <mat-form-field appearance="outline">
+        <mat-label>Motorista</mat-label>
+        <mat-select formControlName="motoristaId">
+          <mat-option [value]="0">Selecione</mat-option>
+          <mat-option *ngFor="let motorista of motoristas" [value]="motorista.id">{{ motorista.nome }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Destino / local</mat-label>
+        <input matInput formControlName="localDestino" maxlength="180">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data e hora de saida</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraSaida">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Observacao</mat-label>
+        <textarea matInput rows="3" formControlName="observacao" maxlength="700"></textarea>
+      </mat-form-field>
+
+      <div class="row-actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="salvandoRegistroViagem">
+          {{ salvandoRegistroViagem ? 'Salvando...' : 'Salvar viagem' }}
+        </button>
+        <button mat-stroked-button type="button" (click)="fecharRegistroViagem()">Cancelar</button>
+      </div>
+    </form>
+  </article>
+</section>
+
 <section class="detail-overlay" *ngIf="selectedVeiculoHistorico">
   <article class="detail-card history-card">
     <header>
-      <h3>Historico de status - {{ selectedVeiculoHistorico.placa }}</h3>
-      <button mat-stroked-button type="button" (click)="fecharHistoricoStatus()">Fechar</button>
+      <div>
+        <h3>Historico do veiculo - {{ selectedVeiculoHistorico.placa }}</h3>
+        <p class="history-card-subtitle">{{ selectedVeiculoHistorico.marca }} {{ selectedVeiculoHistorico.modelo }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="fecharHistoricoVeiculo()">Fechar</button>
     </header>
 
-    <p *ngIf="loadingHistoricoStatus">Carregando historico...</p>
-    <div class="table" *ngIf="!loadingHistoricoStatus">
-      <article class="table-row" *ngFor="let item of historicoStatus">
-        <div>
-          <strong>{{ statusLabel(item.statusAnterior) }} -> {{ statusLabel(item.statusNovo) }}</strong>
-          <p>{{ item.administradorNome }} - {{ item.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
+    <p *ngIf="loadingHistoricoVeiculo">Carregando historico...</p>
+
+    <ng-container *ngIf="!loadingHistoricoVeiculo && historicoVeiculo as historico">
+      <section class="history-summary">
+        <div class="history-current-status">
+          <span class="status-pill" [ngClass]="statusClass(historico.statusAtual)">{{ historico.statusAtualRotulo }}</span>
+          <p><strong>Motorista atual:</strong> {{ historico.motoristaAtualNome || '-' }}</p>
+          <p><strong>Ultima movimentacao:</strong> {{ historico.ultimaMovimentacaoEm ? (historico.ultimaMovimentacaoEm | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
         </div>
-      </article>
-      <p *ngIf="historicoStatus.length === 0">Nenhuma alteracao registrada.</p>
-    </div>
+
+        <div class="history-kpis">
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalMissoes }}</strong>
+            <span>Missoes</span>
+          </article>
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalChecklists }}</strong>
+            <span>Checklists</span>
+          </article>
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalExcecoes }}</strong>
+            <span>Sem checklist</span>
+          </article>
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalVistoriasCompletas }}</strong>
+            <span>Vistorias completas</span>
+          </article>
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalUsosExternos }}</strong>
+            <span>Usos externos</span>
+          </article>
+          <article class="kpi">
+            <strong>{{ historico.resumo.totalIdasOficina }}</strong>
+            <span>Idas para oficina</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="history-filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de evento</mat-label>
+          <mat-select [(ngModel)]="filtroHistoricoVeiculo" (selectionChange)="aplicarFiltroHistoricoVeiculo()">
+            <mat-option *ngFor="let filtro of filtrosHistoricoVeiculo" [value]="filtro.value">{{ filtro.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="history-filter-actions">
+          <button
+            mat-stroked-button
+            type="button"
+            [class.active]="filtroHistoricoSomenteComFotos"
+            (click)="filtroHistoricoSomenteComFotos = !filtroHistoricoSomenteComFotos; aplicarFiltroHistoricoVeiculo()">
+            So com fotos
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
+            [class.active]="filtroHistoricoSomenteComAvarias"
+            (click)="filtroHistoricoSomenteComAvarias = !filtroHistoricoSomenteComAvarias; aplicarFiltroHistoricoVeiculo()">
+            So com avarias
+          </button>
+        </div>
+      </section>
+
+      <section class="history-layout">
+        <div class="history-timeline">
+          <button
+            type="button"
+            class="history-event-card"
+            *ngFor="let evento of eventosHistoricoFiltrados()"
+            [class.active]="eventoHistoricoSelecionado?.idExibicao === evento.idExibicao"
+            (click)="selecionarEventoHistorico(evento)">
+            <div class="history-event-head">
+              <span class="history-event-date">{{ evento.dataHora | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span class="status-pill" [ngClass]="historicoVeiculoBadgeClasse(evento)">{{ historicoVeiculoBadgePrincipal(evento) }}</span>
+            </div>
+            <strong>{{ evento.titulo }}</strong>
+            <p>{{ descricaoEventoHistorico(evento) }}</p>
+            <div class="history-event-meta">
+              <span
+                class="status-pill"
+                *ngIf="historicoVeiculoBadgeSecundaria(evento) as badgeSecundaria"
+                [ngClass]="historicoVeiculoBadgeSecundariaClasse(evento)">
+                {{ badgeSecundaria }}
+              </span>
+              <span *ngIf="evento.possuiFotos">Fotos: {{ evento.quantidadeFotos }}</span>
+              <span *ngIf="evento.possuiAvarias">Avarias: {{ evento.quantidadeAvarias }}</span>
+            </div>
+          </button>
+          <p *ngIf="eventosHistoricoFiltrados().length === 0" class="empty-column">Nenhum evento encontrado com os filtros atuais.</p>
+        </div>
+
+        <div class="history-event-detail" *ngIf="eventoHistoricoSelecionado as evento; else semEventoSelecionado">
+          <h4>{{ evento.titulo }}</h4>
+          <p class="history-detail-date">{{ evento.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
+
+          <div class="history-detail-badges">
+            <span class="status-pill" [ngClass]="historicoVeiculoBadgeClasse(evento)">{{ historicoVeiculoBadgePrincipal(evento) }}</span>
+            <span
+              class="status-pill"
+              *ngIf="historicoVeiculoBadgeSecundaria(evento) as badgeSecundaria"
+              [ngClass]="historicoVeiculoBadgeSecundariaClasse(evento)">
+              {{ badgeSecundaria }}
+            </span>
+          </div>
+
+          <p><strong>Resumo:</strong> {{ descricaoEventoHistorico(evento) }}</p>
+          <p *ngIf="evento.motoristaNome"><strong>Motorista:</strong> {{ evento.motoristaNome }}</p>
+          <p *ngIf="evento.responsavelNome"><strong>Registrado por:</strong> {{ evento.responsavelNome }}</p>
+          <p *ngIf="evento.possuiFotos"><strong>Fotos vinculadas:</strong> {{ evento.quantidadeFotos }}</p>
+          <p *ngIf="evento.possuiAvarias"><strong>Avarias registradas:</strong> {{ evento.quantidadeAvarias }}</p>
+
+          <ng-container *ngIf="evento.detalhe as detalhe">
+            <p *ngIf="detalhe.tipoOperacao"><strong>Operacao:</strong> {{ tipoOperacaoLabel(detalhe.tipoOperacao) }}</p>
+            <p *ngIf="detalhe.origemAberturaMissao"><strong>Inicio:</strong> {{ origemAberturaMissaoLabel(detalhe.origemAberturaMissao) }}</p>
+            <p *ngIf="detalhe.origemEncerramentoMissao"><strong>Fim:</strong> {{ origemEncerramentoMissaoLabel(detalhe.origemEncerramentoMissao) }}</p>
+            <p *ngIf="detalhe.statusDocumentalMissao"><strong>Dados da missao:</strong> {{ statusDocumentalMissaoLabel(detalhe.statusDocumentalMissao) }}</p>
+            <p *ngIf="detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome">
+              <strong>Destino | Setor | Solicitante:</strong>
+              {{ detalhe.localDestino || '-' }} | {{ detalhe.setorSolicitante || '-' }} | {{ detalhe.solicitanteNome || '-' }}
+            </p>
+            <p *ngIf="detalhe.motivoExcecao"><strong>Motivo:</strong> {{ motivoExcecaoLabel(detalhe.motivoExcecao) }}</p>
+            <p *ngIf="detalhe.statusExcecaoMissao"><strong>Status da regularizacao:</strong> {{ statusExcecaoLabel(detalhe.statusExcecaoMissao) }}</p>
+            <p *ngIf="(evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') && detalhe.localDestino">
+              <strong>Destino:</strong> {{ detalhe.localDestino }}
+            </p>
+            <p *ngIf="detalhe.justificativa"><strong>Justificativa:</strong> {{ detalhe.justificativa }}</p>
+            <p *ngIf="detalhe.justificativaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ detalhe.justificativaEncerramento }}</p>
+            <p *ngIf="detalhe.resultadoVistoria"><strong>Resultado da vistoria:</strong> {{ resultadoVistoriaLabel(detalhe.resultadoVistoria) }}</p>
+            <p *ngIf="detalhe.nomeContraparte">
+              <strong>{{ detalhe.tipoOperacao === 'SAIDA' ? 'Entregue para' : 'Recebido de' }}:</strong>
+              {{ detalhe.nomeContraparte }}
+            </p>
+            <p *ngIf="detalhe.quilometragem !== null && detalhe.quilometragem !== undefined"><strong>Quilometragem:</strong> {{ detalhe.quilometragem }} km</p>
+            <p *ngIf="detalhe.localizacao"><strong>Localizacao:</strong> {{ detalhe.localizacao }}</p>
+            <p *ngIf="detalhe.observacaoGeral"><strong>Observacao geral:</strong> {{ detalhe.observacaoGeral }}</p>
+            <p *ngIf="detalhe.statusAnterior && detalhe.statusNovo">
+              <strong>Mudanca de status:</strong>
+              {{ statusLabel(detalhe.statusAnterior) }} -> {{ statusLabel(detalhe.statusNovo) }}
+            </p>
+          </ng-container>
+        </div>
+      </section>
+    </ng-container>
+
+    <p *ngIf="!loadingHistoricoVeiculo && historicoVeiculo && historicoVeiculo.eventos.length === 0">Nenhum evento registrado para este veiculo.</p>
   </article>
 </section>
+
+<ng-template #semEventoSelecionado>
+  <div class="history-event-detail empty-detail">
+    <p>Selecione um evento para ver os detalhes.</p>
+  </div>
+</ng-template>

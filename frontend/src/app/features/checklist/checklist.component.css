@@ -277,6 +277,12 @@
   border-color: #c8b5ff;
 }
 
+.status-em_uso_externo {
+  background: #e6f7fb;
+  color: #0b7285;
+  border-color: #8fd3de;
+}
+
 .status-oficina {
   background: #fff8de;
   color: #8a6900;

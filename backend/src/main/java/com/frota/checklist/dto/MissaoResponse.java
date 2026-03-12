@@ -5,6 +5,7 @@ import com.frota.checklist.entity.OrigemEncerramentoMissao;
 import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public record MissaoResponse(
         long duracaoSegundos,
         OrigemAberturaMissao origemAbertura,
         OrigemEncerramentoMissao origemEncerramento,
+        TipoDeslocamentoMissao tipoDeslocamento,
         Long motoristaId,
         String motoristaNome,
         Long veiculoId,

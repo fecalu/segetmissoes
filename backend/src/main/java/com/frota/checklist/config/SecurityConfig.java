@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/checklists/**").hasRole("MOTORISTA")
+                        .requestMatchers(HttpMethod.POST, "/api/vistorias-completas/**").hasRole("MOTORISTA")
                         .requestMatchers(HttpMethod.POST, "/api/missoes/excecoes/**").hasRole("MOTORISTA")
                         .requestMatchers(HttpMethod.GET, "/api/veiculos/**").authenticated()
                         .anyRequest().authenticated()

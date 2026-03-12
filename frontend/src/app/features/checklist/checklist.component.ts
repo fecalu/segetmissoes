@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { finalize } from 'rxjs';
+import { TipoDeslocamentoMissao } from '../../core/models/missao.model';
 import { StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
 import { ChecklistPayload, ChecklistService } from '../../core/services/checklist.service';
@@ -38,6 +39,8 @@ type FotoKey = 'fotoPainel' | 'fotoEstepe' | 'fotoLateralEsq' | 'fotoLateralDir'
   styleUrl: './checklist.component.css'
 })
 export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
+  private readonly maxPhotoDimension = 1600;
+  private readonly jpegQuality = 0.78;
   veiculos: Veiculo[] = [];
   loading = false;
   sending = false;
@@ -79,6 +82,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     BASE_JOAO_GOULART: 'DISPONIVEL',
     NO_PATIO: 'NO PATIO',
     AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
+    EM_USO_EXTERNO: 'EM USO EXTERNO',
     OFICINA: 'OFICINA',
     EM_VIAGEM: 'EM VIAGEM',
     MANUTENCAO: 'MANUTENCAO',
@@ -98,7 +102,8 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   ) {
     this.form = this.fb.nonNullable.group({
       veiculoId: [0, [Validators.required, Validators.min(1)]],
-      tipoOperacao: ['SAIDA', [Validators.required]]
+      tipoOperacao: ['SAIDA', [Validators.required]],
+      tipoDeslocamento: ['NA_CIDADE' as TipoDeslocamentoMissao, [Validators.required]]
     });
   }
 
@@ -108,6 +113,10 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (operacao === 'SAIDA' || operacao === 'ENTRADA') {
       this.operacaoBloqueada = operacao;
       this.form.controls.tipoOperacao.setValue(operacao);
+    }
+    const tipoDeslocamento = this.route.snapshot.queryParamMap.get('tipoDeslocamento');
+    if (tipoDeslocamento === 'NA_CIDADE' || tipoDeslocamento === 'VIAGEM') {
+      this.form.controls.tipoDeslocamento.setValue(tipoDeslocamento);
     }
 
     this.loading = true;
@@ -208,18 +217,24 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     if (tipoOperacao === 'SAIDA') {
       return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
     }
-    return veiculo.statusAutomatico === 'CIRCULANDO' && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
+    return this.veiculoCorrespondeAoTipoSelecionado(veiculo) && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
   }
 
   veiculosVisiveis(): Veiculo[] {
     if (this.form.controls.tipoOperacao.value === 'ENTRADA') {
-      return this.veiculos.filter(v => v.statusAutomatico === 'CIRCULANDO' && v.motoristaAtualId === this.authService.loggedMotoristaId());
+      return this.veiculos.filter(v => this.veiculoCorrespondeAoTipoSelecionado(v) && v.motoristaAtualId === this.authService.loggedMotoristaId());
     }
     return this.veiculos;
   }
 
   semVeiculoParaChegada(): boolean {
     return this.form.controls.tipoOperacao.value === 'ENTRADA' && this.veiculosVisiveis().length === 0;
+  }
+
+  mensagemSemVeiculoParaChegada(): string {
+    return this.isViagemSelecionada()
+      ? 'Nenhuma viagem aberta encontrada para voce finalizar com checklist de chegada.'
+      : 'Nenhuma missao aberta encontrada para voce finalizar com checklist de chegada.';
   }
 
   statusLabel(status: StatusVeiculo, statusRotuloServidor?: string | null): string {
@@ -234,7 +249,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   exibeMotoristaAtual(veiculo: Veiculo): boolean {
-    return veiculo.statusAutomatico === 'CIRCULANDO' && !!veiculo.motoristaAtualNome;
+    return this.veiculoComDeslocamentoAtivo(veiculo) && !!veiculo.motoristaAtualNome;
   }
 
   async openCamera(key: FotoKey): Promise<void> {
@@ -276,15 +291,18 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       return;
     }
 
+    const { width, height } = this.calcularDimensoesOtimizadas(video.videoWidth, video.videoHeight);
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       this.snackBar.open('Falha na captura.', 'Fechar', { duration: 1600 });
       return;
     }
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     this.desenharCarimboDataHora(ctx, canvas.width, canvas.height);
 
@@ -372,11 +390,21 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   operationLabel(value: string): string {
-    return value === 'SAIDA' ? 'Estou saindo em missao' : 'Estou chegando da missao';
+    if (value === 'SAIDA') {
+      return this.isViagemSelecionada() ? 'Estou saindo em viagem' : 'Estou saindo em missao';
+    }
+    return this.isViagemSelecionada() ? 'Estou retornando da viagem' : 'Estou chegando da missao';
+  }
+
+  tipoDeslocamentoLabel(value: TipoDeslocamentoMissao): string {
+    return value === 'VIAGEM' ? 'Viagem' : 'Na cidade';
   }
 
   operationTitle(): string {
-    return this.form.controls.tipoOperacao.value === 'SAIDA' ? 'Iniciar Missao' : 'Finalizar Missao';
+    if (this.form.controls.tipoOperacao.value === 'SAIDA') {
+      return this.isViagemSelecionada() ? 'Iniciar Viagem' : 'Iniciar Missao';
+    }
+    return this.isViagemSelecionada() ? 'Finalizar Viagem' : 'Finalizar Missao';
   }
 
   step1Title(): string {
@@ -386,7 +414,9 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   step1Helper(): string {
     return this.isStep1Externa()
       ? 'Capture primeiro estepe e laterais do veiculo.'
-      : 'Na chegada, comece pelo painel com a quilometragem visivel.';
+      : this.isViagemSelecionada()
+        ? 'No retorno da viagem, comece pelo painel com a quilometragem visivel.'
+        : 'Na chegada, comece pelo painel com a quilometragem visivel.';
   }
 
   step2Title(): string {
@@ -395,7 +425,9 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   step2Helper(): string {
     return this.isStep2Externa()
-      ? 'Agora capture estepe e laterais para fechar a vistoria da chegada.'
+      ? this.isViagemSelecionada()
+        ? 'Agora capture estepe e laterais para fechar a saida da viagem.'
+        : 'Agora capture estepe e laterais para fechar a saida da missao.'
       : 'Agora entre no veiculo e fotografe o painel com a quilometragem visivel.';
   }
 
@@ -409,6 +441,9 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     const payload: ChecklistPayload = {
       veiculoId: raw.veiculoId,
       tipoOperacao: raw.tipoOperacao as 'SAIDA' | 'ENTRADA',
+      tipoDeslocamento: raw.tipoOperacao === 'SAIDA'
+        ? raw.tipoDeslocamento as TipoDeslocamentoMissao
+        : 'NA_CIDADE',
       fotoPainel: this.files.fotoPainel!,
       fotoEstepe: this.files.fotoEstepe!,
       fotoLateralEsq: this.files.fotoLateralEsq!,
@@ -428,7 +463,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   novoChecklist(): void {
-    this.form.patchValue({ veiculoId: 0, tipoOperacao: 'SAIDA' });
+    this.form.patchValue({ veiculoId: 0, tipoOperacao: 'SAIDA', tipoDeslocamento: 'NA_CIDADE' });
     this.files = {};
     this.revokeAllPreviews();
     this.previews = { fotoPainel: null, fotoEstepe: null, fotoLateralEsq: null, fotoLateralDir: null };
@@ -523,6 +558,23 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     return !this.isStep1Externa();
   }
 
+  private veiculoComDeslocamentoAtivo(veiculo: Veiculo): boolean {
+    return veiculo.statusAutomatico === 'CIRCULANDO' || veiculo.statusAutomatico === 'EM_VIAGEM';
+  }
+
+  private veiculoCorrespondeAoTipoSelecionado(veiculo: Veiculo): boolean {
+    if (!this.veiculoComDeslocamentoAtivo(veiculo)) {
+      return false;
+    }
+    return this.isViagemSelecionada()
+      ? veiculo.statusAutomatico === 'EM_VIAGEM'
+      : veiculo.statusAutomatico === 'CIRCULANDO';
+  }
+
+  private isViagemSelecionada(): boolean {
+    return this.form.controls.tipoDeslocamento.value === 'VIAGEM';
+  }
+
   private atualizarSuporteLanterna(): void {
     const trilha = this.cameraStream?.getVideoTracks()[0];
     if (!trilha || typeof trilha.getCapabilities !== 'function') {
@@ -573,7 +625,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private async gerarArquivoJpeg(canvas: HTMLCanvasElement, key: FotoKey): Promise<File | null> {
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', this.jpegQuality));
     if (!blob) {
       return null;
     }
@@ -587,17 +639,40 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
       return null;
     }
 
+    const { width, height } = this.calcularDimensoesOtimizadas(
+      imagem.naturalWidth || imagem.width,
+      imagem.naturalHeight || imagem.height
+    );
     const canvas = document.createElement('canvas');
-    canvas.width = imagem.naturalWidth || imagem.width;
-    canvas.height = imagem.naturalHeight || imagem.height;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       return null;
     }
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(imagem, 0, 0, canvas.width, canvas.height);
     this.desenharCarimboDataHora(ctx, canvas.width, canvas.height);
     return this.gerarArquivoJpeg(canvas, key);
+  }
+
+  private calcularDimensoesOtimizadas(width: number, height: number): { width: number; height: number } {
+    if (!width || !height) {
+      return { width: this.maxPhotoDimension, height: this.maxPhotoDimension };
+    }
+
+    const maiorLado = Math.max(width, height);
+    if (maiorLado <= this.maxPhotoDimension) {
+      return { width, height };
+    }
+
+    const escala = this.maxPhotoDimension / maiorLado;
+    return {
+      width: Math.max(1, Math.round(width * escala)),
+      height: Math.max(1, Math.round(height * escala))
+    };
   }
 
   private carregarImagem(file: File): Promise<HTMLImageElement | null> {

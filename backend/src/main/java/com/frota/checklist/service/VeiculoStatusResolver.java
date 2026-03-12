@@ -5,6 +5,7 @@ import com.frota.checklist.entity.MissaoExcecao;
 import com.frota.checklist.entity.StatusExcecaoMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.repository.ChecklistRepository;
@@ -103,14 +104,19 @@ public class VeiculoStatusResolver {
         String motoristaAtualNome = null;
 
         if (missaoAtiva != null) {
-            statusAutomatico = StatusVeiculo.CIRCULANDO;
+            statusAutomatico = missaoAtiva.getTipoDeslocamento() == null || missaoAtiva.getTipoDeslocamento() == TipoDeslocamentoMissao.NA_CIDADE
+                    ? StatusVeiculo.CIRCULANDO
+                    : StatusVeiculo.EM_VIAGEM;
             motoristaAtualId = missaoAtiva.getMotorista().getId();
             motoristaAtualNome = missaoAtiva.getMotorista().getNome();
         } else if (excecaoAberta != null) {
             statusAutomatico = StatusVeiculo.CIRCULANDO;
             motoristaAtualId = excecaoAberta.getMotorista().getId();
             motoristaAtualNome = excecaoAberta.getMotorista().getNome();
-        } else if (ultimoChecklist != null) {
+        // Quando existe um status administrativo explicito, ele deve impedir que um checklist antigo
+        // continue inferindo o veiculo como "em missao". A excecao continua sendo missao/excecao
+        // realmente ativas, tratadas nos blocos acima.
+        } else if (ultimoChecklist != null && statusAdministrativo == null) {
             TipoOperacao tipoUltimoChecklist = parseTipoOperacao(ultimoChecklist.getTipoOperacao());
             if (tipoUltimoChecklist == TipoOperacao.SAIDA) {
                 if (veiculo.getDataHoraUltimoEncerramentoSemChecklist() != null

@@ -14,6 +14,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Subscription, finalize, forkJoin, interval, of } from 'rxjs';
 import { ChecklistResponse, TipoOperacao } from '../../core/models/checklist.model';
 import {
+  EventoHistoricoVeiculo,
+  HistoricoVeiculoResponse,
+  TipoEventoHistoricoVeiculo
+} from '../../core/models/historico-veiculo.model';
+import {
   AcaoAuditoriaMissao,
   AuditoriaMissaoResponse,
   MissaoResponse,
@@ -26,11 +31,14 @@ import { SugestoesCamposMissaoResponse } from '../../core/models/missao-suggesti
 import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from '../../core/models/missao-excecao.model';
 import { Motorista } from '../../core/models/motorista.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
-import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
+import { StatusAdministrativoVeiculo, StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
+import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../../core/models/vistoria-completa.model';
 import {
   AdminService,
+  AtualizarContraparteVistoriaCompletaPayload,
   CriarMissaoContingenciaPayload,
-  EncerrarMissaoPendentePayload
+  EncerrarMissaoPendentePayload,
+  RegistrarVeiculoEmViagemPayload
 } from '../../core/services/admin.service';
 import { AuthService } from '../../core/services/auth.service';
 import { MissaoExcecaoService } from '../../core/services/missao-excecao.service';
@@ -42,13 +50,14 @@ import {
   AdminCredentialConfirmDialogResult
 } from '../../shared/dialogs/admin-credential-confirm-dialog.component';
 
-type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'excecoes';
+type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'vistorias-completas' | 'excecoes';
 type CadastroMenu = 'veiculos' | 'motoristas' | 'rotulos-status';
-type ControleMenu = 'missoes' | 'checklists';
-type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
+type ControleMenu = 'missoes' | 'checklists' | 'vistorias-completas';
+type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'USO_EXTERNO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
+type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'VISTORIAS' | 'STATUS';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -109,6 +118,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   veiculos: Veiculo[] = [];
   checklists: ChecklistResponse[] = [];
   missoes: MissaoResponse[] = [];
+  vistoriasCompletas: VistoriaCompletaResponse[] = [];
   consultaChecklist: ConsultaChecklistItem[] = [];
   painelVeiculos = this.criarPainelVazio();
 
@@ -116,13 +126,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadingVeiculos = false;
   loadingChecklists = false;
   loadingMissoes = false;
+  loadingVistoriasCompletas = false;
   loadingTempoReal = false;
   loadingAuditoriaMissao = false;
-  loadingHistoricoStatus = false;
+  loadingHistoricoVeiculo = false;
   loadingRotulosStatus = false;
   loadingSugestoesMissao = false;
   gerandoRelatorioMissoes = false;
   salvandoRotulosStatus = false;
+  salvandoContraparteVistoria = false;
 
   editingMotoristaId: number | null = null;
   editingVeiculoId: number | null = null;
@@ -131,6 +143,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   veiculoBusca = '';
 
   selectedChecklist: ChecklistResponse | null = null;
+  selectedVistoriaCompleta: VistoriaCompletaResponse | null = null;
   selectedMissaoAuditoria: MissaoResponse | null = null;
   selectedMissaoDadosAdmin: MissaoResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
@@ -141,7 +154,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   agoraEpochMs = Date.now();
   missoesTempoReal: MissaoResponse[] = [];
   auditoriaMissao: AuditoriaMissaoResponse[] = [];
-  historicoStatus: HistoricoStatusVeiculo[] = [];
+  historicoVeiculo: HistoricoVeiculoResponse | null = null;
+  eventoHistoricoSelecionado: EventoHistoricoVeiculo | null = null;
   rotulosStatusEditor: RotuloStatusVeiculoResponse[] = [];
   sugestoesMissaoEditor: SugestoesCamposMissaoResponse = {
     destinos: [],
@@ -160,19 +174,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   novaMissaoModo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA';
   salvandoNovaMissaoContingencia = false;
   encerrandoMissaoPendente = false;
+  salvandoRegistroViagem = false;
   glossarioMissoesAberto = false;
   glossarioChecklistsAberto = false;
+  glossarioVistoriasAberto = false;
+  filtrosVistoriasAbertos = false;
+  contraparteVistoriaEdicao = '';
+  showRegistroViagemModal = false;
+  selectedVeiculoViagem: Veiculo | null = null;
+  filtroHistoricoVeiculo: FiltroHistoricoVeiculo = '';
+  filtroHistoricoSomenteComFotos = false;
+  filtroHistoricoSomenteComAvarias = false;
   private relogioSub?: Subscription;
   private refreshTempoRealSub?: Subscription;
 
   readonly categoriasPainel: Array<{ id: PainelCategoria; titulo: string; descricao: string }> = [
     { id: 'DISPONIVEL', titulo: 'Disponiveis', descricao: 'Prontos para nova missao' },
     { id: 'MISSAO', titulo: 'Em missao', descricao: 'Veiculos com missao em andamento' },
-    { id: 'VIAGEM', titulo: 'Em viagem', descricao: 'Viagem definida administrativamente' },
     { id: 'PATIO', titulo: 'No patio', descricao: 'Parados no patio' },
-    { id: 'REALOCACAO', titulo: 'Aguardando realocacao', descricao: 'Recebidos e aguardando definicao' },
+    { id: 'VIAGEM', titulo: 'Em viagem', descricao: 'Veiculos em viagem pelo app ou pela administracao' },
     { id: 'OFICINA', titulo: 'Oficina', descricao: 'Oficina ou manutencao' },
+    { id: 'REALOCACAO', titulo: 'Aguardando realocacao', descricao: 'Recebidos e aguardando definicao' },
+    { id: 'USO_EXTERNO', titulo: 'Em uso externo', descricao: 'Entregues para uso fora do setor' },
     { id: 'BLOQUEADO', titulo: 'Bloqueados', descricao: 'Sem liberacao para uso' }
+  ];
+  readonly filtrosHistoricoVeiculo: Array<{ value: FiltroHistoricoVeiculo; label: string }> = [
+    { value: '', label: 'Todos os eventos' },
+    { value: 'MISSOES', label: 'Missoes' },
+    { value: 'CHECKLISTS', label: 'Checklists' },
+    { value: 'SEM_CHECKLIST', label: 'Sem checklist' },
+    { value: 'VIAGENS', label: 'Viagens' },
+    { value: 'VISTORIAS', label: 'Vistorias completas' },
+    { value: 'STATUS', label: 'Mudancas de status' }
   ];
   readonly categoriasPainelIds: PainelCategoria[] = this.categoriasPainel.map(c => c.id);
   private readonly statusLabelsPadrao: Record<StatusVeiculo, string> = {
@@ -180,6 +213,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     BASE_JOAO_GOULART: 'DISPONIVEL',
     NO_PATIO: 'NO PATIO',
     AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
+    EM_USO_EXTERNO: 'EM USO EXTERNO',
     OFICINA: 'OFICINA',
     EM_VIAGEM: 'EM VIAGEM',
     MANUTENCAO: 'MANUTENCAO',
@@ -205,7 +239,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     ADMINISTRATIVO: 'FIM: PELO ADMIN'
   };
   private readonly tipoMissaoLabels = {
-    MANUAL: 'REGISTRO MANUAL'
+    MANUAL: 'REGISTRO MANUAL',
+    VIAGEM: 'VIAGEM'
   } as const;
   readonly glossarioMissoesBadges: GlossarioBadgeItem[] = [
     { termo: this.statusMissaoLabels.ATIVA, descricao: 'Missao em andamento, ainda sem finalizacao.', exemplo: 'Ex.: motorista saiu 13:12 e ainda nao registrou o fim.', classe: 'status-circulando' },
@@ -213,6 +248,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: this.statusDocumentalMissaoLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda faltam destino, setor ou solicitante.', exemplo: 'Ex.: destino foi informado, mas setor e solicitante ainda faltam.', classe: 'status-documental-pendente' },
     { termo: this.statusDocumentalMissaoLabels.DADOS_ADMIN_COMPLETOS, descricao: 'Destino, setor e solicitante ja foram preenchidos.', exemplo: 'Ex.: destino SEGET, setor ATOS e solicitante VAL ja informados.', classe: 'status-documental-ok' },
     { termo: this.tipoMissaoLabels.MANUAL, descricao: 'Missao registrada manualmente pela administracao.', exemplo: 'Ex.: administrador registrou a missao porque o celular descarregou.', classe: 'status-bloqueado' },
+    { termo: this.tipoMissaoLabels.VIAGEM, descricao: 'Missao aberta como viagem, para deslocamentos fora da rotina urbana.', exemplo: 'Ex.: motorista iniciou uma viagem e o veiculo passou a aparecer em Em viagem.', classe: 'status-em_viagem' },
     { termo: this.origemAberturaMissaoLabels.CHECKLIST, descricao: 'Inicio registrado pelo checklist de saida.', exemplo: 'Ex.: a missao foi aberta logo apos o checklist de saida.', classe: 'status-base_joao_goulart' },
     { termo: this.origemAberturaMissaoLabels.SEM_CHECKLIST, descricao: 'Inicio registrado sem checklist.', exemplo: 'Ex.: o motorista iniciou a missao sem checklist por excecao operacional.', classe: 'status-base_joao_goulart' },
     { termo: this.origemAberturaMissaoLabels.CONTINGENCIA_ADMIN, descricao: 'Inicio registrado diretamente pela administracao.', exemplo: 'Ex.: a administracao abriu a missao manualmente para o motorista.', classe: 'status-base_joao_goulart' },
@@ -244,20 +280,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: 'Fotos', descricao: 'Abre as imagens quando o registro possui checklist fotografico.' },
     { termo: 'Sem fotos', descricao: 'Aparece quando o registro nao tem nenhuma imagem vinculada.' }
   ];
+  readonly glossarioVistoriasBadges: GlossarioBadgeItem[] = [
+    { termo: 'SAIDA', descricao: 'Vistoria registrada antes da entrega do veiculo para uso externo.', exemplo: 'Ex.: envio para oficina, locadora ou outra secretaria.', classe: 'status-circulando' },
+    { termo: 'CHEGADA', descricao: 'Vistoria registrada no retorno do veiculo de uso externo.', exemplo: 'Ex.: veiculo voltou da oficina e foi recebido pelo transporte.', classe: 'status-no_patio' },
+    { termo: 'APROVADO', descricao: 'Veiculo retornou ou saiu sem impedimento apontado na vistoria.', exemplo: 'Ex.: fotos e itens sem problema relevante.', classe: 'status-base_joao_goulart' },
+    { termo: 'COM RESSALVA', descricao: 'Veiculo pode seguir, mas houve observacao ou avaria registrada.', exemplo: 'Ex.: pequeno risco ja existente, sem impedir o uso.', classe: 'status-oficina' },
+    { termo: 'REPROVADO', descricao: 'A vistoria identificou problema que impede a liberacao normal.', exemplo: 'Ex.: item obrigatorio faltando ou avaria relevante.', classe: 'status-bloqueado' },
+    { termo: 'EM USO EXTERNO', descricao: 'Depois da vistoria completa de saida, o veiculo fica marcado como entregue para uso fora do setor.', exemplo: 'Ex.: carro entregue para oficina, locadora ou outra secretaria.', classe: 'status-em_uso_externo' },
+    { termo: 'AGUARDANDO REALOCACAO', descricao: 'Depois da vistoria completa de chegada, o veiculo volta e aguarda definicao do transporte.', exemplo: 'Ex.: veiculo recebido de volta e aguardando novo destino interno.', classe: 'status-aguardando_realocacao' }
+  ];
+  readonly glossarioVistoriasCampos: GlossarioItem[] = [
+    { termo: 'Quilometragem', descricao: 'Quilometragem informada no momento da vistoria.' },
+    { termo: 'Localizacao', descricao: 'Posicao capturada pelo celular, quando disponivel.' },
+    { termo: 'Itens faltando', descricao: 'Quantidade de itens obrigatorios marcados como faltando.' },
+    { termo: 'Avarias', descricao: 'Quantidade de avarias registradas na vistoria.' },
+    { termo: 'Ver detalhes', descricao: 'Abre itens, avarias e fotos completas daquela vistoria.' }
+  ];
   readonly camposSugestaoMissao: Array<{ key: CampoSugestaoMissaoEditor; titulo: string; placeholder: string }> = [
     { key: 'destinos', titulo: 'Destino', placeholder: 'Adicionar destino' },
     { key: 'setoresSolicitantes', titulo: 'Setor solicitante', placeholder: 'Adicionar setor' },
     { key: 'solicitantes', titulo: 'Quem solicitou', placeholder: 'Adicionar solicitante' },
-    { key: 'justificativasRegistroManual', titulo: 'Justificativa do registro manual', placeholder: 'Adicionar frase pronta' }
+    { key: 'justificativasRegistroManual', titulo: 'Justificativas manuais (registro e encerramento)', placeholder: 'Adicionar frase pronta para registro ou encerramento' }
   ];
 
   readonly motoristaForm;
   readonly veiculoForm;
   readonly filtroForm;
   readonly missaoFiltroForm;
+  readonly vistoriaCompletaFiltroForm;
   readonly missaoDadosForm;
   readonly missaoContingenciaForm;
   readonly missaoPendenteForm;
+  readonly viagemForm;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -307,6 +361,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       dataFim: [hoje]
     });
 
+    this.vistoriaCompletaFiltroForm = this.fb.nonNullable.group({
+      busca: [''],
+      motoristaId: [0],
+      veiculoId: [0],
+      tipoOperacao: ['' as '' | TipoOperacao],
+      resultado: ['' as '' | ResultadoVistoriaCompleta],
+      dataInicio: [hoje],
+      dataFim: [hoje]
+    });
+
     this.missaoDadosForm = this.fb.nonNullable.group({
       localDestino: [''],
       setorSolicitante: [''],
@@ -328,6 +392,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       dataHoraFim: [this.agoraDateTimeLocal(), [Validators.required]],
       justificativaEncerramento: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
+
+    this.viagemForm = this.fb.nonNullable.group({
+      motoristaId: [0, [Validators.min(1)]],
+      localDestino: ['', [Validators.required, Validators.maxLength(180)]],
+      dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
+      observacao: ['', [Validators.maxLength(700)]]
+    });
   }
 
   ngOnInit(): void {
@@ -345,7 +416,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.carregarDadosDoMenu(this.activeMenu, false);
     }
     this.iniciarRelogioTempoReal();
-    if (this.activeMenu === 'tempo-real') {
+    if (this.activeMenu === 'tempo-real' || this.activeMenu === 'operacao') {
       this.iniciarAtualizacaoTempoReal();
     }
   }
@@ -381,6 +452,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu !== 'checklists') {
       this.filtrosAbertos = false;
     }
+    if (menu !== 'vistorias-completas') {
+      this.filtrosVistoriasAbertos = false;
+      this.selectedVistoriaCompleta = null;
+    }
 
     this.garantirDadosBasicos(menu);
     if (menu !== 'tempo-real') {
@@ -390,7 +465,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.carregarMissoesTempoReal(false);
     }
 
-    if (menu === 'tempo-real') {
+    if (menu === 'tempo-real' || menu === 'operacao') {
       this.iniciarAtualizacaoTempoReal();
     } else {
       this.pararAtualizacaoTempoReal();
@@ -411,6 +486,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   toggleFiltrosMissoes(): void {
     this.filtrosMissoesAbertos = !this.filtrosMissoesAbertos;
+  }
+
+  toggleFiltrosVistorias(): void {
+    this.filtrosVistoriasAbertos = !this.filtrosVistoriasAbertos;
   }
 
   atualizarPainelOperacional(): void {
@@ -444,7 +523,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   isControleAtivo(): boolean {
     return this.activeMenu === 'missoes'
-      || this.activeMenu === 'checklists';
+      || this.activeMenu === 'checklists'
+      || this.activeMenu === 'vistorias-completas';
   }
 
   abrirTelaRelatorio(): void {
@@ -856,8 +936,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (veiculo.statusAutomatico === 'CIRCULANDO') {
+    if (this.veiculoComDeslocamentoAutomatico(veiculo)) {
       this.snackBar.open('Veiculo com missao em andamento nao pode ser movido manualmente de coluna.', 'Fechar', { duration: 3200 });
+      return;
+    }
+
+    if (categoriaDestino === 'VIAGEM') {
+      this.abrirRegistroViagem(veiculo);
       return;
     }
 
@@ -877,10 +962,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const origemLabel = this.categoriaTitulo(categoriaOrigem);
     const destinoLabel = this.categoriaTitulo(categoriaDestino);
     const statusDestinoLabel = novoStatus ? this.statusLabel(novoStatus) : 'DISPONIVEL (AUTOMATICO)';
+    const mensagemBase = `${origemLabel} -> ${destinoLabel}\nNovo status: ${statusDestinoLabel}`;
+    const mensagem = veiculo.statusAtual === 'EM_VIAGEM'
+      ? `${mensagemBase}\nO registro de viagem em aberto sera encerrado automaticamente.`
+      : mensagemBase;
 
     this.abrirConfirmacao({
       title: `Movimentar ${veiculo.placa}`,
-      message: `${origemLabel} -> ${destinoLabel}\nNovo status: ${statusDestinoLabel}`,
+      message: mensagem,
       confirmText: 'Confirmar movimentacao'
     }, () => {
       this.adminService.atualizarStatusAdministrativoVeiculo(veiculo.id, novoStatus).subscribe({
@@ -953,6 +1042,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.selectedCategoriaInclusao === 'VIAGEM') {
+      this.fecharInclusaoCategoria();
+      this.abrirRegistroViagem(veiculo);
+      return;
+    }
+
     const novoStatus = this.statusAdministrativoAlvoPorCategoria(this.selectedCategoriaInclusao);
     if (novoStatus === undefined) {
       this.snackBar.open('Categoria sem alteracao administrativa manual.', 'Fechar', { duration: 2400 });
@@ -961,9 +1056,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const atualLabel = veiculo.statusAdministrativo ? this.statusLabel(veiculo.statusAdministrativo) : 'AUTOMATICO';
     const destinoLabel = novoStatus ? this.statusLabel(novoStatus) : 'DISPONIVEL (AUTOMATICO)';
+    const mensagemBase = `${atualLabel} -> ${destinoLabel}`;
+    const mensagem = veiculo.statusAtual === 'EM_VIAGEM'
+      ? `${mensagemBase}\nO registro de viagem em aberto sera encerrado automaticamente.`
+      : mensagemBase;
     this.abrirConfirmacao({
       title: `Alterar status de ${veiculo.placa}`,
-      message: `${atualLabel} -> ${destinoLabel}`,
+      message: mensagem,
       confirmText: 'Confirmar'
     }, () => {
       this.processandoInclusao = true;
@@ -980,21 +1079,224 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  abrirHistoricoStatus(veiculo: Veiculo): void {
+  abrirHistoricoVeiculo(veiculo: Veiculo): void {
     this.selectedVeiculoHistorico = veiculo;
-    this.historicoStatus = [];
-    this.loadingHistoricoStatus = true;
-    this.adminService.listarHistoricoStatusVeiculo(veiculo.id)
-      .pipe(finalize(() => (this.loadingHistoricoStatus = false)))
+    this.historicoVeiculo = null;
+    this.eventoHistoricoSelecionado = null;
+    this.filtroHistoricoVeiculo = '';
+    this.filtroHistoricoSomenteComFotos = false;
+    this.filtroHistoricoSomenteComAvarias = false;
+    this.loadingHistoricoVeiculo = true;
+    this.adminService.buscarHistoricoVeiculo(veiculo.id)
+      .pipe(finalize(() => (this.loadingHistoricoVeiculo = false)))
       .subscribe({
-        next: data => (this.historicoStatus = data),
+        next: data => {
+          this.historicoVeiculo = data;
+          this.selecionarPrimeiroEventoHistoricoDisponivel();
+        },
         error: () => this.snackBar.open('Falha ao carregar historico.', 'Fechar', { duration: 2800 })
       });
   }
 
-  fecharHistoricoStatus(): void {
+  fecharHistoricoVeiculo(): void {
     this.selectedVeiculoHistorico = null;
-    this.historicoStatus = [];
+    this.historicoVeiculo = null;
+    this.eventoHistoricoSelecionado = null;
+  }
+
+  abrirRegistroViagem(veiculo: Veiculo): void {
+    this.selectedVeiculoViagem = veiculo;
+    this.showRegistroViagemModal = true;
+    this.viagemForm.reset({
+      motoristaId: veiculo.viagemMotoristaId || veiculo.motoristaAtualId || 0,
+      localDestino: veiculo.viagemLocalDestino || '',
+      dataHoraSaida: this.agoraDateTimeLocal(),
+      observacao: veiculo.viagemObservacao || ''
+    });
+    if (this.motoristas.length === 0) {
+      this.carregarMotoristas();
+    }
+  }
+
+  fecharRegistroViagem(): void {
+    this.showRegistroViagemModal = false;
+    this.selectedVeiculoViagem = null;
+    this.viagemForm.reset({
+      motoristaId: 0,
+      localDestino: '',
+      dataHoraSaida: this.agoraDateTimeLocal(),
+      observacao: ''
+    });
+  }
+
+  salvarRegistroViagem(): void {
+    if (!this.selectedVeiculoViagem) {
+      return;
+    }
+    if (this.viagemForm.invalid) {
+      this.viagemForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.viagemForm.getRawValue();
+    const payload: RegistrarVeiculoEmViagemPayload = {
+      motoristaId: raw.motoristaId,
+      localDestino: raw.localDestino.trim(),
+      dataHoraSaida: raw.dataHoraSaida,
+      observacao: this.toNullIfBlank(raw.observacao)
+    };
+
+    this.salvandoRegistroViagem = true;
+    this.adminService.registrarVeiculoEmViagem(this.selectedVeiculoViagem.id, payload)
+      .pipe(finalize(() => (this.salvandoRegistroViagem = false)))
+      .subscribe({
+        next: () => {
+          const historicoAbertoParaMesmoVeiculo = this.selectedVeiculoHistorico?.id === this.selectedVeiculoViagem?.id;
+          this.snackBar.open('Registro de viagem salvo com sucesso.', 'Fechar', { duration: 2400 });
+          const veiculoHistorico = this.selectedVeiculoHistorico;
+          this.fecharRegistroViagem();
+          this.carregarVeiculos(this.veiculoBusca);
+          if (historicoAbertoParaMesmoVeiculo && veiculoHistorico) {
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar a viagem.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  eventosHistoricoFiltrados(): EventoHistoricoVeiculo[] {
+    const eventos = this.historicoVeiculo?.eventos || [];
+    return eventos.filter(evento => {
+      if (this.filtroHistoricoVeiculo && !this.eventoHistoricoCorrespondeAoFiltro(evento, this.filtroHistoricoVeiculo)) {
+        return false;
+      }
+      if (this.filtroHistoricoSomenteComFotos && !evento.possuiFotos) {
+        return false;
+      }
+      if (this.filtroHistoricoSomenteComAvarias && !evento.possuiAvarias) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  selecionarEventoHistorico(evento: EventoHistoricoVeiculo): void {
+    this.eventoHistoricoSelecionado = evento;
+  }
+
+  aplicarFiltroHistoricoVeiculo(): void {
+    const eventos = this.eventosHistoricoFiltrados();
+    if (!this.eventoHistoricoSelecionado) {
+      this.eventoHistoricoSelecionado = eventos[0] || null;
+      return;
+    }
+    const aindaVisivel = eventos.some(item => item.idExibicao === this.eventoHistoricoSelecionado?.idExibicao);
+    if (!aindaVisivel) {
+      this.eventoHistoricoSelecionado = eventos[0] || null;
+    }
+  }
+
+  historicoVeiculoBadgePrincipal(evento: EventoHistoricoVeiculo): string {
+    switch (evento.tipo) {
+      case 'MISSAO_INICIADA':
+      case 'MISSAO_FINALIZADA':
+        return 'MISSAO';
+      case 'CHECKLIST_SAIDA':
+      case 'CHECKLIST_CHEGADA':
+        return 'CHECKLIST';
+      case 'EXCECAO_ABERTA':
+      case 'EXCECAO_REGULARIZADA':
+        return 'SEM CHECKLIST';
+      case 'VIAGEM_INICIADA':
+      case 'VIAGEM_FINALIZADA':
+        return 'VIAGEM';
+      case 'VISTORIA_COMPLETA_SAIDA':
+      case 'VISTORIA_COMPLETA_CHEGADA':
+        return 'VISTORIA COMPLETA';
+      case 'STATUS_ALTERADO':
+        return 'STATUS';
+    }
+  }
+
+  historicoVeiculoBadgeSecundaria(evento: EventoHistoricoVeiculo): string | null {
+    switch (evento.tipo) {
+      case 'MISSAO_INICIADA':
+        return evento.detalhe?.origemAberturaMissao ? this.origemAberturaMissaoLabel(evento.detalhe.origemAberturaMissao) : null;
+      case 'MISSAO_FINALIZADA':
+        return evento.detalhe?.origemEncerramentoMissao ? this.origemEncerramentoMissaoLabel(evento.detalhe.origemEncerramentoMissao) : null;
+      case 'CHECKLIST_SAIDA':
+      case 'VISTORIA_COMPLETA_SAIDA':
+        return 'SAIDA';
+      case 'CHECKLIST_CHEGADA':
+      case 'VISTORIA_COMPLETA_CHEGADA':
+        return 'CHEGADA';
+      case 'EXCECAO_ABERTA':
+        return 'PENDENTE';
+      case 'EXCECAO_REGULARIZADA':
+        return 'REGULARIZADA';
+      case 'VIAGEM_INICIADA':
+        return 'INICIO';
+      case 'VIAGEM_FINALIZADA':
+        return 'RETORNO';
+      case 'STATUS_ALTERADO':
+        return evento.detalhe?.statusNovo ? this.statusLabel(evento.detalhe.statusNovo) : null;
+    }
+  }
+
+  historicoVeiculoBadgeClasse(evento: EventoHistoricoVeiculo): string {
+    switch (evento.tipo) {
+      case 'MISSAO_INICIADA':
+      case 'MISSAO_FINALIZADA':
+        return 'status-circulando';
+      case 'CHECKLIST_SAIDA':
+      case 'CHECKLIST_CHEGADA':
+        return 'status-base_joao_goulart';
+      case 'EXCECAO_ABERTA':
+      case 'EXCECAO_REGULARIZADA':
+        return 'status-oficina';
+      case 'VIAGEM_INICIADA':
+      case 'VIAGEM_FINALIZADA':
+        return 'status-em_viagem';
+      case 'VISTORIA_COMPLETA_SAIDA':
+      case 'VISTORIA_COMPLETA_CHEGADA':
+        return 'status-em_uso_externo';
+      case 'STATUS_ALTERADO':
+        return 'status-aguardando_realocacao';
+    }
+  }
+
+  historicoVeiculoBadgeSecundariaClasse(evento: EventoHistoricoVeiculo): string {
+    if (evento.tipo === 'STATUS_ALTERADO' && evento.detalhe?.statusNovo) {
+      return this.statusClass(evento.detalhe.statusNovo);
+    }
+    if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
+      return 'status-em_viagem';
+    }
+    if (evento.tipo === 'CHECKLIST_CHEGADA' || evento.tipo === 'VISTORIA_COMPLETA_CHEGADA') {
+      return 'status-no_patio';
+    }
+    if (evento.tipo === 'EXCECAO_ABERTA') {
+      return 'status-documental-pendente';
+    }
+    if (evento.tipo === 'EXCECAO_REGULARIZADA') {
+      return 'status-documental-ok';
+    }
+    return 'status-base_joao_goulart';
+  }
+
+  descricaoEventoHistorico(evento: EventoHistoricoVeiculo): string {
+    if (evento.tipo === 'STATUS_ALTERADO' && evento.detalhe?.statusAnterior && evento.detalhe.statusNovo) {
+      return `De: ${this.statusLabel(evento.detalhe.statusAnterior)} | Para: ${this.statusLabel(evento.detalhe.statusNovo)}`;
+    }
+    return evento.descricao || '-';
+  }
+
+  motoristaViagemLabel(veiculo: Veiculo): string {
+    return veiculo.viagemMotoristaNome || '-';
+  }
+
+  destinoViagemLabel(veiculo: Veiculo): string {
+    return veiculo.viagemLocalDestino || '-';
   }
 
   desativarVeiculo(veiculo: Veiculo): void {
@@ -1135,12 +1437,36 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  buscarVistoriasCompletas(): void {
+    this.loadingVistoriasCompletas = true;
+    const raw = this.vistoriaCompletaFiltroForm.getRawValue();
+    this.adminService.listarVistoriasCompletas({
+      busca: raw.busca || undefined,
+      motoristaId: raw.motoristaId > 0 ? raw.motoristaId : undefined,
+      veiculoId: raw.veiculoId > 0 ? raw.veiculoId : undefined,
+      tipoOperacao: raw.tipoOperacao || undefined,
+      resultado: raw.resultado || undefined,
+      dataInicio: raw.dataInicio || undefined,
+      dataFim: raw.dataFim || undefined
+    })
+      .pipe(finalize(() => (this.loadingVistoriasCompletas = false)))
+      .subscribe({
+        next: data => (this.vistoriasCompletas = data),
+        error: () => this.snackBar.open('Falha ao carregar vistorias completas.', 'Fechar', { duration: 3000 })
+      });
+  }
+
   carregarMissoesTempoReal(showError = true): void {
     this.loadingTempoReal = true;
     this.adminService.listarMissoes({ status: 'ATIVA' })
       .pipe(finalize(() => (this.loadingTempoReal = false)))
       .subscribe({
-        next: data => (this.missoesTempoReal = data),
+        next: data => {
+          this.missoesTempoReal = data;
+          if (this.activeMenu === 'operacao' && !this.loadingVeiculos) {
+            this.carregarVeiculos(this.veiculoBusca);
+          }
+        },
         error: () => {
           if (showError) {
             this.snackBar.open('Falha ao carregar missoes em andamento.', 'Fechar', { duration: 2800 });
@@ -1162,6 +1488,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       dataFim: hoje
     });
     this.buscarMissoes();
+  }
+
+  limparFiltrosVistoriasCompletas(): void {
+    const hoje = this.hojeIso();
+    this.vistoriaCompletaFiltroForm.reset({
+      busca: '',
+      motoristaId: 0,
+      veiculoId: 0,
+      tipoOperacao: '',
+      resultado: '',
+      dataInicio: hoje,
+      dataFim: hoje
+    });
+    this.buscarVistoriasCompletas();
   }
 
   limparFiltros(): void {
@@ -1204,6 +1544,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.veiculosDaCategoria('MISSAO').length;
   }
 
+  totalVeiculosEmUsoExterno(): number {
+    return this.veiculosDaCategoria('USO_EXTERNO').length;
+  }
+
   totalVeiculosEmViagem(): number {
     return this.veiculosDaCategoria('VIAGEM').length;
   }
@@ -1240,6 +1584,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.veiculos.filter(v => !v.desativado);
   }
 
+  private veiculoEmMissaoAtual(veiculo: Veiculo): boolean {
+    return veiculo.statusAtual === 'CIRCULANDO';
+  }
+
+  private veiculoComDeslocamentoAutomatico(veiculo: Veiculo): boolean {
+    return veiculo.statusAutomatico === 'CIRCULANDO' || veiculo.statusAutomatico === 'EM_VIAGEM';
+  }
+
+  private veiculoDisponivelParaNovaMissao(veiculo: Veiculo): boolean {
+    return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
+  }
+
   veiculosDesativados(): Veiculo[] {
     return this.veiculos.filter(v => v.desativado);
   }
@@ -1249,7 +1605,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   veiculosElegiveisContingencia(): Veiculo[] {
-    return this.veiculosAtivos().filter(v => v.statusAutomatico !== 'CIRCULANDO');
+    return this.veiculosAtivos().filter(v => this.veiculoDisponivelParaNovaMissao(v));
   }
 
   tipoOperacaoLabel(value: string): string {
@@ -1262,6 +1618,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   consultaChecklistOrdenada(): ConsultaChecklistItem[] {
     return [...this.consultaChecklist].sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+  }
+
+  vistoriasCompletasOrdenadas(): VistoriaCompletaResponse[] {
+    return [...this.vistoriasCompletas].sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+  }
+
+  vistoriasCompletasSaida(): VistoriaCompletaResponse[] {
+    return this.vistoriasCompletas.filter(item => item.tipoOperacao === 'SAIDA');
+  }
+
+  vistoriasCompletasChegada(): VistoriaCompletaResponse[] {
+    return this.vistoriasCompletas.filter(item => item.tipoOperacao === 'ENTRADA');
+  }
+
+  vistoriasCompletasReprovadas(): VistoriaCompletaResponse[] {
+    return this.vistoriasCompletas.filter(item => item.resultado === 'REPROVADO');
   }
 
   missoesAtivas(): MissaoResponse[] {
@@ -1323,7 +1695,125 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.origemAberturaMissaoLabels[origem];
   }
 
+  resultadoVistoriaLabel(resultado: ResultadoVistoriaCompleta): string {
+    if (resultado === 'RESSALVA') {
+      return 'COM RESSALVA';
+    }
+    return resultado;
+  }
+
+  classeResultadoVistoria(resultado: ResultadoVistoriaCompleta): string {
+    if (resultado === 'APROVADO') {
+      return 'status-base_joao_goulart';
+    }
+    if (resultado === 'RESSALVA') {
+      return 'status-oficina';
+    }
+    return 'status-bloqueado';
+  }
+
+  classeLinhaVistoria(vistoria: VistoriaCompletaResponse): string {
+    if (vistoria.resultado === 'REPROVADO') {
+      return 'vistoria-row-reprovada';
+    }
+    if (vistoria.resultado === 'RESSALVA') {
+      return 'vistoria-row-ressalva';
+    }
+    return 'vistoria-row-aprovada';
+  }
+
+  quantidadeItensFaltandoVistoria(vistoria: VistoriaCompletaResponse): number {
+    return vistoria.itens.filter(item => item.status === 'FALTANDO').length;
+  }
+
+  tipoItemVistoriaLabel(tipo: string): string {
+    const labels: Record<string, string> = {
+      CHAVE_VEICULO: 'Chave do veiculo',
+      DOCUMENTO_VEICULO: 'Documento do veiculo',
+      MACACO: 'Macaco',
+      CHAVE_DE_RODA: 'Chave de roda',
+      TRIANGULO: 'Triangulo',
+      ESTEPE: 'Estepe'
+    };
+    return labels[tipo] || tipo;
+  }
+
+  tipoAvariaVistoriaLabel(tipo: string): string {
+    const labels: Record<string, string> = {
+      AMASSADO: 'Amassado',
+      RISCADO: 'Riscado',
+      QUEBRADO: 'Quebrado',
+      TRINCADO: 'Trincado',
+      FALTANDO: 'Faltando',
+      OUTRO: 'Outro'
+    };
+    return labels[tipo] || tipo;
+  }
+
+  tipoFotoVistoriaLabel(tipo: string): string {
+    const labels: Record<string, string> = {
+      FRENTE: 'Frente',
+      LATERAL_ESQ: 'Lateral esquerda',
+      LATERAL_DIR: 'Lateral direita',
+      TRASEIRA: 'Traseira',
+      PAINEL: 'Painel',
+      ESTEPE: 'Estepe'
+    };
+    return labels[tipo] || tipo;
+  }
+
+  abrirVistoriaCompleta(vistoria: VistoriaCompletaResponse): void {
+    this.selectedVistoriaCompleta = vistoria;
+    this.contraparteVistoriaEdicao = vistoria.nomeContraparte || '';
+  }
+
+  fecharVistoriaCompleta(): void {
+    this.selectedVistoriaCompleta = null;
+    this.contraparteVistoriaEdicao = '';
+  }
+
+  labelContraparteVistoria(tipoOperacao: TipoOperacao): string {
+    return tipoOperacao === 'SAIDA' ? 'Entregue para' : 'Recebido de';
+  }
+
+  statusPosVistoriaLabel(tipoOperacao: TipoOperacao): string {
+    return tipoOperacao === 'SAIDA' ? this.statusLabel('EM_USO_EXTERNO') : this.statusLabel('AGUARDANDO_REALOCACAO');
+  }
+
+  statusPosVistoriaClasse(tipoOperacao: TipoOperacao): string {
+    return tipoOperacao === 'SAIDA' ? this.statusClass('EM_USO_EXTERNO') : this.statusClass('AGUARDANDO_REALOCACAO');
+  }
+
+  salvarContraparteVistoria(): void {
+    const vistoria = this.selectedVistoriaCompleta;
+    if (!vistoria || this.salvandoContraparteVistoria) {
+      return;
+    }
+
+    const payload: AtualizarContraparteVistoriaCompletaPayload = {
+      nomeContraparte: this.contraparteVistoriaEdicao.trim() || null
+    };
+
+    this.salvandoContraparteVistoria = true;
+    this.adminService.atualizarContraparteVistoriaCompleta(vistoria.id, payload)
+      .pipe(finalize(() => (this.salvandoContraparteVistoria = false)))
+      .subscribe({
+        next: atualizado => {
+          this.selectedVistoriaCompleta = atualizado;
+          this.contraparteVistoriaEdicao = atualizado.nomeContraparte || '';
+          this.vistoriasCompletas = this.vistoriasCompletas.map(item => item.id === atualizado.id ? atualizado : item);
+          this.snackBar.open('Contraparte da vistoria salva.', 'Fechar', { duration: 2200 });
+        },
+        error: err => {
+          this.snackBar.open(err.error?.message || 'Falha ao salvar contraparte da vistoria.', 'Fechar', { duration: 3200 });
+        }
+      });
+  }
+
   tipoMissaoLabel(missao: MissaoResponse): string {
+    if (missao.tipoDeslocamento === 'VIAGEM') {
+      return this.tipoMissaoLabels.VIAGEM;
+    }
     return missao.origemAbertura === 'CONTINGENCIA_ADMIN'
       ? this.tipoMissaoLabels.MANUAL
       : '';
@@ -1559,6 +2049,32 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
+  private selecionarPrimeiroEventoHistoricoDisponivel(): void {
+    this.eventoHistoricoSelecionado = this.eventosHistoricoFiltrados()[0] || null;
+  }
+
+  private eventoHistoricoCorrespondeAoFiltro(
+    evento: EventoHistoricoVeiculo,
+    filtro: FiltroHistoricoVeiculo
+  ): boolean {
+    switch (filtro) {
+      case '':
+        return true;
+      case 'MISSOES':
+        return evento.tipo === 'MISSAO_INICIADA' || evento.tipo === 'MISSAO_FINALIZADA';
+      case 'CHECKLISTS':
+        return evento.tipo === 'CHECKLIST_SAIDA' || evento.tipo === 'CHECKLIST_CHEGADA';
+      case 'SEM_CHECKLIST':
+        return evento.tipo === 'EXCECAO_ABERTA' || evento.tipo === 'EXCECAO_REGULARIZADA';
+      case 'VIAGENS':
+        return evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA';
+      case 'VISTORIAS':
+        return evento.tipo === 'VISTORIA_COMPLETA_SAIDA' || evento.tipo === 'VISTORIA_COMPLETA_CHEGADA';
+      case 'STATUS':
+        return evento.tipo === 'STATUS_ALTERADO';
+    }
+  }
+
   private toNullIfBlank(value: string): string | null {
     const normalized = value.trim();
     return normalized ? normalized : null;
@@ -1604,12 +2120,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       || value === 'missoes'
       || value === 'tempo-real'
       || value === 'checklists'
+      || value === 'vistorias-completas'
       || value === 'excecoes';
   }
 
   private isPainelCategoria(value: string | null): value is PainelCategoria {
     return value === 'DISPONIVEL'
       || value === 'MISSAO'
+      || value === 'USO_EXTERNO'
       || value === 'VIAGEM'
       || value === 'PATIO'
       || value === 'REALOCACAO'
@@ -1622,15 +2140,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.cadastrosMenuAtivo = menu;
       return;
     }
-    if (menu === 'missoes' || menu === 'checklists') {
+    if (menu === 'missoes' || menu === 'checklists' || menu === 'vistorias-completas') {
       this.controleMenuAtivo = menu;
     }
   }
 
   private garantirDadosBasicos(menu: AdminMenu): void {
-    const precisaMotoristas = menu === 'motoristas'
+    const precisaMotoristas = menu === 'operacao'
+      || menu === 'motoristas'
       || menu === 'missoes'
-      || menu === 'checklists';
+      || menu === 'checklists'
+      || menu === 'vistorias-completas';
     const precisaVeiculos = menu !== 'motoristas';
 
     if (precisaMotoristas && this.motoristas.length === 0 && !this.loadingMotoristas) {
@@ -1648,6 +2168,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (menu === 'checklists' && (force || this.consultaChecklist.length === 0) && !this.loadingChecklists) {
       this.buscarChecklists();
+      return;
+    }
+    if (menu === 'vistorias-completas' && (force || this.vistoriasCompletas.length === 0) && !this.loadingVistoriasCompletas) {
+      this.buscarVistoriasCompletas();
       return;
     }
     if (menu === 'rotulos-status' && (force || this.rotulosStatusEditor.length === 0) && !this.loadingRotulosStatus) {
@@ -1703,6 +2227,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return {
       DISPONIVEL: [],
       MISSAO: [],
+      USO_EXTERNO: [],
       VIAGEM: [],
       PATIO: [],
       REALOCACAO: [],
@@ -1723,8 +2248,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private categoriaDoVeiculo(veiculo: Veiculo): PainelCategoria {
-    // Em caso de conflito com status administrativo, missao ativa sempre prevalece no painel.
-    if (veiculo.statusAutomatico === 'CIRCULANDO') {
+    if (this.veiculoEmMissaoAtual(veiculo)) {
       return 'MISSAO';
     }
     if (veiculo.statusAtual === 'BASE_JOAO_GOULART') {
@@ -1732,6 +2256,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (veiculo.statusAtual === 'EM_VIAGEM') {
       return 'VIAGEM';
+    }
+    if (veiculo.statusAtual === 'EM_USO_EXTERNO') {
+      return 'USO_EXTERNO';
     }
     if (veiculo.statusAtual === 'NO_PATIO') {
       return 'PATIO';
@@ -1752,7 +2279,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     return this.veiculosAtivos()
-      .filter(v => v.statusAutomatico !== 'CIRCULANDO')
+      .filter(v => !this.veiculoComDeslocamentoAutomatico(v))
       .filter(v => {
         if (categoria === 'DISPONIVEL') {
           return v.statusAdministrativo !== null;
@@ -1768,6 +2295,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (categoria === 'VIAGEM') {
       return 'EM_VIAGEM';
+    }
+    if (categoria === 'USO_EXTERNO') {
+      return 'EM_USO_EXTERNO';
     }
     if (categoria === 'PATIO') {
       return 'NO_PATIO';
@@ -1878,6 +2408,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   private iniciarAtualizacaoTempoReal(): void {
     this.pararAtualizacaoTempoReal();
+    if (this.activeMenu === 'operacao') {
+      this.atualizarPainelOperacional();
+      this.refreshTempoRealSub = interval(15000).subscribe(() => this.atualizarPainelOperacional());
+      return;
+    }
+
     this.carregarMissoesTempoReal();
     this.refreshTempoRealSub = interval(15000).subscribe(() => this.carregarMissoesTempoReal());
   }

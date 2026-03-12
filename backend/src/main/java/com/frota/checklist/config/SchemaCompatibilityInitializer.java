@@ -34,6 +34,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'BASE_JOAO_GOULART',
                     'NO_PATIO',
                     'AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO',
                     'OFICINA',
                     'EM_VIAGEM',
                     'MANUTENCAO',
@@ -49,7 +50,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_novo_check");
 
         String allowed = """
-                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
+                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO','EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
                 """;
         executarSilencioso("""
                 alter table historico_status_veiculo
@@ -73,6 +74,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'BASE_JOAO_GOULART',
                     'NO_PATIO',
                     'AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO',
                     'OFICINA',
                     'EM_VIAGEM',
                     'MANUTENCAO',
@@ -116,6 +118,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         executarSilencioso("alter table missoes drop constraint if exists missoes_status_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_origem_abertura_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_origem_encerramento_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_tipo_deslocamento_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_status_documental_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_motivo_contingencia_check");
 
@@ -145,6 +148,15 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'CHECKLIST',
                     'SEM_CHECKLIST',
                     'ADMINISTRATIVO'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_tipo_deslocamento_check
+                check (tipo_deslocamento in (
+                    'NA_CIDADE',
+                    'VIAGEM'
                 ))
                 """);
 

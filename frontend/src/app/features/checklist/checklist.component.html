@@ -137,11 +137,15 @@
             <strong>{{ operationTitle() }}</strong>
             <p>{{ operationLabel(form.getRawValue().tipoOperacao) }}</p>
           </article>
+          <article class="operation-chip">
+            <strong>Tipo do deslocamento</strong>
+            <p>{{ tipoDeslocamentoLabel(form.getRawValue().tipoDeslocamento) }}</p>
+          </article>
         </div>
 
         <div class="vehicle-grid">
           <p class="camera-note" *ngIf="semVeiculoParaChegada()">
-            Nenhuma missao aberta encontrada para voce finalizar com checklist de chegada.
+            {{ mensagemSemVeiculoParaChegada() }}
           </p>
           <article
             class="vehicle-card"

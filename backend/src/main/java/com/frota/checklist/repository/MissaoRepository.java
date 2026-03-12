@@ -23,6 +23,8 @@ public interface MissaoRepository extends JpaRepository<Missao, Long>, JpaSpecif
     @EntityGraph(attributePaths = {"motorista", "veiculo"})
     List<Missao> findByStatusAndVeiculoIdIn(StatusMissao status, List<Long> veiculoIds);
 
+    List<Missao> findByVeiculoIdOrderByDataHoraInicioDescIdDesc(Long veiculoId);
+
     boolean existsByMotoristaIdAndStatus(Long motoristaId, StatusMissao status);
 
     boolean existsByVeiculoIdAndStatus(Long veiculoId, StatusMissao status);

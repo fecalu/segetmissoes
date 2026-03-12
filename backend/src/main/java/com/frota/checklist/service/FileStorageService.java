@@ -42,14 +42,38 @@ public class FileStorageService {
         return "/uploads/checklists/" + nomeUnico;
     }
 
+    public String salvarFotoVistoriaCompleta(MultipartFile file, String categoriaArquivo, Long motoristaId) {
+        validarArquivoGenerico(file, categoriaArquivo);
+
+        String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+        String ext = extrairExtensao(originalName);
+        String nomeUnico = motoristaId + "_" + categoriaArquivo.toLowerCase(Locale.ROOT) + "_" + UUID.randomUUID() + "." + ext;
+
+        Path targetDir = Path.of(uploadBaseDir, "vistorias-completas");
+        Path target = targetDir.resolve(nomeUnico);
+
+        try {
+            Files.createDirectories(targetDir);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new BusinessException("Falha ao salvar arquivo da vistoria completa: " + categoriaArquivo);
+        }
+
+        return "/uploads/vistorias-completas/" + nomeUnico;
+    }
+
     private void validarArquivo(MultipartFile file, TipoFoto tipoFoto) {
+        validarArquivoGenerico(file, tipoFoto.name());
+    }
+
+    private void validarArquivoGenerico(MultipartFile file, String nomeCampo) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("Arquivo obrigatorio nao enviado: " + tipoFoto.name());
+            throw new BusinessException("Arquivo obrigatorio nao enviado: " + nomeCampo);
         }
         String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
         String ext = extrairExtensao(originalName);
         if (!EXTENSOES_PERMITIDAS.contains(ext.toLowerCase(Locale.ROOT))) {
-            throw new BusinessException("Formato invalido para " + tipoFoto.name() + ". Use jpg, jpeg, png ou webp");
+            throw new BusinessException("Formato invalido para " + nomeCampo + ". Use jpg, jpeg, png ou webp");
         }
     }
 

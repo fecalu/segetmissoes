@@ -50,4 +50,5 @@ public interface MissaoExcecaoRepository extends JpaRepository<MissaoExcecao, Lo
 
     long countByVeiculoId(Long veiculoId);
     List<MissaoExcecao> findByVeiculoId(Long veiculoId);
+    List<MissaoExcecao> findByVeiculoIdOrderByDataHoraAberturaDescIdDesc(Long veiculoId);
 }

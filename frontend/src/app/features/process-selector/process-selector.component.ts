@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { TipoDeslocamentoMissao } from '../../core/models/missao.model';
 import { Veiculo } from '../../core/models/veiculo.model';
 import { VeiculoService } from '../../core/services/veiculo.service';
 
@@ -16,10 +17,7 @@ import { VeiculoService } from '../../core/services/veiculo.service';
   styleUrl: './process-selector.component.css'
 })
 export class ProcessSelectorComponent implements OnInit {
-  selectedFluxo: 'INICIAR' | 'FINALIZAR' | null = null;
-  selectedChecklistCompleto = false;
-  showDevModal = false;
-  devFeatureName = '';
+  selectedMissaoCidadeFluxo: 'INICIAR' | 'FINALIZAR' | null = null;
   missaoAtivaMotorista: Veiculo | null = null;
   validandoMissaoAtiva = false;
 
@@ -34,50 +32,80 @@ export class ProcessSelectorComponent implements OnInit {
     this.carregarMissaoAtivaMotorista();
   }
 
-  selecionarFluxo(fluxo: 'INICIAR' | 'FINALIZAR'): void {
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    this.carregarMissaoAtivaMotorista();
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      this.carregarMissaoAtivaMotorista();
+    }
+  }
+
+  toggleMissaoCidade(fluxo: 'INICIAR' | 'FINALIZAR'): void {
     if (fluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Voce possui missao em andamento. Finalize a missao atual antes de iniciar outra.', 'Fechar', { duration: 2600 });
+      this.snackBar.open('Finalize o deslocamento atual antes de iniciar uma missao na cidade.', 'Fechar', { duration: 2600 });
       return;
     }
-    this.selectedFluxo = this.selectedFluxo === fluxo ? null : fluxo;
-  }
-
-  irComChecklist(): void {
-    if (!this.selectedFluxo) {
+    if (fluxo === 'FINALIZAR' && !this.hasMissaoNaCidadeAtiva()) {
+      this.snackBar.open('Nenhuma missao na cidade em andamento para finalizar.', 'Fechar', { duration: 2600 });
       return;
     }
-    if (this.selectedFluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Finalize sua missao em andamento antes de iniciar outra.', 'Fechar', { duration: 2600 });
+    this.selectedMissaoCidadeFluxo = this.selectedMissaoCidadeFluxo === fluxo ? null : fluxo;
+  }
+
+  iniciarMissaoComChecklist(): void {
+    if (this.hasMissaoAtiva()) {
+      this.snackBar.open('Finalize o deslocamento atual antes de iniciar uma missao na cidade.', 'Fechar', { duration: 2600 });
       return;
     }
-    const operacao = this.selectedFluxo === 'INICIAR' ? 'SAIDA' : 'ENTRADA';
-    this.router.navigate(['/checklist'], { queryParams: { operacao } });
+    this.irChecklist('SAIDA', 'NA_CIDADE');
   }
 
-  irSemChecklist(): void {
-    if (!this.selectedFluxo) {
+  iniciarMissaoSemChecklist(): void {
+    if (this.hasMissaoAtiva()) {
+      this.snackBar.open('Finalize o deslocamento atual antes de iniciar uma missao na cidade.', 'Fechar', { duration: 2600 });
       return;
     }
-    if (this.selectedFluxo === 'INICIAR' && this.hasMissaoAtiva()) {
-      this.snackBar.open('Finalize sua missao em andamento antes de iniciar outra.', 'Fechar', { duration: 2600 });
+    this.router.navigate(['/checklist/excecao'], { queryParams: { operacao: 'SAIDA' } });
+  }
+
+  finalizarMissaoComChecklist(): void {
+    if (!this.hasMissaoNaCidadeAtiva()) {
+      this.snackBar.open('Nenhuma missao na cidade em andamento para finalizar.', 'Fechar', { duration: 2600 });
       return;
     }
-    const operacao = this.selectedFluxo === 'INICIAR' ? 'SAIDA' : 'ENTRADA';
-    this.router.navigate(['/checklist/excecao'], { queryParams: { operacao } });
+    this.irChecklist('ENTRADA', 'NA_CIDADE');
   }
 
-  abrirEmDesenvolvimento(featureName: string): void {
-    this.devFeatureName = featureName;
-    this.showDevModal = true;
+  finalizarMissaoSemChecklist(): void {
+    if (!this.hasMissaoNaCidadeAtiva()) {
+      this.snackBar.open('Nenhuma missao na cidade em andamento para finalizar.', 'Fechar', { duration: 2600 });
+      return;
+    }
+    this.router.navigate(['/checklist/excecao'], { queryParams: { operacao: 'ENTRADA' } });
   }
 
-  toggleChecklistCompleto(): void {
-    this.selectedChecklistCompleto = !this.selectedChecklistCompleto;
+  iniciarViagem(): void {
+    if (this.hasMissaoAtiva()) {
+      this.snackBar.open('Finalize o deslocamento atual antes de iniciar uma viagem.', 'Fechar', { duration: 2600 });
+      return;
+    }
+    this.irChecklist('SAIDA', 'VIAGEM');
   }
 
-  fecharModal(): void {
-    this.showDevModal = false;
-    this.devFeatureName = '';
+  finalizarViagem(): void {
+    if (!this.hasViagemAtiva()) {
+      this.snackBar.open('Nenhuma viagem em andamento para finalizar.', 'Fechar', { duration: 2600 });
+      return;
+    }
+    this.irChecklist('ENTRADA', 'VIAGEM');
+  }
+
+  irVistoriaCompleta(operacao: 'SAIDA' | 'CHEGADA'): void {
+    this.router.navigate(['/vistoria-completa'], { queryParams: { operacao } });
   }
 
   logout(): void {
@@ -86,6 +114,53 @@ export class ProcessSelectorComponent implements OnInit {
 
   hasMissaoAtiva(): boolean {
     return !!this.missaoAtivaMotorista;
+  }
+
+  hasMissaoNaCidadeAtiva(): boolean {
+    return this.missaoAtivaMotorista?.statusAtual === 'CIRCULANDO';
+  }
+
+  hasViagemAtiva(): boolean {
+    return this.missaoAtivaMotorista?.statusAtual === 'EM_VIAGEM';
+  }
+
+  alertaTitulo(): string {
+    return this.hasViagemAtiva() ? 'Viagem em andamento detectada' : 'Missao em andamento detectada';
+  }
+
+  alertaDescricaoPrincipal(): string {
+    if (!this.missaoAtivaMotorista) {
+      return '';
+    }
+    return this.hasViagemAtiva()
+      ? `Voce ja iniciou uma viagem no veiculo ${this.missaoAtivaMotorista.placa}.`
+      : `Voce ja iniciou uma missao no veiculo ${this.missaoAtivaMotorista.placa}.`;
+  }
+
+  alertaDescricaoSecundaria(): string {
+    return this.hasViagemAtiva()
+      ? 'Finalize essa viagem para iniciar outro deslocamento.'
+      : 'Finalize essa missao para iniciar outro deslocamento.';
+  }
+
+  subtituloFinalizarMissao(): string {
+    return this.hasMissaoNaCidadeAtiva()
+      ? 'Encerrar a missao urbana em andamento'
+      : 'Disponivel quando houver missao na cidade ativa';
+  }
+
+  subtituloFinalizarViagem(): string {
+    return this.hasViagemAtiva()
+      ? 'Encerrar a viagem em andamento'
+      : 'Disponivel quando houver viagem ativa';
+  }
+
+  private veiculoEmMissaoAtual(veiculo: Veiculo): boolean {
+    return veiculo.statusAtual === 'CIRCULANDO' || veiculo.statusAtual === 'EM_VIAGEM';
+  }
+
+  private irChecklist(operacao: 'SAIDA' | 'ENTRADA', tipoDeslocamento: TipoDeslocamentoMissao): void {
+    this.router.navigate(['/checklist'], { queryParams: { operacao, tipoDeslocamento } });
   }
 
   private carregarMissaoAtivaMotorista(): void {
@@ -100,12 +175,8 @@ export class ProcessSelectorComponent implements OnInit {
       .subscribe({
         next: veiculos => {
           this.missaoAtivaMotorista = veiculos.find(v =>
-            v.statusAutomatico === 'CIRCULANDO' && v.motoristaAtualId === motoristaId
+            this.veiculoEmMissaoAtual(v) && v.motoristaAtualId === motoristaId
           ) ?? null;
-
-          if (this.missaoAtivaMotorista && this.selectedFluxo === 'INICIAR') {
-            this.selectedFluxo = 'FINALIZAR';
-          }
         },
         error: () => {
           this.snackBar.open('Nao foi possivel validar sua missao em andamento agora.', 'Fechar', { duration: 2600 });

@@ -68,111 +68,111 @@
   font-size: 0.92rem;
 }
 
-.options-grid {
+.process-groups {
   margin-top: 14px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
-.flow-shell {
-  border-radius: 14px;
+.process-group {
+  border-radius: 16px;
+  border: 1px solid #dbe4ee;
+  background: #ffffff;
   overflow: hidden;
-  border: 1px solid transparent;
-  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
-.flow-shell.expanded {
-  transform: translateY(-1px);
+.mission-group {
+  border-color: #bfe0c8;
 }
 
-.primary-shell.expanded {
-  box-shadow: 0 0 0 3px rgba(32, 128, 72, 0.24);
-  border-color: #1f8a4d;
+.trip-group {
+  border-color: #f1d08f;
 }
 
-.secondary-shell.expanded {
-  box-shadow: 0 0 0 3px rgba(24, 94, 239, 0.24);
-  border-color: #155eef;
+.inspection-group {
+  border-color: #e7b1b1;
 }
 
-.option-card {
-  width: 100%;
-  min-height: 98px;
+.group-header {
+  padding: 14px 16px 10px;
+}
+
+.group-header h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #0f172a;
+}
+
+.group-header p {
+  margin: 6px 0 0;
+  font-size: 0.93rem;
+  color: #475569;
+}
+
+.group-actions {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.mission-flow-shell {
+  display: grid;
+  gap: 8px;
+}
+
+.mission-flow-shell.expanded {
+  padding: 0;
+}
+
+.group-action-btn {
+  min-height: 92px;
   border-radius: 14px;
+  text-align: left;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+}
+
+:host ::ng-deep .group-action-btn .mdc-button__label {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
+  width: 100%;
+  text-transform: none;
   text-align: left;
-  padding: 16px;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
-.option-card strong {
-  font-size: 1.22rem;
-  line-height: 1.3;
+.group-action-btn strong {
+  font-size: 1.06rem;
+  line-height: 1.25;
+  font-weight: 700;
 }
 
-.option-card span {
-  font-size: 0.96rem;
+.group-action-btn span {
+  font-size: 0.92rem;
+  line-height: 1.25;
   opacity: 0.95;
 }
 
-.option-card:disabled {
-  opacity: 0.65;
+.group-action-btn:disabled {
+  opacity: 0.58;
 }
 
-.line-break {
-  display: block;
-}
-
-.danger-card {
-  background: linear-gradient(140deg, #b91c1c, #dc2626) !important;
-  border: 1px solid #991b1b !important;
-  color: #fff !important;
-}
-
-.danger-card .mdc-button__label {
-  color: #fff !important;
-}
-
-.primary-card {
-  background: linear-gradient(135deg, #1c7c45, #2d9a5a);
-  color: #fff !important;
-}
-
-.secondary-card {
-  background: linear-gradient(135deg, #155eef, #3b82f6);
-  color: #fff !important;
-}
-
-.warning-card {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  color: #fff !important;
-}
-
-.fluxo-grid {
-  grid-template-columns: 1fr;
-}
-
-.embedded-actions {
-  margin-top: 10px;
+.group-subactions {
   display: grid;
   gap: 8px;
-  padding: 10px;
+  padding: 0 4px 2px;
 }
 
-.primary-shell .embedded-actions {
-  background: linear-gradient(180deg, #e7f7ee, #f0fbf4);
-}
-
-.secondary-shell .embedded-actions {
-  background: linear-gradient(180deg, #e9f1ff, #f1f6ff);
-}
-
-.decision-btn {
-  min-height: 84px;
+.subaction-btn {
+  min-height: 80px;
   border-radius: 12px;
   text-align: left;
   justify-content: center;
@@ -181,7 +181,7 @@
   border: 1px solid transparent;
 }
 
-:host ::ng-deep .decision-btn .mdc-button__label {
+:host ::ng-deep .subaction-btn .mdc-button__label {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -194,16 +194,50 @@
   padding-left: 0 !important;
 }
 
-.decision-btn strong {
-  font-size: 1.08rem;
+.subaction-btn strong {
+  font-size: 1rem;
   line-height: 1.25;
   font-weight: 700;
 }
 
-.decision-btn span {
-  font-size: 0.92rem;
+.subaction-btn span {
+  font-size: 0.9rem;
   line-height: 1.25;
   opacity: 0.95;
+}
+
+.subaction-btn:disabled {
+  opacity: 0.58;
+}
+
+.line-break {
+  display: block;
+}
+
+.primary-card {
+  background: linear-gradient(135deg, #1c7c45, #2d9a5a);
+  color: #fff !important;
+}
+
+.secondary-card {
+  background: linear-gradient(135deg, #155eef, #3b82f6);
+  color: #fff !important;
+}
+
+.travel-start-card {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #fff !important;
+}
+
+.travel-end-card {
+  background: linear-gradient(135deg, #92400e, #c2410c);
+  color: #fff !important;
+}
+
+.danger-card {
+  background: linear-gradient(140deg, #b91c1c, #dc2626) !important;
+  border: 1px solid #991b1b !important;
+  color: #fff !important;
 }
 
 .recommended-card {
@@ -212,69 +246,20 @@
   border: 1px solid #18733f;
 }
 
-.recommended-card .mdc-button__label {
+.warning-card {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
   color: #fff !important;
+  border: 1px solid #c56d09;
 }
 
-:host ::ng-deep .recommended-card .mdc-button__label,
-:host ::ng-deep .warning-card .mdc-button__label {
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
-.decision-btn.warning-card {
-  border-color: #c56d09;
-}
-
-.future-grid {
-  margin-top: 12px;
-  grid-template-columns: 1fr;
-}
-
-.complete-shell.expanded {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
-  border-color: #dc2626;
-}
-
-.complete-card {
-  background: linear-gradient(135deg, #991b1b, #dc2626);
+.primary-card .mdc-button__label,
+.secondary-card .mdc-button__label,
+.travel-start-card .mdc-button__label,
+.travel-end-card .mdc-button__label,
+.danger-card .mdc-button__label,
+.recommended-card .mdc-button__label,
+.warning-card .mdc-button__label {
   color: #fff !important;
-}
-
-.complete-actions {
-  background: linear-gradient(180deg, #fff1f2, #fff7f7);
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.68);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px;
-  z-index: 1001;
-}
-
-.modal-card {
-  width: 100%;
-  max-width: 380px;
-  background: #fff;
-  border-radius: 14px;
-  padding: 16px;
-  text-align: center;
-}
-
-.modal-card h3 {
-  margin: 0;
-}
-
-.modal-card p {
-  margin: 8px 0 14px;
-  color: #475569;
 }
 
 @media (min-width: 860px) {
@@ -282,15 +267,8 @@
     grid-template-columns: 1fr auto;
   }
 
-  .fluxo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .embedded-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .future-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .process-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
   }
 }

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Veiculo } from '../models/veiculo.model';
@@ -11,6 +11,7 @@ export class VeiculoService {
   constructor(private readonly http: HttpClient) {}
 
   listar(): Observable<Veiculo[]> {
-    return this.http.get<Veiculo[]>(this.baseUrl);
+    const params = new HttpParams().set('_ts', Date.now().toString());
+    return this.http.get<Veiculo[]>(this.baseUrl, { params });
   }
 }

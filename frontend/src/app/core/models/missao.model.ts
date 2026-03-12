@@ -4,6 +4,7 @@ export type StatusMissao = 'ATIVA' | 'FINALIZADA';
 export type StatusDocumentalMissao = 'PENDENTE_DADOS_ADMIN' | 'DADOS_ADMIN_COMPLETOS';
 export type OrigemAberturaMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'CONTINGENCIA_ADMIN';
 export type OrigemEncerramentoMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'ADMINISTRATIVO';
+export type TipoDeslocamentoMissao = 'NA_CIDADE' | 'VIAGEM';
 
 export interface MissaoResponse {
   id: number;
@@ -14,6 +15,7 @@ export interface MissaoResponse {
   duracaoSegundos: number;
   origemAbertura: OrigemAberturaMissao;
   origemEncerramento: OrigemEncerramentoMissao | null;
+  tipoDeslocamento: TipoDeslocamentoMissao;
   motoristaId: number;
   motoristaNome: string;
   veiculoId: number;

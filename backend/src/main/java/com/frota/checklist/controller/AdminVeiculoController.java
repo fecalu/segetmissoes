@@ -3,9 +3,12 @@ package com.frota.checklist.controller;
 import com.frota.checklist.dto.AdminVeiculoRequest;
 import com.frota.checklist.dto.AtualizarStatusAdministrativoRequest;
 import com.frota.checklist.dto.ExclusaoDefinitivaVeiculoRequest;
+import com.frota.checklist.dto.HistoricoVeiculoResponse;
 import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
+import com.frota.checklist.dto.RegistrarVeiculoEmViagemRequest;
 import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.security.CustomUserDetails;
+import com.frota.checklist.service.AdminHistoricoVeiculoService;
 import com.frota.checklist.service.AdminVeiculoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ import java.util.List;
 public class AdminVeiculoController {
 
     private final AdminVeiculoService adminVeiculoService;
+    private final AdminHistoricoVeiculoService adminHistoricoVeiculoService;
 
     @GetMapping
     public ResponseEntity<List<VeiculoResponse>> listar(@RequestParam(required = false) String buscaPlaca) {
@@ -60,6 +64,15 @@ public class AdminVeiculoController {
         ));
     }
 
+    @PostMapping("/{id}/em-viagem")
+    public ResponseEntity<VeiculoResponse> registrarEmViagem(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrarVeiculoEmViagemRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.registrarEmViagem(id, request, userDetails.getMotoristaId()));
+    }
+
     @PatchMapping("/{id}/desativar")
     public ResponseEntity<VeiculoResponse> desativar(
             @PathVariable Long id,
@@ -79,6 +92,11 @@ public class AdminVeiculoController {
     @GetMapping("/{id}/historico-status")
     public ResponseEntity<List<HistoricoStatusVeiculoResponse>> listarHistoricoStatus(@PathVariable Long id) {
         return ResponseEntity.ok(adminVeiculoService.listarHistoricoStatus(id));
+    }
+
+    @GetMapping("/{id}/historico")
+    public ResponseEntity<HistoricoVeiculoResponse> buscarHistorico(@PathVariable Long id) {
+        return ResponseEntity.ok(adminHistoricoVeiculoService.buscar(id));
     }
 
     @DeleteMapping("/{id}")

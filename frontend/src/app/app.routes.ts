@@ -9,6 +9,7 @@ import { ProcessSelectorComponent } from './features/process-selector/process-se
 import { AdminReportComponent } from './features/admin-report/admin-report.component';
 import { AdminMissionStatsComponent } from './features/admin-mission-stats/admin-mission-stats.component';
 import { MissaoExcecaoComponent } from './features/missao-excecao/missao-excecao.component';
+import { VistoriaCompletaComponent } from './features/vistoria-completa/vistoria-completa.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -16,6 +17,7 @@ export const routes: Routes = [
   { path: 'inicio', component: ProcessSelectorComponent, canActivate: [motoristaGuard] },
   { path: 'checklist', component: ChecklistComponent, canActivate: [motoristaGuard] },
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },
+  { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
   { path: 'admin/checklists/relatorio', component: AdminReportComponent, canActivate: [adminGuard] },
   { path: 'admin/estatisticas/missoes', component: AdminMissionStatsComponent, canActivate: [adminGuard] },
   { path: 'admin', component: AdminDashboardComponent, canActivate: [adminGuard] },

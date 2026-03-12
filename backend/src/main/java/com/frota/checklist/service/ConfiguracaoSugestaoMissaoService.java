@@ -56,7 +56,7 @@ public class ConfiguracaoSugestaoMissaoService {
         substituirCampo(CampoSugestaoMissao.SOLICITANTE, normalizarLista(solicitantes, 160, "Quem solicitou"), administrador);
         substituirCampo(
                 CampoSugestaoMissao.JUSTIFICATIVA_REGISTRO_MANUAL,
-                normalizarLista(justificativasRegistroManual, 700, "Justificativa do registro manual"),
+                normalizarLista(justificativasRegistroManual, 700, "Justificativas manuais"),
                 administrador
         );
 

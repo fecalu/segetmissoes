@@ -218,6 +218,24 @@ public class MissaoExcecaoService {
         );
     }
 
+    @Transactional
+    public MissaoExcecao regularizarPorVistoriaCompleta(
+            MissaoExcecao missaoExcecao,
+            Motorista motoristaResponsavel,
+            LocalDateTime dataHoraRegularizacao
+    ) {
+        if (missaoExcecao == null || !missaoExcecao.getStatus().isAberta()) {
+            return missaoExcecao;
+        }
+        if (!missaoExcecao.getMotorista().getId().equals(motoristaResponsavel.getId())) {
+            throw new BusinessException("Somente o motorista responsavel pode regularizar a excecao pela vistoria completa");
+        }
+
+        missaoExcecao.setStatus(StatusExcecaoMissao.REGULARIZADA_SEM_CHECKLIST);
+        missaoExcecao.setDataHoraRegularizacao(dataHoraRegularizacao == null ? LocalDateTime.now() : dataHoraRegularizacao);
+        return missaoExcecaoRepository.save(missaoExcecao);
+    }
+
     public List<MissaoExcecaoResponse> listarAdmin(
             StatusExcecaoMissao status,
             Long motoristaId,

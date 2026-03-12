@@ -6,6 +6,7 @@ import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.Foto;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.TipoFoto;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.entity.StatusVeiculo;
@@ -41,6 +42,7 @@ public class ChecklistService {
             Long motoristaId,
             Long veiculoId,
             TipoOperacao tipoOperacao,
+            TipoDeslocamentoMissao tipoDeslocamento,
             MultipartFile fotoPainel,
             MultipartFile fotoEstepe,
             MultipartFile fotoLateralEsq,
@@ -71,7 +73,7 @@ public class ChecklistService {
                 }
             } else {
                 // Compatibilidade com registros legados criados antes da entidade Missao.
-                if (statusSnapshot.statusAutomatico() != StatusVeiculo.CIRCULANDO) {
+                if (!statusSnapshot.statusAutomatico().isDeslocamentoAtivo()) {
                     throw new BusinessException("Nao existe missao em aberto para registrar chegada deste veiculo");
                 }
                 if (statusSnapshot.motoristaAtualId() == null || !statusSnapshot.motoristaAtualId().equals(motoristaId)) {
@@ -104,7 +106,7 @@ public class ChecklistService {
 
         Checklist saved = checklistRepository.save(checklist);
         if (saved.getTipoOperacao() == TipoOperacao.SAIDA) {
-            missaoService.abrirComChecklist(saved);
+            missaoService.abrirComChecklist(saved, tipoDeslocamento);
         } else {
             missaoService.encerrarComChecklist(saved);
         }

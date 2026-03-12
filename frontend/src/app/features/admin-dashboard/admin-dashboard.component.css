@@ -193,6 +193,11 @@
   gap: 8px;
 }
 
+.row-actions.align-start {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+
 .row-actions button {
   min-height: 42px;
   font-weight: 700;
@@ -413,6 +418,24 @@
   border-color: #7fc592;
   background: #f3fbf5;
   box-shadow: 0 8px 22px rgba(87, 169, 111, 0.14);
+}
+
+.vistoria-row-aprovada {
+  border-color: #7fc592;
+  background: #f3fbf5;
+  box-shadow: 0 8px 22px rgba(87, 169, 111, 0.14);
+}
+
+.vistoria-row-ressalva {
+  border-color: #e8a74d;
+  background: #fff8ef;
+  box-shadow: 0 8px 22px rgba(232, 167, 77, 0.14);
+}
+
+.vistoria-row-reprovada {
+  border-color: #e06b74;
+  background: #fff4f5;
+  box-shadow: 0 8px 22px rgba(224, 107, 116, 0.16);
 }
 
 .missao-lista-row {
@@ -841,6 +864,12 @@
   border-color: #c8b5ff;
 }
 
+.status-em_uso_externo {
+  background: #e6f7fb;
+  color: #0b7285;
+  border-color: #8fd3de;
+}
+
 .status-oficina {
   background: #fff8de;
   color: #8a6900;
@@ -899,7 +928,7 @@
 }
 
 .history-card {
-  max-width: 700px;
+  max-width: 1180px;
 }
 
 .inclusion-card {
@@ -908,6 +937,10 @@
 
 .nova-missao-card {
   max-width: 840px;
+}
+
+.viagem-card {
+  max-width: 760px;
 }
 
 .nova-missao-modos {
@@ -974,6 +1007,150 @@
 
 .detail-card p {
   margin: 6px 0;
+}
+
+.history-card-subtitle {
+  margin: 4px 0 0;
+  color: #5b698b;
+  font-size: 0.84rem;
+}
+
+.history-summary {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 10px;
+}
+
+.history-current-status {
+  border: 1px solid #dce5fb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f9fbff;
+}
+
+.history-current-status p {
+  margin: 6px 0 0;
+}
+
+.history-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.history-kpis .kpi {
+  border: 1px solid #dde6fb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-kpis .kpi strong {
+  font-size: 1.05rem;
+}
+
+.history-kpis .kpi span {
+  color: #5b698b;
+  font-size: 0.8rem;
+}
+
+.history-filters {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.history-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-filter-actions button.active {
+  border-color: #2d5ac8;
+  background: #eaf0ff;
+}
+
+.history-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-event-card {
+  width: 100%;
+  border: 1px solid #dbe4fb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.history-event-card.active {
+  border-color: #5b7fda;
+  background: #f5f8ff;
+  box-shadow: inset 0 0 0 1px rgba(45, 90, 200, 0.08);
+}
+
+.history-event-card p {
+  margin: 0;
+  color: #516183;
+  font-size: 0.82rem;
+}
+
+.history-event-head,
+.history-event-meta,
+.history-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.history-event-head {
+  justify-content: space-between;
+}
+
+.history-event-date,
+.history-detail-date {
+  color: #607093;
+  font-size: 0.8rem;
+}
+
+.history-event-meta span:not(.status-pill) {
+  color: #607093;
+  font-size: 0.78rem;
+}
+
+.history-event-detail {
+  border: 1px solid #dbe4fb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfdff;
+}
+
+.history-event-detail h4 {
+  margin: 0 0 4px;
+}
+
+.empty-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #647496;
+  min-height: 220px;
 }
 
 .photo-grid {
@@ -1043,6 +1220,25 @@
 
   .sugestao-missao-add {
     grid-template-columns: 1fr auto;
+  }
+
+  .history-summary {
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    align-items: stretch;
+  }
+
+  .history-kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .history-filters {
+    grid-template-columns: minmax(240px, 300px) 1fr;
+    align-items: start;
+  }
+
+  .history-layout {
+    grid-template-columns: minmax(320px, 410px) 1fr;
+    align-items: start;
   }
 
   .operacao-board {

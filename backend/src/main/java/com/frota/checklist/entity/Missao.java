@@ -63,6 +63,10 @@ public class Missao {
     @Column(name = "origem_encerramento", length = 30)
     private OrigemEncerramentoMissao origemEncerramento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_deslocamento", length = 20)
+    private TipoDeslocamentoMissao tipoDeslocamento;
+
     @Column(name = "checklist_saida_id")
     private Long checklistSaidaId;
 
@@ -113,6 +117,9 @@ public class Missao {
         }
         if (statusDocumental == null) {
             statusDocumental = StatusDocumentalMissao.PENDENTE_DADOS_ADMIN;
+        }
+        if (tipoDeslocamento == null) {
+            tipoDeslocamento = TipoDeslocamentoMissao.NA_CIDADE;
         }
     }
 

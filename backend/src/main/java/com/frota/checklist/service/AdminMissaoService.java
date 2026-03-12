@@ -9,6 +9,7 @@ import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
@@ -122,6 +123,7 @@ public class AdminMissaoService {
                 duracaoSegundos,
                 missao.getOrigemAbertura(),
                 missao.getOrigemEncerramento(),
+                missao.getTipoDeslocamento(),
                 missao.getMotorista().getId(),
                 missao.getMotorista().getNome(),
                 missao.getVeiculo().getId(),
@@ -224,6 +226,10 @@ public class AdminMissaoService {
 
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
             throw new BusinessException("Veiculo desativado nao pode receber registro manual");
+        }
+        StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
+        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoMotorista()) {
+            throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusAdministrativo);
         }
         MotivoExcecaoMissao motivoContingenciaNormalizado =
                 motivoContingencia == null ? MotivoExcecaoMissao.OUTROS : motivoContingencia;

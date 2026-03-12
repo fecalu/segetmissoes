@@ -18,6 +18,7 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long>, Jpa
     boolean existsByVeiculoId(Long veiculoId);
     long countByVeiculoId(Long veiculoId);
     List<Checklist> findByVeiculoId(Long veiculoId);
+    List<Checklist> findByVeiculoIdOrderByDataHoraDescIdDesc(Long veiculoId);
     Optional<Checklist> findTopByVeiculoIdOrderByDataHoraAscIdAsc(Long veiculoId);
 
     @EntityGraph(attributePaths = {"motorista"})

@@ -2,6 +2,8 @@ package com.frota.checklist.dto;
 
 import com.frota.checklist.entity.StatusVeiculo;
 
+import java.time.LocalDateTime;
+
 public record VeiculoResponse(
         Long id,
         String placa,
@@ -15,6 +17,12 @@ public record VeiculoResponse(
         String motoristaAtualNome,
         String statusAtualRotulo,
         String statusAutomaticoRotulo,
-        String statusAdministrativoRotulo
+        String statusAdministrativoRotulo,
+        Long viagemId,
+        Long viagemMotoristaId,
+        String viagemMotoristaNome,
+        String viagemLocalDestino,
+        String viagemObservacao,
+        LocalDateTime viagemDataHoraSaida
 ) {
 }

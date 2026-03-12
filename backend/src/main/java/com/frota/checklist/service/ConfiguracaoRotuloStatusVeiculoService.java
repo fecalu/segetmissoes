@@ -29,6 +29,7 @@ public class ConfiguracaoRotuloStatusVeiculoService {
             StatusVeiculo.BASE_JOAO_GOULART,
             StatusVeiculo.NO_PATIO,
             StatusVeiculo.AGUARDANDO_REALOCACAO,
+            StatusVeiculo.EM_USO_EXTERNO,
             StatusVeiculo.OFICINA,
             StatusVeiculo.EM_VIAGEM,
             StatusVeiculo.MANUTENCAO,
@@ -136,6 +137,7 @@ public class ConfiguracaoRotuloStatusVeiculoService {
         map.put(StatusVeiculo.BASE_JOAO_GOULART, "DISPONIVEL");
         map.put(StatusVeiculo.NO_PATIO, "NO PATIO");
         map.put(StatusVeiculo.AGUARDANDO_REALOCACAO, "AGUARDANDO REALOCACAO");
+        map.put(StatusVeiculo.EM_USO_EXTERNO, "EM USO EXTERNO");
         map.put(StatusVeiculo.OFICINA, "OFICINA");
         map.put(StatusVeiculo.EM_VIAGEM, "EM VIAGEM");
         map.put(StatusVeiculo.MANUTENCAO, "MANUTENCAO");

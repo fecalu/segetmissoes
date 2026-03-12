@@ -50,7 +50,7 @@ public class MissaoAtivaValidatorService {
 
         return veiculos.stream()
                 .map(veiculo -> new VeiculoSnapshot(veiculo, snapshots.get(veiculo.getId())))
-                .filter(item -> item.snapshot().statusAutomatico() == StatusVeiculo.CIRCULANDO
+                .filter(item -> item.snapshot().statusAutomatico().isDeslocamentoAtivo()
                         && motoristaId.equals(item.snapshot().motoristaAtualId()))
                 .findFirst()
                 .map(item -> new MissaoAtivaInfo(

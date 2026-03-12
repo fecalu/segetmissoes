@@ -1,0 +1,400 @@
+<section class="page-wrap">
+  <mat-card class="card-shell vistoria-card">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Vistoria completa</p>
+        <h2>{{ operationTitle() }}</h2>
+        <p class="topbar-copy">Motorista: {{ getDriverName() }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="voltarInicio()">Voltar ao inicio</button>
+    </header>
+
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <strong>Etapa {{ etapaAtual }} de {{ totalEtapas }}</strong>
+        <span>{{ uploadedPhotosCount() }}/{{ pontosFoto.length }} fotos obrigatorias</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="progressoPercentual()"></div>
+      </div>
+    </div>
+
+    <div class="spinner-wrap" *ngIf="loading">
+      <mat-spinner diameter="34"></mat-spinner>
+    </div>
+
+    <section *ngIf="showSuccess" class="success-view">
+      <div class="success-icon">OK</div>
+      <h3>Vistoria pronta</h3>
+      <p><strong>Registro:</strong> {{ numeroVistoriaLocal }}</p>
+      <p>Vistoria salva com sucesso e veiculo movido para aguardando realocacao.</p>
+      <div class="success-summary">
+        <p><strong>Resultado:</strong> {{ resultadoLabel(resultado) }}</p>
+        <p><strong>Fotos:</strong> {{ uploadedPhotosCount() }}/{{ pontosFoto.length }}</p>
+        <p><strong>Avarias:</strong> {{ avariasPendentesResumo() }}</p>
+      </div>
+      <button mat-flat-button color="primary" class="big-btn" type="button" (click)="novaVistoria()">Nova vistoria</button>
+      <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">Voltar para escolha de processo</button>
+    </section>
+
+    <form *ngIf="!loading && !showSuccess" [formGroup]="form" class="wizard">
+      <section class="step-card">
+        <h3>{{ tituloEtapaAtual() }}</h3>
+        <p class="helper">{{ descricaoEtapaAtual() }}</p>
+
+        <section *ngIf="etapaAtual === 1" class="step-content">
+          <div class="hero-card">
+            <strong>{{ operationTitle() }}</strong>
+            <p>{{ operationSubtitle() }}</p>
+          </div>
+
+          <div class="meta-grid">
+            <article class="meta-card">
+              <span>Data e hora</span>
+              <strong>{{ dataHoraVistoria | date:'dd/MM/yyyy HH:mm:ss' }}</strong>
+            </article>
+            <article class="meta-card">
+              <span>Localizacao</span>
+              <strong>{{ localizacaoTexto }}</strong>
+              <p *ngIf="localizacaoErro">{{ localizacaoErro }}</p>
+              <button mat-stroked-button type="button" (click)="atualizarLocalizacao()" [disabled]="capturandoLocalizacao">
+                {{ capturandoLocalizacao ? 'Atualizando...' : 'Atualizar localizacao' }}
+              </button>
+            </article>
+          </div>
+
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Quilometragem</mat-label>
+              <input matInput type="number" min="0" formControlName="quilometragem">
+            </mat-form-field>
+          </div>
+
+          <article class="review-box warning-box" *ngIf="avisoMissaoAtivaSelecionada() as aviso">
+            <p>{{ aviso }}</p>
+          </article>
+
+          <div class="vehicle-grid">
+            <p class="camera-note full-span" *ngIf="semVeiculoDisponivel()">
+              Nenhum veiculo disponivel para esta operacao no momento.
+            </p>
+            <article
+              class="vehicle-card"
+              *ngFor="let veiculo of veiculosVisiveis()"
+              [class.selected]="isVeiculoSelecionado(veiculo)"
+              [class.disabled]="!canSelectVeiculo(veiculo)"
+              (click)="selecionarVeiculo(veiculo)"
+            >
+              <header>
+                <strong>{{ veiculo.placa }}</strong>
+                <span class="status-pill" [ngClass]="statusClass(veiculo.statusAtual)">
+                  {{ statusLabel(veiculo.statusAtual, veiculo.statusAtualRotulo) }}
+                </span>
+              </header>
+              <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>
+              <p><strong>Motorista:</strong> {{ exibeMotoristaAtual(veiculo) ? veiculo.motoristaAtualNome : '-' }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section *ngIf="etapaAtual === 2" class="step-content">
+          <div class="items-grid">
+            <article class="item-card" *ngFor="let item of itensObrigatorios">
+              <div class="item-header">
+                <strong>{{ item.label }}</strong>
+                <span class="mini-badge" [ngClass]="itemStatusClass(item.status)">{{ itemStatusLabel(item.status) }}</span>
+              </div>
+
+              <div class="item-status-actions">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [class.active]="item.status === 'OK'"
+                  (click)="definirStatusItem(item, 'OK')"
+                >
+                  OK
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [class.active]="item.status === 'FALTANDO'"
+                  (click)="definirStatusItem(item, 'FALTANDO')"
+                >
+                  Faltando
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [class.active]="item.status === 'NAO_SE_APLICA'"
+                  (click)="definirStatusItem(item, 'NAO_SE_APLICA')"
+                >
+                  Nao se aplica
+                </button>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width" *ngIf="item.status === 'FALTANDO'">
+                <mat-label>Explique o que esta faltando</mat-label>
+                <textarea matInput rows="3" [(ngModel)]="item.observacao" [ngModelOptions]="{standalone: true}"></textarea>
+              </mat-form-field>
+            </article>
+          </div>
+        </section>
+
+        <section *ngIf="etapaAtual === 3" class="step-content">
+          <div class="photo-grid">
+            <article class="photo-card" *ngFor="let foto of pontosFoto" [class.done]="previews[foto.key]">
+              <h4>{{ foto.label }}</h4>
+              <small>{{ foto.hint }}</small>
+
+              <div class="preview" *ngIf="previews[foto.key] as src; else emptyPhoto">
+                <img [src]="src" [alt]="'Preview ' + foto.label">
+              </div>
+              <ng-template #emptyPhoto>
+                <div class="empty">FOTO<br>nao capturada</div>
+              </ng-template>
+
+              <div class="actions">
+                <button mat-flat-button color="primary" type="button" class="big-btn" (click)="openCamera(foto.key)">
+                  {{ previews[foto.key] ? 'Refazer' : 'Capturar' }}
+                </button>
+                <button mat-stroked-button type="button" *ngIf="previews[foto.key]" (click)="clearPhoto(foto.key)">Limpar</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section *ngIf="etapaAtual === 4" class="step-content">
+          <div class="toggle-row">
+            <button
+              mat-stroked-button
+              type="button"
+              [class.active]="!possuiAvarias"
+              (click)="togglePossuiAvarias(false)"
+            >
+              Nao ha avarias
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              [class.active]="possuiAvarias"
+              (click)="togglePossuiAvarias(true)"
+            >
+              Ha avarias
+            </button>
+          </div>
+
+          <div class="avaria-actions" *ngIf="possuiAvarias">
+            <button mat-flat-button color="primary" type="button" (click)="adicionarAvaria()">+ Adicionar avaria</button>
+          </div>
+
+          <div class="avaria-list" *ngIf="possuiAvarias; else semAvariaBloco">
+            <article class="avaria-card" *ngFor="let avaria of avarias">
+              <div class="avaria-topline">
+                <strong>Avaria {{ avaria.id }}</strong>
+                <button mat-stroked-button type="button" (click)="removerAvaria(avaria.id)">Remover</button>
+              </div>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Local</mat-label>
+                  <input matInput [(ngModel)]="avaria.local" [ngModelOptions]="{standalone: true}" maxlength="120">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo</mat-label>
+                  <mat-select [(ngModel)]="avaria.tipo" [ngModelOptions]="{standalone: true}">
+                    <mat-option value="">Selecione</mat-option>
+                    <mat-option *ngFor="let tipo of tiposAvaria" [value]="tipo.value">{{ tipo.label }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Descricao</mat-label>
+                  <textarea matInput rows="3" [(ngModel)]="avaria.descricao" [ngModelOptions]="{standalone: true}" maxlength="500"></textarea>
+                </mat-form-field>
+              </div>
+
+              <div class="toggle-row compact-toggle">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [class.active]="avaria.jaExistia"
+                  (click)="avaria.jaExistia = true"
+                >
+                  Ja existia
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [class.active]="!avaria.jaExistia"
+                  (click)="avaria.jaExistia = false"
+                >
+                  Identificada agora
+                </button>
+              </div>
+
+              <div class="damage-photo-wrap">
+                <div class="preview damage-preview" *ngIf="avaria.fotoUrl as src; else semFotoAvaria">
+                  <img [src]="src" alt="Foto da avaria">
+                </div>
+                <ng-template #semFotoAvaria>
+                  <div class="empty damage-empty">FOTO DA AVARIA<br>obrigatoria</div>
+                </ng-template>
+                <div class="actions">
+                  <button mat-flat-button color="primary" type="button" class="big-btn" (click)="abrirCapturaAvaria(avaria.id)">
+                    {{ avaria.fotoUrl ? 'Trocar foto' : 'Anexar foto' }}
+                  </button>
+                  <button mat-stroked-button type="button" *ngIf="avaria.fotoUrl" (click)="limparFotoAvaria(avaria.id)">Limpar</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <ng-template #semAvariaBloco>
+            <article class="review-box">
+              <p>Nenhuma avaria sera registrada nesta vistoria.</p>
+            </article>
+          </ng-template>
+        </section>
+
+        <section *ngIf="etapaAtual === 5" class="step-content">
+          <div class="review-grid">
+            <article class="review-card">
+              <span>Veiculo selecionado</span>
+              <strong>{{ veiculoSelecionadoLabel() }}</strong>
+            </article>
+            <article class="review-card">
+              <span>Quilometragem</span>
+              <strong>{{ form.getRawValue().quilometragem || '-' }}</strong>
+            </article>
+            <article class="review-card">
+              <span>Itens faltando</span>
+              <strong>{{ itensFaltandoResumo() }}</strong>
+            </article>
+            <article class="review-card">
+              <span>Avarias</span>
+              <strong>{{ avariasPendentesResumo() }}</strong>
+            </article>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observacao geral</mat-label>
+            <textarea matInput rows="4" [(ngModel)]="observacaoGeral" [ngModelOptions]="{standalone: true}" maxlength="700"></textarea>
+          </mat-form-field>
+
+          <div class="resultado-panel">
+            <p class="resultado-title">Resultado final</p>
+            <div class="toggle-row compact-toggle">
+              <button
+                mat-stroked-button
+                type="button"
+                [class.active]="resultado === 'APROVADO'"
+                (click)="resultado = 'APROVADO'"
+              >
+                Aprovado
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [class.active]="resultado === 'RESSALVA'"
+                (click)="resultado = 'RESSALVA'"
+              >
+                Com ressalva
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [class.active]="resultado === 'REPROVADO'"
+                (click)="resultado = 'REPROVADO'"
+              >
+                Reprovado
+              </button>
+            </div>
+
+            <span class="resultado-badge" [ngClass]="resultadoClass(resultado)">{{ resultadoLabel(resultado) }}</span>
+            <p class="resultado-helper" *ngIf="resultado === 'REPROVADO'">
+              Se a vistoria for reprovada, a observacao geral deve explicar o motivo da nao liberacao.
+            </p>
+          </div>
+        </section>
+      </section>
+
+      <footer class="wizard-actions">
+        <button mat-stroked-button type="button" (click)="goBack()">Voltar</button>
+
+        <button mat-flat-button color="primary" type="button" *ngIf="etapaAtual < totalEtapas" (click)="goNext()">
+          Proximo
+        </button>
+
+        <button mat-flat-button color="primary" type="button" *ngIf="etapaAtual === totalEtapas" [disabled]="!isReadyToSubmit()" (click)="concluirVistoria()">
+          {{ sending ? 'Salvando...' : 'Concluir vistoria' }}
+        </button>
+      </footer>
+    </form>
+  </mat-card>
+</section>
+
+<input
+  #fallbackInput
+  type="file"
+  accept="image/*"
+  capture="environment"
+  (change)="onFallbackFileChange($event)"
+  class="camera-input-fallback"
+>
+
+<input
+  #avariaInput
+  type="file"
+  accept="image/*"
+  capture="environment"
+  (change)="onAvariaFileChange($event)"
+  class="camera-input-fallback"
+>
+
+<section class="camera-overlay" *ngIf="activeCameraKey">
+  <article class="camera-card">
+    <header>
+      <div>
+        <h3>Capturar: {{ getActivePhotoLabel() }}</h3>
+        <p class="camera-note camera-overlay-note">Data e hora serao gravadas automaticamente na foto.</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="closeCamera()">Fechar</button>
+    </header>
+
+    <video #cameraVideo autoplay playsinline muted></video>
+
+    <div class="camera-controls">
+      <div class="camera-controls-main">
+        <button
+          type="button"
+          class="camera-icon-btn camera-flash-btn"
+          *ngIf="lanternaDisponivel; else cameraFlashPlaceholder"
+          [disabled]="alternandoLanterna"
+          (click)="alternarLanterna()"
+          [attr.aria-label]="lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna'"
+          [attr.title]="lanternaAtiva ? 'Desligar lanterna' : 'Ligar lanterna'"
+        >
+          <mat-icon fontSet="material-symbols-rounded">
+            {{ lanternaAtiva ? 'flash_on' : 'flash_off' }}
+          </mat-icon>
+        </button>
+        <ng-template #cameraFlashPlaceholder>
+          <span class="camera-flash-placeholder" aria-hidden="true"></span>
+        </ng-template>
+
+        <button
+          type="button"
+          class="camera-shot-btn"
+          (click)="captureFromCamera()"
+          aria-label="Capturar foto"
+          title="Capturar foto"
+        >
+          <mat-icon fontSet="material-symbols-rounded" class="camera-shot-icon">photo_camera</mat-icon>
+        </button>
+
+        <span class="camera-flash-placeholder" aria-hidden="true"></span>
+      </div>
+    </div>
+  </article>
+</section>

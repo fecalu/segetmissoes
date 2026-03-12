@@ -53,6 +53,7 @@ export class MissaoExcecaoComponent implements OnInit {
     BASE_JOAO_GOULART: 'DISPONIVEL',
     NO_PATIO: 'NO PATIO',
     AGUARDANDO_REALOCACAO: 'AGUARDANDO REALOCACAO',
+    EM_USO_EXTERNO: 'EM USO EXTERNO',
     OFICINA: 'OFICINA',
     EM_VIAGEM: 'EM VIAGEM',
     MANUTENCAO: 'MANUTENCAO',
@@ -102,7 +103,7 @@ export class MissaoExcecaoComponent implements OnInit {
     if (this.operacao === 'SAIDA') {
       return veiculo.statusAtual === 'BASE_JOAO_GOULART' || veiculo.statusAtual === 'NO_PATIO';
     }
-    return veiculo.statusAutomatico === 'CIRCULANDO' && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
+    return this.veiculoComDeslocamentoAtivo(veiculo) && veiculo.motoristaAtualId === this.authService.loggedMotoristaId();
   }
 
   selecionarVeiculo(veiculo: Veiculo): void {
@@ -132,7 +133,7 @@ export class MissaoExcecaoComponent implements OnInit {
       return this.veiculos;
     }
     const motoristaId = this.authService.loggedMotoristaId();
-    return this.veiculos.filter(v => v.statusAutomatico === 'CIRCULANDO' && v.motoristaAtualId === motoristaId);
+    return this.veiculos.filter(v => this.veiculoComDeslocamentoAtivo(v) && v.motoristaAtualId === motoristaId);
   }
 
   semVeiculoDisponivel(): boolean {
@@ -209,5 +210,9 @@ export class MissaoExcecaoComponent implements OnInit {
       const item = rotulos.find(r => r.status === status);
       this.statusLabelsCustomizados[status] = item?.rotulo || this.statusLabelsPadrao[status];
     }
+  }
+
+  private veiculoComDeslocamentoAtivo(veiculo: Veiculo): boolean {
+    return veiculo.statusAutomatico === 'CIRCULANDO' || veiculo.statusAutomatico === 'EM_VIAGEM';
   }
 }

@@ -5,6 +5,7 @@ public enum StatusVeiculo {
     BASE_JOAO_GOULART,
     NO_PATIO,
     AGUARDANDO_REALOCACAO,
+    EM_USO_EXTERNO,
     OFICINA,
     EM_VIAGEM,
     MANUTENCAO,
@@ -17,10 +18,15 @@ public enum StatusVeiculo {
     public boolean isAdministrativo() {
         return this == NO_PATIO
                 || this == AGUARDANDO_REALOCACAO
+                || this == EM_USO_EXTERNO
                 || this == OFICINA
                 || this == EM_VIAGEM
                 || this == MANUTENCAO
                 || this == BLOQUEADO;
+    }
+
+    public boolean isDeslocamentoAtivo() {
+        return this == CIRCULANDO || this == EM_VIAGEM;
     }
 
     public boolean permiteInicioMissaoMotorista() {
@@ -28,7 +34,7 @@ public enum StatusVeiculo {
     }
 
     public boolean isBloqueanteMissao() {
-        return !permiteInicioMissaoMotorista() && this != CIRCULANDO;
+        return !permiteInicioMissaoMotorista() && !isDeslocamentoAtivo();
     }
 
     public static StatusVeiculo normalizarStatusAdministrativo(StatusVeiculo status) {

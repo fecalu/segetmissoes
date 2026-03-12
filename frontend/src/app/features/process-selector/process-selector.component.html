@@ -12,106 +12,99 @@
       <h2>Escolha o tipo de processo</h2>
       <p>Toque em uma opcao para continuar.</p>
       <article class="active-mission-alert" *ngIf="missaoAtivaMotorista as missao">
-        <strong>Missao em andamento detectada</strong>
-        <p>Voce ja iniciou uma missao no veiculo {{ missao.placa }}.</p>
-        <p>Finalize essa missao para iniciar outra.</p>
+        <strong>{{ alertaTitulo() }}</strong>
+        <p>{{ alertaDescricaoPrincipal() }}</p>
+        <p>{{ alertaDescricaoSecundaria() }}</p>
       </article>
     </section>
 
-    <section class="options-grid fluxo-grid">
-      <article class="flow-shell primary-shell" [class.expanded]="selectedFluxo === 'INICIAR'">
-        <button
-          mat-flat-button
-          class="option-card primary-card"
-          [class.selected]="selectedFluxo === 'INICIAR'"
-          [disabled]="hasMissaoAtiva()"
-          type="button"
-          (click)="selecionarFluxo('INICIAR')"
-        >
-          <strong>Iniciar Missao</strong>
-          <span class="line-break">Estou saindo em missao</span>
-        </button>
+    <section class="process-groups">
+      <article class="process-group mission-group">
+        <header class="group-header">
+          <h3>Missao na cidade</h3>
+          <p>Saidas e retornos da rotina urbana do setor.</p>
+        </header>
+        <div class="group-actions">
+          <div class="mission-flow-shell" [class.expanded]="selectedMissaoCidadeFluxo === 'INICIAR'">
+            <button mat-flat-button class="group-action-btn primary-card" type="button" [disabled]="hasMissaoAtiva()" (click)="toggleMissaoCidade('INICIAR')">
+              <strong>Iniciar Missao</strong>
+              <span class="line-break">Abrir missao urbana</span>
+            </button>
+            <div class="group-subactions" *ngIf="selectedMissaoCidadeFluxo === 'INICIAR'">
+              <button mat-flat-button class="subaction-btn recommended-card" type="button" [disabled]="hasMissaoAtiva()" (click)="iniciarMissaoComChecklist()">
+                <strong>Com checklist</strong>
+                <span class="line-break">Fluxo recomendado</span>
+              </button>
+              <button mat-flat-button class="subaction-btn warning-card" type="button" [disabled]="hasMissaoAtiva()" (click)="iniciarMissaoSemChecklist()">
+                <strong>Sem checklist</strong>
+                <span class="line-break">Somente emergencia operacional</span>
+              </button>
+            </div>
+          </div>
 
-        <div class="embedded-actions" *ngIf="selectedFluxo === 'INICIAR'">
-          <button mat-flat-button class="decision-btn recommended-card" type="button" [disabled]="hasMissaoAtiva()" (click)="irComChecklist()">
-            <strong>Com checklist</strong>
-            <span class="line-break">Fluxo recomendado</span>
+          <div class="mission-flow-shell" [class.expanded]="selectedMissaoCidadeFluxo === 'FINALIZAR'">
+            <button mat-flat-button class="group-action-btn secondary-card" type="button" [disabled]="!hasMissaoNaCidadeAtiva()" (click)="toggleMissaoCidade('FINALIZAR')">
+              <strong>Finalizar Missao</strong>
+              <span class="line-break">{{ subtituloFinalizarMissao() }}</span>
+            </button>
+            <div class="group-subactions" *ngIf="selectedMissaoCidadeFluxo === 'FINALIZAR'">
+              <button mat-flat-button class="subaction-btn recommended-card" type="button" [disabled]="!hasMissaoNaCidadeAtiva()" (click)="finalizarMissaoComChecklist()">
+                <strong>Com checklist</strong>
+                <span class="line-break">Fluxo recomendado</span>
+              </button>
+              <button mat-flat-button class="subaction-btn warning-card" type="button" [disabled]="!hasMissaoNaCidadeAtiva()" (click)="finalizarMissaoSemChecklist()">
+                <strong>Sem checklist</strong>
+                <span class="line-break">Somente emergencia operacional</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="process-group trip-group">
+        <header class="group-header">
+          <h3>Viagem</h3>
+          <p>Deslocamentos fora da rotina urbana, usando o mesmo checklist do app.</p>
+        </header>
+        <div class="group-actions">
+          <button mat-flat-button class="group-action-btn travel-start-card" type="button" [disabled]="hasMissaoAtiva()" (click)="iniciarViagem()">
+            <strong>Iniciar Viagem</strong>
+            <span class="line-break">Abrir viagem com checklist</span>
           </button>
-          <button mat-flat-button class="decision-btn warning-card" type="button" [disabled]="hasMissaoAtiva()" (click)="irSemChecklist()">
-            <strong>Sem checklist</strong>
-            <span class="line-break">Somente emergencia operacional</span>
+          <button mat-flat-button class="group-action-btn travel-end-card" type="button" [disabled]="!hasViagemAtiva()" (click)="finalizarViagem()">
+            <strong>Finalizar Viagem</strong>
+            <span class="line-break">{{ subtituloFinalizarViagem() }}</span>
           </button>
         </div>
       </article>
 
-      <article class="flow-shell secondary-shell" [class.expanded]="selectedFluxo === 'FINALIZAR'">
-        <button
-          mat-flat-button
-          class="option-card secondary-card"
-          [class.selected]="selectedFluxo === 'FINALIZAR'"
-          type="button"
-          (click)="selecionarFluxo('FINALIZAR')"
-        >
-          <strong>Finalizar Missao</strong>
-          <span class="line-break">Estou chegando da missao</span>
-        </button>
-
-        <div class="embedded-actions" *ngIf="selectedFluxo === 'FINALIZAR'">
-          <button mat-flat-button class="decision-btn recommended-card" type="button" (click)="irComChecklist()">
-            <strong>Com checklist</strong>
-            <span class="line-break">Fluxo recomendado</span>
-          </button>
-          <button mat-flat-button class="decision-btn warning-card" type="button" (click)="irSemChecklist()">
-            <strong>Sem checklist</strong>
-            <span class="line-break">Somente emergencia operacional</span>
-          </button>
-        </div>
-      </article>
-    </section>
-
-    <section class="options-grid future-grid">
-      <article class="flow-shell complete-shell" [class.expanded]="selectedChecklistCompleto">
-        <button
-          mat-flat-button
-          class="option-card complete-card"
-          [class.selected]="selectedChecklistCompleto"
-          type="button"
-          (click)="toggleChecklistCompleto()"
-        >
-          <strong>Checklist Completo</strong>
-          <span class="line-break">Entrega e recebimento de veiculo</span>
-        </button>
-
-        <div class="embedded-actions complete-actions" *ngIf="selectedChecklistCompleto">
+      <article class="process-group inspection-group">
+        <header class="group-header">
+          <h3>Vistoria Completa</h3>
+          <p>Registro detalhado para entrega e retorno de uso externo.</p>
+        </header>
+        <div class="group-actions">
           <button
             mat-flat-button
-            class="decision-btn danger-card"
+            class="group-action-btn danger-card"
             type="button"
-            (click)="abrirEmDesenvolvimento('Checklist de entrega')"
+            (click)="irVistoriaCompleta('SAIDA')"
           >
-            <strong>Checklist de entrega</strong>
-            <span class="line-break">Quando entregamos um veiculo da frota para uso externo.</span>
+            <strong>Vistoria de Saida</strong>
+            <span class="line-break">Antes de entregar o veiculo para uso externo</span>
           </button>
 
           <button
             mat-flat-button
-            class="decision-btn danger-card"
+            class="group-action-btn danger-card"
             type="button"
-            (click)="abrirEmDesenvolvimento('Checklist de recebimento')"
+            (click)="irVistoriaCompleta('CHEGADA')"
           >
-            <strong>Checklist de recebimento</strong>
-            <span class="line-break">Quando recebemos um veiculo novo ou devolvido.</span>
+            <strong>Vistoria de Chegada</strong>
+            <span class="line-break">No retorno do veiculo de uso externo</span>
           </button>
         </div>
       </article>
     </section>
   </mat-card>
-</section>
-
-<section class="modal-overlay" *ngIf="showDevModal">
-  <article class="modal-card">
-    <h3>{{ devFeatureName }}</h3>
-    <p>Funcionalidade em desenvolvimento</p>
-    <button mat-flat-button color="primary" type="button" (click)="fecharModal()">Entendi</button>
-  </article>
 </section>

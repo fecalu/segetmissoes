@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ChecklistResponse, TipoOperacao } from '../models/checklist.model';
 import { EstatisticasMissoesResponse } from '../models/estatisticas-missoes.model';
+import { HistoricoVeiculoResponse } from '../models/historico-veiculo.model';
 import {
   AuditoriaMissaoResponse,
   MissaoResponse,
@@ -14,6 +15,7 @@ import { SalvarSugestoesCamposMissaoRequest, SugestoesCamposMissaoResponse } fro
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, Veiculo } from '../models/veiculo.model';
+import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../models/vistoria-completa.model';
 import { environment } from '../../../environments/environment';
 
 export interface ChecklistFiltro {
@@ -34,6 +36,27 @@ export interface MissaoFiltro {
   statusDocumental?: StatusDocumentalMissao;
   dataInicio?: string;
   dataFim?: string;
+}
+
+export interface VistoriaCompletaFiltro {
+  busca?: string;
+  motoristaId?: number;
+  veiculoId?: number;
+  tipoOperacao?: TipoOperacao;
+  resultado?: ResultadoVistoriaCompleta;
+  dataInicio?: string;
+  dataFim?: string;
+}
+
+export interface AtualizarContraparteVistoriaCompletaPayload {
+  nomeContraparte: string | null;
+}
+
+export interface RegistrarVeiculoEmViagemPayload {
+  motoristaId: number;
+  localDestino: string;
+  dataHoraSaida: string;
+  observacao: string | null;
 }
 
 export interface AtualizarDadosAdministrativosMissaoPayload {
@@ -68,6 +91,7 @@ export class AdminService {
   private readonly relatorioChecklistUrl = `${environment.apiBaseUrl}/admin/relatorios/checklists/pdf`;
   private readonly relatorioMissaoUrl = `${environment.apiBaseUrl}/admin/relatorios/missoes/pdf`;
   private readonly estatisticasMissoesUrl = `${environment.apiBaseUrl}/admin/estatisticas/missoes`;
+  private readonly vistoriaCompletaUrl = `${environment.apiBaseUrl}/admin/vistorias-completas`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -102,13 +126,30 @@ export class AdminService {
   }
 
   listarMissoes(filtro: MissaoFiltro): Observable<MissaoResponse[]> {
-    let params = new HttpParams();
+    let params = new HttpParams().set('_ts', Date.now().toString());
     Object.entries(filtro).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params = params.set(key, String(value));
       }
     });
     return this.http.get<MissaoResponse[]>(this.missaoUrl, { params });
+  }
+
+  listarVistoriasCompletas(filtro: VistoriaCompletaFiltro): Observable<VistoriaCompletaResponse[]> {
+    let params = new HttpParams();
+    Object.entries(filtro).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, String(value));
+      }
+    });
+    return this.http.get<VistoriaCompletaResponse[]>(this.vistoriaCompletaUrl, { params });
+  }
+
+  atualizarContraparteVistoriaCompleta(
+    vistoriaId: number,
+    payload: AtualizarContraparteVistoriaCompletaPayload
+  ): Observable<VistoriaCompletaResponse> {
+    return this.http.patch<VistoriaCompletaResponse>(`${this.vistoriaCompletaUrl}/${vistoriaId}/contraparte`, payload);
   }
 
   listarAuditoriaMissao(missaoId: number): Observable<AuditoriaMissaoResponse[]> {
@@ -160,7 +201,7 @@ export class AdminService {
   }
 
   listarVeiculos(buscaPlaca?: string): Observable<Veiculo[]> {
-    let params = new HttpParams();
+    let params = new HttpParams().set('_ts', Date.now().toString());
     if (buscaPlaca && buscaPlaca.trim()) {
       params = params.set('buscaPlaca', buscaPlaca.trim());
     }
@@ -179,8 +220,16 @@ export class AdminService {
     return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo });
   }
 
+  registrarVeiculoEmViagem(id: number, payload: RegistrarVeiculoEmViagemPayload): Observable<Veiculo> {
+    return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/em-viagem`, payload);
+  }
+
   listarHistoricoStatusVeiculo(id: number): Observable<HistoricoStatusVeiculo[]> {
     return this.http.get<HistoricoStatusVeiculo[]>(`${this.veiculoUrl}/${id}/historico-status`);
+  }
+
+  buscarHistoricoVeiculo(id: number): Observable<HistoricoVeiculoResponse> {
+    return this.http.get<HistoricoVeiculoResponse>(`${this.veiculoUrl}/${id}/historico`);
   }
 
   desativarVeiculo(id: number): Observable<Veiculo> {
