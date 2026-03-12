@@ -46,7 +46,18 @@ public class MissaoAuditoriaService {
             String valorAnterior,
             String valorNovo
     ) {
-        String detalhe = "Campo '%s' alterado.".formatted(campoAlterado);
+        registrarAlteracaoCampo(missao, usuarioAcao, campoAlterado, valorAnterior, valorNovo,
+                "Campo '%s' alterado.".formatted(campoAlterado));
+    }
+
+    public void registrarAlteracaoCampo(
+            Missao missao,
+            Motorista usuarioAcao,
+            String campoAlterado,
+            String valorAnterior,
+            String valorNovo,
+            String detalhe
+    ) {
         registrarInterno(
                 missao,
                 AcaoAuditoriaMissao.ATUALIZACAO_DADOS_ADMINISTRATIVOS,

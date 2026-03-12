@@ -6,6 +6,7 @@ import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
+import com.frota.checklist.entity.OrigemEncerramentoMissao;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -36,6 +38,8 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class AdminMissaoService {
+
+    private static final DateTimeFormatter AUDITORIA_DATA_HORA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private static final EnumSet<MotivoExcecaoMissao> MOTIVOS_CONTINGENCIA_ADMIN = EnumSet.of(
             MotivoExcecaoMissao.SEM_INTERNET,
@@ -240,6 +244,75 @@ public class AdminMissaoService {
     }
 
     @Transactional
+    public MissaoResponse ajustarHorario(
+            Long missaoId,
+            Long administradorId,
+            LocalDateTime dataHoraInicio,
+            LocalDateTime dataHoraFim,
+            String justificativa
+    ) {
+        Missao missao = missaoRepository.findById(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+            throw new BusinessException("Somente missoes registradas manualmente podem ter horario ajustado por este fluxo");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
+            throw new BusinessException("Informe a justificativa do ajuste com pelo menos 10 caracteres");
+        }
+
+        LocalDateTime novoInicio = dataHoraInicio;
+        LocalDateTime novoFim = missao.getDataHoraFim();
+
+        if (missao.getStatus() == StatusMissao.ATIVA) {
+            if (dataHoraFim != null) {
+                throw new BusinessException("Missoes em andamento permitem ajuste apenas do horario de inicio");
+            }
+        } else if (dataHoraFim != null) {
+            if (missao.getOrigemEncerramento() != null && missao.getOrigemEncerramento() != OrigemEncerramentoMissao.ADMINISTRATIVO) {
+                throw new BusinessException("Horario de fim so pode ser ajustado quando o encerramento tambem foi manual pelo administrador");
+            }
+            novoFim = dataHoraFim;
+        }
+
+        if (novoFim != null && !novoFim.isAfter(novoInicio)) {
+            throw new BusinessException("Data/hora de fim deve ser posterior ao inicio da missao");
+        }
+
+        registrarAlteracaoHorarioSeNecessario(
+                missao,
+                administrador,
+                "dataHoraInicio",
+                missao.getDataHoraInicio(),
+                novoInicio,
+                justificativaNormalizada
+        );
+        missao.setDataHoraInicio(novoInicio);
+
+        if (missao.getStatus() == StatusMissao.FINALIZADA && missao.getOrigemEncerramento() == OrigemEncerramentoMissao.ADMINISTRATIVO) {
+            registrarAlteracaoHorarioSeNecessario(
+                    missao,
+                    administrador,
+                    "dataHoraFim",
+                    missao.getDataHoraFim(),
+                    novoFim,
+                    justificativaNormalizada
+            );
+            missao.setDataHoraFim(novoFim);
+        }
+
+        Missao salva = missaoRepository.save(missao);
+        return toResponse(salva);
+    }
+
+    @Transactional
     public MissaoResponse criarContingencia(
             Long administradorId,
             Long motoristaId,
@@ -373,6 +446,36 @@ public class AdminMissaoService {
     private String normalizeForAudit(String value) {
         String normalized = trimToNull(value);
         return normalized == null ? "(vazio)" : normalized;
+    }
+
+    private void registrarAlteracaoHorarioSeNecessario(
+            Missao missao,
+            Motorista administrador,
+            String campo,
+            LocalDateTime valorAnterior,
+            LocalDateTime valorNovo,
+            String justificativa
+    ) {
+        if (valorAnterior == null && valorNovo == null) {
+            return;
+        }
+        if (valorAnterior != null && valorAnterior.equals(valorNovo)) {
+            return;
+        }
+
+        String detalhe = "Horario ajustado pela administracao. Justificativa: %s".formatted(justificativa);
+        missaoAuditoriaService.registrarAlteracaoCampo(
+                missao,
+                administrador,
+                campo,
+                formatarDataHoraAuditoria(valorAnterior),
+                formatarDataHoraAuditoria(valorNovo),
+                detalhe
+        );
+    }
+
+    private String formatarDataHoraAuditoria(LocalDateTime value) {
+        return value == null ? "(vazio)" : value.format(AUDITORIA_DATA_HORA_FORMATTER);
     }
 
     private StatusDocumentalMissao statusDocumentalEfetivo(Missao missao) {

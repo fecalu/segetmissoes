@@ -80,6 +80,12 @@ export interface EncerrarMissaoPendentePayload {
   justificativaEncerramento: string;
 }
 
+export interface AjustarHorarioMissaoPayload {
+  dataHoraInicio: string;
+  dataHoraFim: string | null;
+  justificativa: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly motoristaUrl = `${environment.apiBaseUrl}/admin/motoristas`;
@@ -172,6 +178,13 @@ export class AdminService {
     payload: EncerrarMissaoPendentePayload
   ): Observable<MissaoResponse> {
     return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/encerrar-pendente`, payload);
+  }
+
+  ajustarHorarioMissao(
+    missaoId: number,
+    payload: AjustarHorarioMissaoPayload
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/horario`, payload);
   }
 
   gerarRelatorioChecklistPdf(dataInicial: string, dataFinal: string): Observable<Blob> {

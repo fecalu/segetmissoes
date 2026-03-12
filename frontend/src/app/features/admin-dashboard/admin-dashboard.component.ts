@@ -35,6 +35,7 @@ import { StatusAdministrativoVeiculo, StatusVeiculo, Veiculo } from '../../core/
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../../core/models/vistoria-completa.model';
 import {
   AdminService,
+  AjustarHorarioMissaoPayload,
   AtualizarContraparteVistoriaCompletaPayload,
   CriarMissaoContingenciaPayload,
   EncerrarMissaoPendentePayload,
@@ -135,6 +136,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   gerandoRelatorioMissoes = false;
   salvandoRotulosStatus = false;
   salvandoContraparteVistoria = false;
+  salvandoHorarioMissao = false;
 
   editingMotoristaId: number | null = null;
   editingVeiculoId: number | null = null;
@@ -146,6 +148,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   selectedVistoriaCompleta: VistoriaCompletaResponse | null = null;
   selectedMissaoAuditoria: MissaoResponse | null = null;
   selectedMissaoDadosAdmin: MissaoResponse | null = null;
+  selectedMissaoHorario: MissaoResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
   selectedCategoriaInclusao: PainelCategoria | null = null;
   veiculoInclusaoSelecionadoId: number | null = null;
@@ -309,6 +312,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   readonly missaoFiltroForm;
   readonly vistoriaCompletaFiltroForm;
   readonly missaoDadosForm;
+  readonly missaoHorarioForm;
   readonly missaoContingenciaForm;
   readonly missaoPendenteForm;
   readonly viagemForm;
@@ -375,6 +379,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       localDestino: [''],
       setorSolicitante: [''],
       solicitanteNome: ['']
+    });
+
+    this.missaoHorarioForm = this.fb.nonNullable.group({
+      dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
+      dataHoraFim: [this.agoraDateTimeLocal()],
+      justificativa: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
 
     this.missaoContingenciaForm = this.fb.nonNullable.group({
@@ -1200,6 +1210,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     switch (evento.tipo) {
       case 'MISSAO_INICIADA':
       case 'MISSAO_FINALIZADA':
+      case 'MISSAO_HORARIO_AJUSTADO':
         return 'MISSAO';
       case 'CHECKLIST_SAIDA':
       case 'CHECKLIST_CHEGADA':
@@ -1224,6 +1235,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         return evento.detalhe?.origemAberturaMissao ? this.origemAberturaMissaoLabel(evento.detalhe.origemAberturaMissao) : null;
       case 'MISSAO_FINALIZADA':
         return evento.detalhe?.origemEncerramentoMissao ? this.origemEncerramentoMissaoLabel(evento.detalhe.origemEncerramentoMissao) : null;
+      case 'MISSAO_HORARIO_AJUSTADO':
+        return 'HORARIO AJUSTADO';
       case 'CHECKLIST_SAIDA':
       case 'VISTORIA_COMPLETA_SAIDA':
         return 'SAIDA';
@@ -1247,6 +1260,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     switch (evento.tipo) {
       case 'MISSAO_INICIADA':
       case 'MISSAO_FINALIZADA':
+      case 'MISSAO_HORARIO_AJUSTADO':
         return 'status-circulando';
       case 'CHECKLIST_SAIDA':
       case 'CHECKLIST_CHEGADA':
@@ -1905,6 +1919,76 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  podeAjustarHorarioMissao(missao: MissaoResponse): boolean {
+    return missao.origemAbertura === 'CONTINGENCIA_ADMIN';
+  }
+
+  podeEditarFimMissao(missao: MissaoResponse): boolean {
+    return missao.status === 'FINALIZADA' && missao.origemEncerramento === 'ADMINISTRATIVO';
+  }
+
+  abrirAjusteHorarioMissao(missao: MissaoResponse): void {
+    this.selectedMissaoHorario = missao;
+    this.missaoHorarioForm.reset({
+      dataHoraInicio: this.toDateTimeLocalValue(missao.dataHoraInicio),
+      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal(),
+      justificativa: ''
+    });
+  }
+
+  fecharAjusteHorarioMissao(): void {
+    this.selectedMissaoHorario = null;
+    this.missaoHorarioForm.reset({
+      dataHoraInicio: this.agoraDateTimeLocal(),
+      dataHoraFim: this.agoraDateTimeLocal(),
+      justificativa: ''
+    });
+  }
+
+  salvarAjusteHorarioMissao(): void {
+    const missao = this.selectedMissaoHorario;
+    if (!missao) {
+      return;
+    }
+    if (this.missaoHorarioForm.invalid) {
+      this.missaoHorarioForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.missaoHorarioForm.getRawValue();
+    const dataHoraFim = this.podeEditarFimMissao(missao) ? this.toNullIfBlank(raw.dataHoraFim) : null;
+    if (this.podeEditarFimMissao(missao) && !dataHoraFim) {
+      this.snackBar.open('Informe a data/hora de fim para concluir o ajuste.', 'Fechar', { duration: 2600 });
+      return;
+    }
+    const payload: AjustarHorarioMissaoPayload = {
+      dataHoraInicio: raw.dataHoraInicio,
+      dataHoraFim,
+      justificativa: raw.justificativa.trim()
+    };
+
+    this.salvandoHorarioMissao = true;
+    this.adminService.ajustarHorarioMissao(missao.id, payload)
+      .pipe(finalize(() => (this.salvandoHorarioMissao = false)))
+      .subscribe({
+        next: updated => {
+          this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
+          this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
+          if (this.selectedMissaoAuditoria?.id === updated.id) {
+            this.selectedMissaoAuditoria = updated;
+            this.abrirAuditoriaMissao(updated);
+          }
+          if (this.selectedVeiculoHistorico?.id === updated.veiculoId) {
+            const veiculoHistorico = this.selectedVeiculoHistorico;
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+          this.snackBar.open('Horario da missao ajustado.', 'Fechar', { duration: 2200 });
+          this.fecharAjusteHorarioMissao();
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao ajustar o horario da missao.', 'Fechar', { duration: 3200 })
+      });
+  }
+
   acaoAuditoriaMissaoLabel(acao: AcaoAuditoriaMissao): string {
     const labels: Record<AcaoAuditoriaMissao, string> = {
       ABERTURA_CHECKLIST: 'INICIO: COM CHECKLIST',
@@ -1918,6 +2002,39 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ATUALIZACAO_DADOS_ADMINISTRATIVOS: 'DADOS DA MISSAO ATUALIZADOS'
     };
     return labels[acao];
+  }
+
+  tituloAuditoriaMissao(item: AuditoriaMissaoResponse): string {
+    if (item.acao === 'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
+      && (item.campoAlterado === 'dataHoraInicio' || item.campoAlterado === 'dataHoraFim')) {
+      return 'HORARIO DA MISSAO AJUSTADO';
+    }
+    return this.acaoAuditoriaMissaoLabel(item.acao);
+  }
+
+  campoAuditoriaMissaoLabel(campo: string | null): string {
+    if (!campo) {
+      return '-';
+    }
+    const labels: Record<string, string> = {
+      localDestino: 'Destino',
+      setorSolicitante: 'Setor solicitante',
+      solicitanteNome: 'Quem solicitou',
+      statusDocumental: 'Status dos dados da missao',
+      dataHoraInicio: 'Data/hora de inicio',
+      dataHoraFim: 'Data/hora de fim'
+    };
+    return labels[campo] || campo;
+  }
+
+  valorAuditoriaMissaoLabel(campo: string | null, valor: string | null): string {
+    if (!valor) {
+      return '(vazio)';
+    }
+    if (campo === 'dataHoraInicio' || campo === 'dataHoraFim') {
+      return valor;
+    }
+    return valor;
   }
 
   duracaoTempoRealLabel(missao: MissaoResponse): string {
@@ -2063,7 +2180,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       case '':
         return true;
       case 'MISSOES':
-        return evento.tipo === 'MISSAO_INICIADA' || evento.tipo === 'MISSAO_FINALIZADA';
+        return evento.tipo === 'MISSAO_INICIADA'
+          || evento.tipo === 'MISSAO_FINALIZADA'
+          || evento.tipo === 'MISSAO_HORARIO_AJUSTADO';
       case 'CHECKLISTS':
         return evento.tipo === 'CHECKLIST_SAIDA' || evento.tipo === 'CHECKLIST_CHEGADA';
       case 'SEM_CHECKLIST':
@@ -2111,6 +2230,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const dia = String(agora.getDate()).padStart(2, '0');
     const hora = String(agora.getHours()).padStart(2, '0');
     const minuto = String(agora.getMinutes()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+  }
+
+  private toDateTimeLocalValue(value: string): string {
+    const data = new Date(value);
+    if (Number.isNaN(data.getTime())) {
+      return this.agoraDateTimeLocal();
+    }
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
     return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
   }
 

@@ -1,6 +1,7 @@
 package com.frota.checklist.controller;
 
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
+import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
@@ -109,6 +110,22 @@ public class AdminMissaoController {
                 userDetails.getMotoristaId(),
                 request.dataHoraFim(),
                 request.justificativaEncerramento()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/horario")
+    public ResponseEntity<MissaoResponse> ajustarHorario(
+            @PathVariable Long id,
+            @Valid @RequestBody AjustarHorarioMissaoAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        MissaoResponse response = adminMissaoService.ajustarHorario(
+                id,
+                userDetails.getMotoristaId(),
+                request.dataHoraInicio(),
+                request.dataHoraFim(),
+                request.justificativa()
         );
         return ResponseEntity.ok(response);
     }

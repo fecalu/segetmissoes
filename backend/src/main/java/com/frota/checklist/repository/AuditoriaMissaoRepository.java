@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface AuditoriaMissaoRepository extends JpaRepository<AuditoriaMissao, Long> {
     List<AuditoriaMissao> findByMissaoIdOrderByDataHoraDesc(Long missaoId);
-}
 
+    List<AuditoriaMissao> findByMissaoVeiculoIdOrderByDataHoraDesc(Long veiculoId);
+}

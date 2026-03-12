@@ -2,6 +2,7 @@ package com.frota.checklist.service;
 
 import com.frota.checklist.dto.HistoricoVeiculoResponse;
 import com.frota.checklist.dto.TipoEventoHistoricoVeiculo;
+import com.frota.checklist.entity.AuditoriaMissao;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.HistoricoStatusVeiculo;
 import com.frota.checklist.entity.Missao;
@@ -17,6 +18,7 @@ import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.entity.VistoriaCompleta;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.ChecklistRepository;
+import com.frota.checklist.repository.AuditoriaMissaoRepository;
 import com.frota.checklist.repository.HistoricoStatusVeiculoRepository;
 import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MissaoRepository;
@@ -42,6 +44,7 @@ public class AdminHistoricoVeiculoService {
     private final VeiculoRepository veiculoRepository;
     private final MissaoRepository missaoRepository;
     private final ChecklistRepository checklistRepository;
+    private final AuditoriaMissaoRepository auditoriaMissaoRepository;
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
     private final VistoriaCompletaRepository vistoriaCompletaRepository;
@@ -56,6 +59,7 @@ public class AdminHistoricoVeiculoService {
 
         List<Missao> missoes = missaoRepository.findByVeiculoIdOrderByDataHoraInicioDescIdDesc(veiculoId);
         List<Checklist> checklists = checklistRepository.findByVeiculoIdOrderByDataHoraDescIdDesc(veiculoId);
+        List<AuditoriaMissao> auditoriasMissao = auditoriaMissaoRepository.findByMissaoVeiculoIdOrderByDataHoraDesc(veiculoId);
         List<MissaoExcecao> excecoes = missaoExcecaoRepository.findByVeiculoIdOrderByDataHoraAberturaDescIdDesc(veiculoId);
         List<RegistroViagemVeiculo> viagens = registroViagemVeiculoRepository.findByVeiculoIdOrderByDataHoraSaidaDescIdDesc(veiculoId);
         List<VistoriaCompleta> vistorias = vistoriaCompletaRepository.findByVeiculoIdOrderByDataHoraDescIdDesc(veiculoId);
@@ -72,6 +76,9 @@ public class AdminHistoricoVeiculoService {
                 eventos.add(mapearMissaoFinalizada(missao, checklistsPorId));
             }
         });
+        auditoriasMissao.stream()
+                .filter(this::isAjusteHorarioMissao)
+                .forEach(auditoria -> eventos.add(mapearAjusteHorarioMissao(auditoria)));
 
         checklists.forEach(checklist -> eventos.add(mapearChecklist(checklist)));
 
@@ -261,6 +268,53 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         checklist.getQuilometragem(),
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+    }
+
+    private HistoricoVeiculoResponse.Evento mapearAjusteHorarioMissao(AuditoriaMissao auditoria) {
+        String campo = auditoria.getCampoAlterado();
+        String descricao = "Horario ajustado: %s -> %s".formatted(
+                valorOuTraco(auditoria.getValorAnterior()),
+                valorOuTraco(auditoria.getValorNovo())
+        );
+
+        return new HistoricoVeiculoResponse.Evento(
+                "MISSAO-AJUSTE-" + auditoria.getId(),
+                TipoEventoHistoricoVeiculo.MISSAO_HORARIO_AJUSTADO,
+                auditoria.getDataHora(),
+                "Horario da missao ajustado",
+                descricaoCampoHorario(campo) + ". " + descricao,
+                auditoria.getMissao().getMotorista().getNome(),
+                auditoria.getUsuarioAcao() != null ? auditoria.getUsuarioAcao().getNome() : null,
+                false,
+                0,
+                false,
+                0,
+                auditoria.getMissao().getId(),
+                null,
+                auditoria.getMissao().getMissaoExcecaoId(),
+                null,
+                null,
+                new HistoricoVeiculoResponse.Detalhe(
+                        null,
+                        auditoria.getMissao().getOrigemAbertura(),
+                        auditoria.getMissao().getOrigemEncerramento(),
+                        auditoria.getMissao().getStatusDocumental(),
+                        null,
+                        null,
+                        auditoria.getMissao().getMotivoContingencia(),
+                        auditoria.getMissao().getLocalDestino(),
+                        auditoria.getMissao().getSetorSolicitante(),
+                        auditoria.getMissao().getSolicitanteNome(),
+                        auditoria.getDetalhe(),
+                        null,
+                        null,
+                        null,
                         null,
                         null,
                         null,
@@ -601,5 +655,17 @@ public class AdminHistoricoVeiculoService {
 
     private String valorOuTraco(String value) {
         return value == null || value.isBlank() ? "-" : value.trim();
+    }
+
+    private boolean isAjusteHorarioMissao(AuditoriaMissao auditoria) {
+        return "dataHoraInicio".equals(auditoria.getCampoAlterado()) || "dataHoraFim".equals(auditoria.getCampoAlterado());
+    }
+
+    private String descricaoCampoHorario(String campo) {
+        return switch (campo) {
+            case "dataHoraInicio" -> "Data/hora de inicio corrigida";
+            case "dataHoraFim" -> "Data/hora de fim corrigida";
+            default -> "Horario corrigido";
+        };
     }
 }

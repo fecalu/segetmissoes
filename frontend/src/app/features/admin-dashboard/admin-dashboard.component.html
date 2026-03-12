@@ -433,6 +433,7 @@
             </div>
             <div class="inline-buttons">
               <button mat-flat-button color="primary" type="button" (click)="abrirEdicaoDadosMissao(m)">Completar dados</button>
+              <button mat-stroked-button type="button" *ngIf="podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horario</button>
               <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA'" (click)="abrirEncerramentoPendente(m.id)">Finalizar em aberto</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Historico</button>
             </div>
@@ -897,15 +898,60 @@
     <div class="table" *ngIf="!loadingAuditoriaMissao">
       <article class="table-row" *ngFor="let item of auditoriaMissao">
         <div>
-          <strong>{{ acaoAuditoriaMissaoLabel(item.acao) }}</strong>
+          <strong>{{ tituloAuditoriaMissao(item) }}</strong>
           <p>{{ item.usuarioAcaoNome || '-' }} - {{ formatarDataHora(item.dataHora) }}</p>
           <p *ngIf="item.detalhe">{{ item.detalhe }}</p>
-          <p *ngIf="item.campoAlterado"><strong>Campo:</strong> {{ item.campoAlterado }}</p>
-          <p *ngIf="item.campoAlterado"><strong>Valor anterior:</strong> {{ item.valorAnterior || '(vazio)' }}</p>
-          <p *ngIf="item.campoAlterado"><strong>Novo valor:</strong> {{ item.valorNovo || '(vazio)' }}</p>
+          <p *ngIf="item.campoAlterado"><strong>Campo:</strong> {{ campoAuditoriaMissaoLabel(item.campoAlterado) }}</p>
+          <p *ngIf="item.campoAlterado"><strong>Valor anterior:</strong> {{ valorAuditoriaMissaoLabel(item.campoAlterado, item.valorAnterior) }}</p>
+          <p *ngIf="item.campoAlterado"><strong>Novo valor:</strong> {{ valorAuditoriaMissaoLabel(item.campoAlterado, item.valorNovo) }}</p>
         </div>
       </article>
       <p *ngIf="auditoriaMissao.length === 0">Nenhum registro no historico desta missao.</p>
+    </div>
+  </article>
+</section>
+
+<section class="detail-overlay" *ngIf="selectedMissaoHorario as missaoHorario">
+  <article class="detail-card history-card">
+    <header>
+      <h3>Ajustar horario da missao #{{ missaoHorario.id }}</h3>
+      <button mat-stroked-button type="button" (click)="fecharAjusteHorarioMissao()">Fechar</button>
+    </header>
+
+    <p><strong>Veiculo:</strong> {{ missaoHorario.veiculoPlaca }} - {{ missaoHorario.veiculoMarca }} {{ missaoHorario.veiculoModelo }}</p>
+    <p><strong>Motorista:</strong> {{ missaoHorario.motoristaNome }}</p>
+    <p><strong>Fluxo:</strong> somente missoes registradas manualmente pela administracao podem ser ajustadas aqui.</p>
+
+    <form [formGroup]="missaoHorarioForm" class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Data/hora de inicio</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraInicio">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" *ngIf="podeEditarFimMissao(missaoHorario)">
+        <mat-label>Data/hora de fim</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraFim">
+      </mat-form-field>
+
+      <p class="panel-helper full-width" *ngIf="missaoHorario.status === 'ATIVA'">
+        Missao em andamento: aqui voce ajusta apenas o horario de inicio.
+      </p>
+      <p class="panel-helper full-width" *ngIf="missaoHorario.status === 'FINALIZADA' && !podeEditarFimMissao(missaoHorario)">
+        O horario de fim nao pode ser alterado porque esse encerramento nao foi manual pelo administrador.
+      </p>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa do ajuste</mat-label>
+        <textarea matInput rows="4" maxlength="700" formControlName="justificativa"></textarea>
+        <mat-hint align="end">{{ missaoHorarioForm.getRawValue().justificativa.length }}/700</mat-hint>
+      </mat-form-field>
+    </form>
+
+    <div class="row-actions">
+      <button mat-stroked-button type="button" (click)="fecharAjusteHorarioMissao()">Cancelar</button>
+      <button mat-flat-button color="primary" type="button" [disabled]="salvandoHorarioMissao" (click)="salvarAjusteHorarioMissao()">
+        {{ salvandoHorarioMissao ? 'Salvando...' : 'Salvar ajuste' }}
+      </button>
     </div>
   </article>
 </section>

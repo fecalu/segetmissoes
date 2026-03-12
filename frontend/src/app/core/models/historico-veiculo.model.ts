@@ -7,6 +7,7 @@ import { StatusVeiculo } from './veiculo.model';
 export type TipoEventoHistoricoVeiculo =
   | 'MISSAO_INICIADA'
   | 'MISSAO_FINALIZADA'
+  | 'MISSAO_HORARIO_AJUSTADO'
   | 'CHECKLIST_SAIDA'
   | 'CHECKLIST_CHEGADA'
   | 'EXCECAO_ABERTA'

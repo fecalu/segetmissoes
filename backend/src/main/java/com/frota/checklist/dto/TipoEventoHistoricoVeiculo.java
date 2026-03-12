@@ -3,6 +3,7 @@ package com.frota.checklist.dto;
 public enum TipoEventoHistoricoVeiculo {
     MISSAO_INICIADA,
     MISSAO_FINALIZADA,
+    MISSAO_HORARIO_AJUSTADO,
     CHECKLIST_SAIDA,
     CHECKLIST_CHEGADA,
     EXCECAO_ABERTA,
