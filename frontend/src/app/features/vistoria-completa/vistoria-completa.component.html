@@ -2,7 +2,7 @@
   <mat-card class="card-shell vistoria-card">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Vistoria completa</p>
+        <p class="eyebrow">Uso externo</p>
         <h2>{{ operationTitle() }}</h2>
         <p class="topbar-copy">Motorista: {{ getDriverName() }}</p>
       </div>
@@ -25,15 +25,20 @@
 
     <section *ngIf="showSuccess" class="success-view">
       <div class="success-icon">OK</div>
-      <h3>Vistoria pronta</h3>
+      <h3>{{ operacao === 'SAIDA' ? 'Entrega registrada' : 'Recebimento registrado' }}</h3>
       <p><strong>Registro:</strong> {{ numeroVistoriaLocal }}</p>
-      <p>Vistoria salva com sucesso e veiculo movido para aguardando realocacao.</p>
+      <p *ngIf="operacao === 'SAIDA'">Entrega registrada com sucesso e veiculo movido para em uso externo.</p>
+      <p *ngIf="operacao === 'CHEGADA'">Recebimento registrado com sucesso e veiculo movido para aguardando realocacao.</p>
       <div class="success-summary">
         <p><strong>Resultado:</strong> {{ resultadoLabel(resultado) }}</p>
+        <p><strong>{{ labelContraparte() }}:</strong> {{ nomeContraparte }}</p>
+        <p><strong>Tipo do uso externo:</strong> {{ labelTipoUsoExterno(tipoUsoExterno) }}</p>
         <p><strong>Fotos:</strong> {{ uploadedPhotosCount() }}/{{ pontosFoto.length }}</p>
         <p><strong>Avarias:</strong> {{ avariasPendentesResumo() }}</p>
       </div>
-      <button mat-flat-button color="primary" class="big-btn" type="button" (click)="novaVistoria()">Nova vistoria</button>
+      <button mat-flat-button color="primary" class="big-btn" type="button" (click)="novaVistoria()">
+        {{ operacao === 'SAIDA' ? 'Nova entrega' : 'Novo recebimento' }}
+      </button>
       <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">Voltar para escolha de processo</button>
     </section>
 
@@ -67,6 +72,20 @@
             <mat-form-field appearance="outline">
               <mat-label>Quilometragem</mat-label>
               <input matInput type="number" min="0" formControlName="quilometragem">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo do uso externo</mat-label>
+              <mat-select [(ngModel)]="tipoUsoExterno" [ngModelOptions]="{standalone: true}">
+                <mat-option value="">Selecione</mat-option>
+                <mat-option *ngFor="let tipo of tiposUsoExterno" [value]="tipo.value">{{ tipo.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ labelContraparte() }}</mat-label>
+              <input matInput maxlength="180" [(ngModel)]="nomeContraparte" [ngModelOptions]="{standalone: true}">
+              <mat-hint>{{ helperContraparte() }}</mat-hint>
             </mat-form-field>
           </div>
 
@@ -266,6 +285,10 @@
             <article class="review-card">
               <span>Quilometragem</span>
               <strong>{{ form.getRawValue().quilometragem || '-' }}</strong>
+            </article>
+            <article class="review-card">
+              <span>{{ labelContraparte() }}</span>
+              <strong>{{ nomeContraparte || '-' }}</strong>
             </article>
             <article class="review-card">
               <span>Itens faltando</span>

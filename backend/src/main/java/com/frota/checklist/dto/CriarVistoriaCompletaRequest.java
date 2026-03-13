@@ -5,6 +5,7 @@ import com.frota.checklist.entity.StatusItemVistoriaCompleta;
 import com.frota.checklist.entity.TipoAvariaVistoriaCompleta;
 import com.frota.checklist.entity.TipoItemObrigatorioVistoriaCompleta;
 import com.frota.checklist.entity.TipoOperacao;
+import com.frota.checklist.entity.TipoUsoExternoVeiculo;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -19,6 +20,8 @@ public record CriarVistoriaCompletaRequest(
         @NotNull @Min(0) Long quilometragem,
         @Size(max = 120) String localizacao,
         @Size(max = 700) String observacaoGeral,
+        @NotBlankTrimmed @Size(max = 180) String nomeContraparte,
+        @NotNull TipoUsoExternoVeiculo tipoUsoExterno,
         Boolean encerrarMissaoAtivaVeiculo,
         @NotNull ResultadoVistoriaCompleta resultado,
         @NotEmpty List<@Valid ItemRequest> itens,

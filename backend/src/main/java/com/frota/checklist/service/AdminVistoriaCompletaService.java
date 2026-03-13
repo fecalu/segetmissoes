@@ -3,8 +3,10 @@ package com.frota.checklist.service;
 import com.frota.checklist.dto.VistoriaCompletaResponse;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.entity.ResultadoVistoriaCompleta;
+import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.VistoriaCompleta;
+import com.frota.checklist.repository.RegistroUsoExternoVeiculoRepository;
 import com.frota.checklist.repository.VistoriaCompletaRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.Locale;
 public class AdminVistoriaCompletaService {
 
     private final VistoriaCompletaRepository vistoriaCompletaRepository;
+    private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
     private final VistoriaCompletaResponseMapper responseMapper;
 
     @Transactional
@@ -52,7 +55,9 @@ public class AdminVistoriaCompletaService {
                 .orElseThrow(() -> new NotFoundException("Vistoria completa nao encontrada"));
 
         vistoria.setNomeContraparte(trimToNull(nomeContraparte));
-        return responseMapper.toResponse(vistoriaCompletaRepository.save(vistoria));
+        VistoriaCompleta salva = vistoriaCompletaRepository.save(vistoria);
+        sincronizarContraparteComUsoExterno(salva);
+        return responseMapper.toResponse(salva);
     }
 
     private boolean correspondeBusca(VistoriaCompleta vistoria, String buscaNormalizada) {
@@ -67,5 +72,22 @@ public class AdminVistoriaCompletaService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void sincronizarContraparteComUsoExterno(VistoriaCompleta vistoria) {
+        if (vistoria.getTipoOperacao() == TipoOperacao.SAIDA) {
+            registroUsoExternoVeiculoRepository.findFirstByVistoriaSaidaId(vistoria.getId())
+                    .ifPresent(registro -> {
+                        registro.setNomeEntreguePara(vistoria.getNomeContraparte());
+                        registroUsoExternoVeiculoRepository.save(registro);
+                    });
+            return;
+        }
+
+        registroUsoExternoVeiculoRepository.findFirstByVistoriaChegadaId(vistoria.getId())
+                .ifPresent(registro -> {
+                    registro.setNomeRecebidoDe(vistoria.getNomeContraparte());
+                    registroUsoExternoVeiculoRepository.save(registro);
+                });
     }
 }

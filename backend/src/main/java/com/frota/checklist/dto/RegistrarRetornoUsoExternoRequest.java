@@ -18,6 +18,10 @@ public record RegistrarRetornoUsoExternoRequest(
         LocalDateTime dataHoraRetorno,
 
         @Size(max = 700, message = "A observacao deve ter no maximo 700 caracteres")
-        String observacao
+        String observacao,
+
+        @NotBlank(message = "Informe a justificativa por nao haver vistoria")
+        @Size(min = 10, max = 700, message = "A justificativa deve ter entre 10 e 700 caracteres")
+        String justificativaSemVistoria
 ) {
 }

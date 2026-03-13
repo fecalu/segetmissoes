@@ -64,6 +64,7 @@ public record HistoricoVeiculoResponse(
             StatusExcecaoMissao statusExcecaoMissao,
             ResultadoVistoriaCompleta resultadoVistoria,
             MotivoExcecaoMissao motivoExcecao,
+            String tipoUsoExterno,
             String localDestino,
             String setorSolicitante,
             String solicitanteNome,

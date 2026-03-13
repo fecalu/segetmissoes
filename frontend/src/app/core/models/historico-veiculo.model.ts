@@ -29,6 +29,7 @@ export interface DetalheHistoricoVeiculo {
   statusExcecaoMissao: StatusExcecaoMissao | null;
   resultadoVistoria: ResultadoVistoriaCompleta | null;
   motivoExcecao: MotivoExcecaoMissao | null;
+  tipoUsoExterno: string | null;
   localDestino: string | null;
   setorSolicitante: string | null;
   solicitanteNome: string | null;

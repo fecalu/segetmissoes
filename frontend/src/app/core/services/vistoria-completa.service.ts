@@ -9,6 +9,7 @@ import {
   VistoriaCompletaResponse
 } from '../models/vistoria-completa.model';
 import { TipoOperacao } from '../models/checklist.model';
+import { TipoUsoExternoVeiculo } from '../models/veiculo.model';
 import { environment } from '../../../environments/environment';
 
 export interface CriarVistoriaCompletaPayload {
@@ -17,6 +18,8 @@ export interface CriarVistoriaCompletaPayload {
   quilometragem: number;
   localizacao: string | null;
   observacaoGeral: string | null;
+  nomeContraparte: string;
+  tipoUsoExterno: TipoUsoExternoVeiculo;
   encerrarMissaoAtivaVeiculo: boolean;
   resultado: ResultadoVistoriaCompleta;
   itens: Array<{
@@ -53,6 +56,8 @@ export class VistoriaCompletaService {
       quilometragem: payload.quilometragem,
       localizacao: payload.localizacao,
       observacaoGeral: payload.observacaoGeral,
+      nomeContraparte: payload.nomeContraparte,
+      tipoUsoExterno: payload.tipoUsoExterno,
       encerrarMissaoAtivaVeiculo: payload.encerrarMissaoAtivaVeiculo,
       resultado: payload.resultado,
       itens: payload.itens,

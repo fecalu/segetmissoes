@@ -19,5 +19,9 @@ public interface RegistroUsoExternoVeiculoRepository extends JpaRepository<Regis
     @EntityGraph(attributePaths = {"administradorRegistro", "administradorEncerramento", "veiculo"})
     List<RegistroUsoExternoVeiculo> findByVeiculoIdInAndDataHoraRetornoIsNull(Collection<Long> veiculoIds);
 
+    Optional<RegistroUsoExternoVeiculo> findFirstByVistoriaSaidaId(Long vistoriaSaidaId);
+
+    Optional<RegistroUsoExternoVeiculo> findFirstByVistoriaChegadaId(Long vistoriaChegadaId);
+
     void deleteByVeiculoId(Long veiculoId);
 }

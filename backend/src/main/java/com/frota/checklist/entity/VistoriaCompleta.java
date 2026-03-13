@@ -51,6 +51,10 @@ public class VistoriaCompleta {
     private String nomeContraparte;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 24)
+    private TipoUsoExternoVeiculo tipoUsoExterno;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ResultadoVistoriaCompleta resultado;
 

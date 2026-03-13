@@ -4,7 +4,9 @@ import com.frota.checklist.dto.CriarVistoriaCompletaRequest;
 import com.frota.checklist.dto.VistoriaCompletaResponse;
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.entity.OrigemRegistroUsoExterno;
 import com.frota.checklist.entity.ResultadoVistoriaCompleta;
+import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
 import com.frota.checklist.entity.StatusItemVistoriaCompleta;
 import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.TipoFotoVistoriaCompleta;
@@ -19,6 +21,7 @@ import com.frota.checklist.entity.MissaoExcecao;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.RegistroUsoExternoVeiculoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import com.frota.checklist.repository.VistoriaCompletaRepository;
 import jakarta.transaction.Transactional;
@@ -40,6 +43,7 @@ public class VistoriaCompletaService {
     private final VistoriaCompletaRepository vistoriaCompletaRepository;
     private final MotoristaRepository motoristaRepository;
     private final VeiculoRepository veiculoRepository;
+    private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
     private final FileStorageService fileStorageService;
     private final VistoriaCompletaResponseMapper responseMapper;
     private final MissaoService missaoService;
@@ -79,6 +83,8 @@ public class VistoriaCompletaService {
         vistoria.setQuilometragem(request.quilometragem());
         vistoria.setLocalizacao(trimToNull(request.localizacao()));
         vistoria.setObservacaoGeral(trimToNull(request.observacaoGeral()));
+        vistoria.setNomeContraparte(request.nomeContraparte().trim());
+        vistoria.setTipoUsoExterno(request.tipoUsoExterno());
         vistoria.setResultado(request.resultado());
 
         adicionarItens(vistoria, request.itens());
@@ -87,11 +93,13 @@ public class VistoriaCompletaService {
 
         VistoriaCompleta salva = vistoriaCompletaRepository.save(vistoria);
 
-        veiculo.setStatusAdministrativo(
-                request.tipoOperacao() == TipoOperacao.SAIDA
-                        ? StatusVeiculo.EM_USO_EXTERNO
-                        : StatusVeiculo.AGUARDANDO_REALOCACAO
-        );
+        if (request.tipoOperacao() == TipoOperacao.SAIDA) {
+            registrarSaidaUsoExternoPorVistoria(veiculo, salva);
+            veiculo.setStatusAdministrativo(StatusVeiculo.EM_USO_EXTERNO);
+        } else {
+            registrarRetornoUsoExternoPorVistoria(veiculo, salva);
+            veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        }
         veiculoRepository.save(veiculo);
 
         return responseMapper.toResponse(salva);
@@ -103,8 +111,21 @@ public class VistoriaCompletaService {
             Veiculo veiculo,
             LocalDateTime dataHoraVistoria
     ) {
+        if (request.tipoOperacao() == TipoOperacao.ENTRADA) {
+            if (registroUsoExternoVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId()).isEmpty()) {
+                throw new BusinessException("Nao existe uso externo em aberto para este veiculo.");
+            }
+            return;
+        }
+
         if (request.tipoOperacao() != TipoOperacao.SAIDA) {
             return;
+        }
+
+        Optional<RegistroUsoExternoVeiculo> usoExternoAberto = registroUsoExternoVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId());
+        if (usoExternoAberto.isPresent() && usoExternoAberto.get().getVistoriaSaidaId() != null) {
+            throw new BusinessException("Este veiculo ja esta em uso externo com vistoria de saida registrada.");
         }
 
         Optional<Missao> missaoAtivaOpt = missaoService.buscarMissaoAtivaPorVeiculo(veiculo.getId());
@@ -144,6 +165,43 @@ public class VistoriaCompletaService {
         excecaoAbertaOpt.ifPresent(excecaoAberta ->
                 missaoExcecaoService.regularizarPorVistoriaCompleta(excecaoAberta, motorista, dataHoraVistoria)
         );
+    }
+
+    private void registrarSaidaUsoExternoPorVistoria(Veiculo veiculo, VistoriaCompleta vistoria) {
+        RegistroUsoExternoVeiculo registro = registroUsoExternoVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId())
+                .orElseGet(() -> {
+                    RegistroUsoExternoVeiculo novo = new RegistroUsoExternoVeiculo();
+                    novo.setVeiculo(veiculo);
+                    novo.setOrigemAbertura(OrigemRegistroUsoExterno.COM_VISTORIA);
+                    return novo;
+                });
+
+        registro.setNomeEntreguePara(vistoria.getNomeContraparte());
+        registro.setTipoUsoExterno(vistoria.getTipoUsoExterno());
+        registro.setDataHoraSaida(vistoria.getDataHora());
+        registro.setObservacaoSaida(vistoria.getObservacaoGeral());
+        registro.setVistoriaSaidaId(vistoria.getId());
+        if (registro.getOrigemAbertura() == null) {
+            registro.setOrigemAbertura(OrigemRegistroUsoExterno.COM_VISTORIA);
+        }
+        registroUsoExternoVeiculoRepository.save(registro);
+    }
+
+    private void registrarRetornoUsoExternoPorVistoria(Veiculo veiculo, VistoriaCompleta vistoria) {
+        RegistroUsoExternoVeiculo registro = registroUsoExternoVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId())
+                .orElseThrow(() -> new BusinessException("Nao existe uso externo em aberto para este veiculo."));
+
+        registro.setNomeRecebidoDe(vistoria.getNomeContraparte());
+        registro.setDataHoraRetorno(vistoria.getDataHora());
+        registro.setObservacaoRetorno(vistoria.getObservacaoGeral());
+        registro.setOrigemRetorno(OrigemRegistroUsoExterno.COM_VISTORIA);
+        registro.setVistoriaChegadaId(vistoria.getId());
+        if (registro.getTipoUsoExterno() == null) {
+            registro.setTipoUsoExterno(vistoria.getTipoUsoExterno());
+        }
+        registroUsoExternoVeiculoRepository.save(registro);
     }
 
     private void validarRequest(CriarVistoriaCompletaRequest request, List<MultipartFile> fotosAvarias) {

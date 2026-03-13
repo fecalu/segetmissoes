@@ -18,6 +18,14 @@ export type StatusAdministrativoVeiculo =
   | 'MANUTENCAO'
   | 'BLOQUEADO';
 
+export type TipoUsoExternoVeiculo =
+  | 'OFICINA'
+  | 'LOCADORA'
+  | 'LAVA_JATO'
+  | 'OUTRA_SECRETARIA'
+  | 'FORNECEDOR'
+  | 'OUTROS';
+
 export interface Veiculo {
   id: number;
   placa: string;
@@ -40,8 +48,11 @@ export interface Veiculo {
   viagemDataHoraSaida?: string | null;
   usoExternoId?: number | null;
   usoExternoEntreguePara?: string | null;
+  usoExternoTipo?: TipoUsoExternoVeiculo | null;
   usoExternoObservacaoSaida?: string | null;
   usoExternoDataHoraSaida?: string | null;
+  usoExternoOrigem?: 'REGISTRO_MANUAL' | 'VISTORIA_COMPLETA' | null;
+  usoExternoVistoriaId?: number | null;
 }
 
 export interface HistoricoStatusVeiculo {

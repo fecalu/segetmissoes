@@ -21,6 +21,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         atualizarConstraintsHistoricoStatusVeiculo();
         atualizarConstraintsConfigRotuloStatusVeiculo();
         atualizarConstraintsConfigSugestaoMissao();
+        atualizarEstruturaRegistroUsoExterno();
         atualizarConstraintsMissaoExcecao();
         atualizarConstraintsMissoes();
         atualizarConstraintsAuditoriaMissao();
@@ -98,6 +99,81 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'SOLICITANTE',
                     'JUSTIFICATIVA_REGISTRO_MANUAL'
                 ))
+                """);
+    }
+
+    private void atualizarEstruturaRegistroUsoExterno() {
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                alter column administrador_registro_id drop not null
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists origem_abertura varchar(24) default 'CONTINGENCIA_ADMIN'
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists justificativa_sem_vistoria_abertura varchar(700)
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists vistoria_saida_id bigint
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists tipo_uso_externo varchar(24) default 'OUTROS'
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists origem_retorno varchar(24)
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists justificativa_sem_vistoria_retorno varchar(700)
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add column if not exists vistoria_chegada_id bigint
+                """);
+        executarSilencioso("""
+                update registros_uso_externo_veiculo
+                   set origem_abertura = 'CONTINGENCIA_ADMIN'
+                 where origem_abertura is null
+                """);
+        executarSilencioso("""
+                update registros_uso_externo_veiculo
+                   set tipo_uso_externo = 'OUTROS'
+                 where tipo_uso_externo is null
+                """);
+        executarSilencioso("alter table registros_uso_externo_veiculo alter column origem_abertura set not null");
+        executarSilencioso("alter table registros_uso_externo_veiculo alter column tipo_uso_externo set not null");
+        executarSilencioso("alter table registros_uso_externo_veiculo drop constraint if exists registros_uso_externo_veiculo_origem_abertura_check");
+        executarSilencioso("alter table registros_uso_externo_veiculo drop constraint if exists registros_uso_externo_veiculo_origem_retorno_check");
+        executarSilencioso("alter table registros_uso_externo_veiculo drop constraint if exists registros_uso_externo_veiculo_tipo_uso_externo_check");
+        executarSilencioso("""
+                alter table vistorias_completas
+                add column if not exists tipo_uso_externo varchar(24)
+                """);
+        executarSilencioso("alter table vistorias_completas drop constraint if exists vistorias_completas_tipo_uso_externo_check");
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add constraint registros_uso_externo_veiculo_origem_abertura_check
+                check (origem_abertura in ('COM_VISTORIA','CONTINGENCIA_ADMIN'))
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add constraint registros_uso_externo_veiculo_origem_retorno_check
+                check (origem_retorno is null or origem_retorno in ('COM_VISTORIA','CONTINGENCIA_ADMIN'))
+                """);
+        executarSilencioso("""
+                alter table registros_uso_externo_veiculo
+                add constraint registros_uso_externo_veiculo_tipo_uso_externo_check
+                check (tipo_uso_externo in ('OFICINA','LOCADORA','LAVA_JATO','OUTRA_SECRETARIA','FORNECEDOR','OUTROS'))
+                """);
+        executarSilencioso("""
+                alter table vistorias_completas
+                add constraint vistorias_completas_tipo_uso_externo_check
+                check (tipo_uso_externo is null or tipo_uso_externo in ('OFICINA','LOCADORA','LAVA_JATO','OUTRA_SECRETARIA','FORNECEDOR','OUTROS'))
                 """);
     }
 

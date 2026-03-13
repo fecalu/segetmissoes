@@ -1063,6 +1063,17 @@
   margin-bottom: 12px;
 }
 
+.history-mode-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-mode-toggle button.active {
+  border-color: #2d5ac8;
+  background: #eaf0ff;
+}
+
 .history-filter-actions {
   display: flex;
   flex-wrap: wrap;

@@ -16,6 +16,7 @@ public class VistoriaCompletaResponseMapper {
                 vistoria.getLocalizacao(),
                 vistoria.getObservacaoGeral(),
                 vistoria.getNomeContraparte(),
+                vistoria.getTipoUsoExterno(),
                 vistoria.getResultado(),
                 vistoria.getMotorista().getId(),
                 vistoria.getMotorista().getNome(),

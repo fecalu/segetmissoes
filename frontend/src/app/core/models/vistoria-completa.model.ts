@@ -1,4 +1,5 @@
 import { TipoOperacao } from './checklist.model';
+import { TipoUsoExternoVeiculo } from './veiculo.model';
 
 export type ResultadoVistoriaCompleta = 'APROVADO' | 'RESSALVA' | 'REPROVADO';
 export type StatusItemVistoriaCompleta = 'OK' | 'FALTANDO' | 'NAO_SE_APLICA';
@@ -54,6 +55,7 @@ export interface VistoriaCompletaResponse {
   localizacao: string | null;
   observacaoGeral: string | null;
   nomeContraparte: string | null;
+  tipoUsoExterno: TipoUsoExternoVeiculo | null;
   resultado: ResultadoVistoriaCompleta;
   motoristaId: number;
   motoristaNome: string;

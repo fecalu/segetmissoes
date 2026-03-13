@@ -26,7 +26,10 @@ public record VeiculoResponse(
         LocalDateTime viagemDataHoraSaida,
         Long usoExternoId,
         String usoExternoEntreguePara,
+        String usoExternoTipo,
         String usoExternoObservacaoSaida,
-        LocalDateTime usoExternoDataHoraSaida
+        LocalDateTime usoExternoDataHoraSaida,
+        String usoExternoOrigem,
+        Long usoExternoVistoriaId
 ) {
 }

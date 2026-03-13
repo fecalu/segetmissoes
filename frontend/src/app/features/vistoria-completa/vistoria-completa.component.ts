@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
-import { StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
+import { StatusVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { AuthService } from '../../core/services/auth.service';
 import { StatusLabelService } from '../../core/services/status-label.service';
 import { VeiculoService } from '../../core/services/veiculo.service';
@@ -94,6 +94,14 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     { value: 'FALTANDO', label: 'Faltando' },
     { value: 'OUTRO', label: 'Outro' }
   ];
+  readonly tiposUsoExterno: Array<{ value: TipoUsoExternoVeiculo; label: string }> = [
+    { value: 'OFICINA', label: 'Oficina' },
+    { value: 'LOCADORA', label: 'Locadora' },
+    { value: 'LAVA_JATO', label: 'Lava-jato' },
+    { value: 'OUTRA_SECRETARIA', label: 'Outra secretaria' },
+    { value: 'FORNECEDOR', label: 'Fornecedor' },
+    { value: 'OUTROS', label: 'Outros' }
+  ];
 
   veiculos: Veiculo[] = [];
   loading = false;
@@ -114,6 +122,8 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
   dataHoraVistoria = new Date();
   resultado: ResultadoVistoria = '';
   observacaoGeral = '';
+  nomeContraparte = '';
+  tipoUsoExterno: TipoUsoExternoVeiculo | '' = '';
   possuiAvarias = false;
   avarias: AvariaDraft[] = [];
   numeroVistoriaLocal = '';
@@ -242,13 +252,27 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
   }
 
   operationTitle(): string {
-    return this.operacao === 'SAIDA' ? 'Vistoria de saida' : 'Vistoria de chegada';
+    return this.operacao === 'SAIDA' ? 'Entrega para uso externo' : 'Recebimento de uso externo';
   }
 
   operationSubtitle(): string {
     return this.operacao === 'SAIDA'
-      ? 'Registro detalhado antes de entregar o veiculo para uso externo.'
-      : 'Registro detalhado no retorno do veiculo vindo de uso externo.';
+      ? 'Confirme o estado do veiculo antes de entregar para fora do setor.'
+      : 'Confirme o estado do veiculo no retorno do uso externo.';
+  }
+
+  labelContraparte(): string {
+    return this.operacao === 'SAIDA' ? 'Entregue para' : 'Recebido de';
+  }
+
+  helperContraparte(): string {
+    return this.operacao === 'SAIDA'
+      ? 'Informe para quem o veiculo sera entregue fora do setor.'
+      : 'Informe de quem o setor recebeu o veiculo de volta.';
+  }
+
+  labelTipoUsoExterno(valor: TipoUsoExternoVeiculo | '' | null | undefined): string {
+    return this.tiposUsoExterno.find(item => item.value === valor)?.label || '-';
   }
 
   uploadedPhotosCount(): number {
@@ -260,7 +284,7 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
   }
 
   veiculosVisiveis(): Veiculo[] {
-    return this.veiculos.filter(v => !v.desativado);
+    return this.veiculos.filter(v => !v.desativado && this.veiculoElegivelParaOperacao(v));
   }
 
   semVeiculoDisponivel(): boolean {
@@ -283,6 +307,9 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
 
   canSelectVeiculo(veiculo: Veiculo): boolean {
     if (veiculo.desativado) {
+      return false;
+    }
+    if (!this.veiculoElegivelParaOperacao(veiculo)) {
       return false;
     }
     if (this.operacao === 'SAIDA' && this.veiculoComDeslocamentoAtivo(veiculo)) {
@@ -655,12 +682,12 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
       return null;
     }
     if (veiculo.motoristaAtualId !== this.authService.loggedMotoristaId()) {
-      return `Este veiculo esta em missao com ${veiculo.motoristaAtualNome || 'outro motorista'}. Finalize essa missao antes de iniciar a vistoria completa.`;
+      return `Este veiculo esta em missao com ${veiculo.motoristaAtualNome || 'outro motorista'}. Finalize essa missao antes de registrar a entrega para uso externo.`;
     }
     if (this.veiculoIdConfirmadoParaEncerrarMissao === veiculo.id) {
-      return 'Confirmado: ao concluir a vistoria, a missao atual sera encerrada sem checklist e o veiculo ira para aguardando realocacao.';
+      return 'Confirmado: ao concluir esta entrega, sua missao atual sera encerrada e o veiculo ira para em uso externo.';
     }
-    return 'Este veiculo ainda esta em missao com voce. Para seguir com a vistoria completa de saida, a missao atual sera encerrada sem checklist no momento da conclusao.';
+    return 'Este veiculo ainda esta em missao com voce. Para registrar a entrega para uso externo, sua missao atual sera encerrada quando esta vistoria for concluida.';
   }
 
   avariasPendentesResumo(): number {
@@ -708,6 +735,8 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     this.dataHoraVistoria = new Date();
     this.resultado = '';
     this.observacaoGeral = '';
+    this.nomeContraparte = '';
+    this.tipoUsoExterno = '';
     this.togglePossuiAvarias(false);
     this.itensObrigatorios = this.itensObrigatorios.map(item => ({
       ...item,
@@ -765,6 +794,15 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     return veiculo.statusAutomatico === 'CIRCULANDO' || veiculo.statusAutomatico === 'EM_VIAGEM';
   }
 
+  private veiculoElegivelParaOperacao(veiculo: Veiculo): boolean {
+    if (this.operacao === 'CHEGADA') {
+      return veiculo.statusAtual === 'EM_USO_EXTERNO';
+    }
+    return veiculo.statusAtual !== 'EM_USO_EXTERNO'
+      && veiculo.statusAtual !== 'OFICINA'
+      && veiculo.statusAtual !== 'BLOQUEADO';
+  }
+
   private podeAvancarEtapaAtual(): boolean {
     if (this.etapaAtual === 1) {
       return this.validarEtapa1();
@@ -790,6 +828,14 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.snackBar.open('Selecione o veiculo e informe a quilometragem.', 'Fechar', { duration: 2600 });
+      return false;
+    }
+    if (!this.nomeContraparte.trim()) {
+      this.snackBar.open(`Informe ${this.labelContraparte().toLowerCase()}.`, 'Fechar', { duration: 2600 });
+      return false;
+    }
+    if (!this.tipoUsoExterno) {
+      this.snackBar.open('Informe o tipo do uso externo.', 'Fechar', { duration: 2600 });
       return false;
     }
 
@@ -901,6 +947,8 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
       quilometragem: Number(raw.quilometragem),
       localizacao: this.localizacaoParaEnvio(),
       observacaoGeral: this.observacaoGeral.trim() || null,
+      nomeContraparte: this.nomeContraparte.trim(),
+      tipoUsoExterno: this.tipoUsoExterno as TipoUsoExternoVeiculo,
       encerrarMissaoAtivaVeiculo: this.veiculoSelecionadoTemMissaoAtiva() && this.veiculoIdConfirmadoParaEncerrarMissao === raw.veiculoId,
       resultado: this.resultado,
       itens: this.itensObrigatorios.map(item => ({
@@ -939,8 +987,8 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     }
 
     const dialogData: ConfirmDialogData = {
-      title: 'Encerrar missao atual?',
-      message: `O veiculo ${veiculo.placa} ainda esta em missao com voce.\n\nSe continuar, a missao atual sera encerrada sem checklist no momento da conclusao da vistoria completa, e o veiculo seguira para aguardando realocacao.`,
+      title: 'Encerrar missao atual e continuar?',
+      message: `O veiculo ${veiculo.placa} ainda esta em missao com voce.\n\nSe continuar, sua missao atual sera encerrada no momento da conclusao desta entrega para uso externo.\n\nDepois disso, o veiculo ficara em Em uso externo.`,
       confirmText: 'Encerrar e continuar',
       cancelText: 'Cancelar',
       confirmColor: 'primary'

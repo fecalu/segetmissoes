@@ -31,7 +31,7 @@ import { SugestoesCamposMissaoResponse } from '../../core/models/missao-suggesti
 import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from '../../core/models/missao-excecao.model';
 import { Motorista } from '../../core/models/motorista.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
-import { StatusAdministrativoVeiculo, StatusVeiculo, Veiculo } from '../../core/models/veiculo.model';
+import { StatusAdministrativoVeiculo, StatusVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../../core/models/vistoria-completa.model';
 import {
   AdminService,
@@ -57,11 +57,12 @@ import {
 type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'vistorias-completas' | 'excecoes';
 type CadastroMenu = 'veiculos' | 'motoristas' | 'rotulos-status';
 type ControleMenu = 'missoes' | 'checklists' | 'vistorias-completas';
-type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'USO_EXTERNO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'OFICINA' | 'BLOQUEADO';
+type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'USO_EXTERNO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'BLOQUEADO';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
 type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'USO_EXTERNO' | 'VISTORIAS' | 'STATUS';
+type ModoHistoricoVeiculo = 'OPERACIONAL' | 'AUDITORIA';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -200,6 +201,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   filtroHistoricoVeiculo: FiltroHistoricoVeiculo = '';
   filtroHistoricoSomenteComFotos = false;
   filtroHistoricoSomenteComAvarias = false;
+  modoHistoricoVeiculo: ModoHistoricoVeiculo = 'OPERACIONAL';
   private relogioSub?: Subscription;
   private refreshTempoRealSub?: Subscription;
 
@@ -208,10 +210,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { id: 'MISSAO', titulo: 'Em missao', descricao: 'Veiculos com missao em andamento' },
     { id: 'PATIO', titulo: 'No patio', descricao: 'Parados no patio' },
     { id: 'VIAGEM', titulo: 'Em viagem', descricao: 'Veiculos em viagem pelo app ou pela administracao' },
-    { id: 'OFICINA', titulo: 'Oficina', descricao: 'Oficina ou manutencao' },
     { id: 'REALOCACAO', titulo: 'Aguardando realocacao', descricao: 'Recebidos e aguardando definicao' },
     { id: 'USO_EXTERNO', titulo: 'Em uso externo', descricao: 'Entregues para uso fora do setor' },
     { id: 'BLOQUEADO', titulo: 'Bloqueados', descricao: 'Sem liberacao para uso' }
+  ];
+  readonly tiposUsoExterno: Array<{ value: TipoUsoExternoVeiculo; label: string }> = [
+    { value: 'OFICINA', label: 'Oficina' },
+    { value: 'LOCADORA', label: 'Locadora' },
+    { value: 'LAVA_JATO', label: 'Lava-jato' },
+    { value: 'OUTRA_SECRETARIA', label: 'Outra secretaria' },
+    { value: 'FORNECEDOR', label: 'Fornecedor' },
+    { value: 'OUTROS', label: 'Outros' }
   ];
   readonly filtrosHistoricoVeiculo: Array<{ value: FiltroHistoricoVeiculo; label: string }> = [
     { value: '', label: 'Todos os eventos' },
@@ -223,6 +232,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { value: 'VISTORIAS', label: 'Vistorias completas' },
     { value: 'STATUS', label: 'Mudancas de status' }
   ];
+  readonly filtrosHistoricoOperacional: FiltroHistoricoVeiculo[] = ['', 'MISSOES', 'VIAGENS', 'USO_EXTERNO', 'VISTORIAS', 'SEM_CHECKLIST'];
+  readonly filtrosHistoricoAuditoria: FiltroHistoricoVeiculo[] = ['', 'MISSOES', 'CHECKLISTS', 'SEM_CHECKLIST', 'VIAGENS', 'USO_EXTERNO', 'VISTORIAS', 'STATUS'];
   readonly categoriasPainelIds: PainelCategoria[] = this.categoriasPainel.map(c => c.id);
   private readonly statusLabelsPadrao: Record<StatusVeiculo, string> = {
     CIRCULANDO: 'NA RUA (MISSAO)',
@@ -441,14 +452,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     this.usoExternoForm = this.fb.nonNullable.group({
       nomeEntreguePara: ['', [Validators.required, Validators.maxLength(180)]],
+      tipoUsoExterno: ['OUTROS' as TipoUsoExternoVeiculo, [Validators.required]],
       dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
-      observacao: ['', [Validators.maxLength(700)]]
+      observacao: ['', [Validators.maxLength(700)]],
+      justificativaSemVistoria: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
 
     this.retornoUsoExternoForm = this.fb.nonNullable.group({
       nomeRecebidoDe: ['', [Validators.required, Validators.maxLength(180)]],
       dataHoraRetorno: [this.agoraDateTimeLocal(), [Validators.required]],
-      observacao: ['', [Validators.maxLength(700)]]
+      observacao: ['', [Validators.maxLength(700)]],
+      justificativaSemVistoria: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
   }
 
@@ -1164,6 +1178,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.selectedVeiculoHistorico = veiculo;
     this.historicoVeiculo = null;
     this.eventoHistoricoSelecionado = null;
+    this.modoHistoricoVeiculo = 'OPERACIONAL';
     this.filtroHistoricoVeiculo = '';
     this.filtroHistoricoSomenteComFotos = false;
     this.filtroHistoricoSomenteComAvarias = false;
@@ -1183,6 +1198,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.selectedVeiculoHistorico = null;
     this.historicoVeiculo = null;
     this.eventoHistoricoSelecionado = null;
+    this.modoHistoricoVeiculo = 'OPERACIONAL';
   }
 
   abrirRegistroViagem(veiculo: Veiculo): void {
@@ -1250,8 +1266,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.showRegistroUsoExternoModal = true;
     this.usoExternoForm.reset({
       nomeEntreguePara: veiculo.usoExternoEntreguePara || '',
+      tipoUsoExterno: (veiculo.usoExternoTipo || 'OUTROS') as TipoUsoExternoVeiculo,
       dataHoraSaida: this.agoraDateTimeLocal(),
-      observacao: veiculo.usoExternoObservacaoSaida || ''
+      observacao: veiculo.usoExternoObservacaoSaida || '',
+      justificativaSemVistoria: ''
     });
   }
 
@@ -1260,8 +1278,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.selectedVeiculoUsoExterno = null;
     this.usoExternoForm.reset({
       nomeEntreguePara: '',
+      tipoUsoExterno: 'OUTROS' as TipoUsoExternoVeiculo,
       dataHoraSaida: this.agoraDateTimeLocal(),
-      observacao: ''
+      observacao: '',
+      justificativaSemVistoria: ''
     });
   }
 
@@ -1277,8 +1297,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const raw = this.usoExternoForm.getRawValue();
     const payload: RegistrarVeiculoEmUsoExternoPayload = {
       nomeEntreguePara: raw.nomeEntreguePara.trim(),
+      tipoUsoExterno: raw.tipoUsoExterno,
       dataHoraSaida: raw.dataHoraSaida,
-      observacao: this.toNullIfBlank(raw.observacao)
+      observacao: this.toNullIfBlank(raw.observacao),
+      justificativaSemVistoria: raw.justificativaSemVistoria.trim()
     };
 
     this.salvandoRegistroUsoExterno = true;
@@ -1315,7 +1337,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.retornoUsoExternoForm.reset({
       nomeRecebidoDe: '',
       dataHoraRetorno: this.agoraDateTimeLocal(),
-      observacao: ''
+      observacao: '',
+      justificativaSemVistoria: ''
     });
   }
 
@@ -1326,7 +1349,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.retornoUsoExternoForm.reset({
       nomeRecebidoDe: '',
       dataHoraRetorno: this.agoraDateTimeLocal(),
-      observacao: ''
+      observacao: '',
+      justificativaSemVistoria: ''
     });
   }
 
@@ -1344,7 +1368,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       statusAdministrativoDestino: this.statusDestinoRetornoUsoExterno,
       nomeRecebidoDe: raw.nomeRecebidoDe.trim(),
       dataHoraRetorno: raw.dataHoraRetorno,
-      observacao: this.toNullIfBlank(raw.observacao)
+      observacao: this.toNullIfBlank(raw.observacao),
+      justificativaSemVistoria: raw.justificativaSemVistoria.trim()
     };
 
     this.salvandoRetornoUsoExterno = true;
@@ -1366,7 +1391,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   eventosHistoricoFiltrados(): EventoHistoricoVeiculo[] {
-    const eventos = this.historicoVeiculo?.eventos || [];
+    const eventos = this.eventosHistoricoBase();
     return eventos.filter(evento => {
       if (this.filtroHistoricoVeiculo && !this.eventoHistoricoCorrespondeAoFiltro(evento, this.filtroHistoricoVeiculo)) {
         return false;
@@ -1386,6 +1411,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   aplicarFiltroHistoricoVeiculo(): void {
+    if (!this.filtroHistoricoDisponivel(this.filtroHistoricoVeiculo)) {
+      this.filtroHistoricoVeiculo = '';
+    }
     const eventos = this.eventosHistoricoFiltrados();
     if (!this.eventoHistoricoSelecionado) {
       this.eventoHistoricoSelecionado = eventos[0] || null;
@@ -1395,6 +1423,45 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (!aindaVisivel) {
       this.eventoHistoricoSelecionado = eventos[0] || null;
     }
+  }
+
+  alternarModoHistoricoVeiculo(modo: ModoHistoricoVeiculo): void {
+    if (this.modoHistoricoVeiculo === modo) {
+      return;
+    }
+    this.modoHistoricoVeiculo = modo;
+    if (!this.filtroHistoricoDisponivel(this.filtroHistoricoVeiculo)) {
+      this.filtroHistoricoVeiculo = '';
+    }
+    this.aplicarFiltroHistoricoVeiculo();
+  }
+
+  filtrosHistoricoDisponiveis(): Array<{ value: FiltroHistoricoVeiculo; label: string }> {
+    const permitidos = this.modoHistoricoVeiculo === 'OPERACIONAL'
+      ? this.filtrosHistoricoOperacional
+      : this.filtrosHistoricoAuditoria;
+    return this.filtrosHistoricoVeiculo.filter(item => permitidos.includes(item.value));
+  }
+
+  resumoOperacionalEvento(evento: EventoHistoricoVeiculo): string {
+    if (evento.tipo === 'MISSAO_INICIADA' || evento.tipo === 'MISSAO_FINALIZADA') {
+      const destino = evento.detalhe?.localDestino || '-';
+      const setor = evento.detalhe?.setorSolicitante || '-';
+      const solicitante = evento.detalhe?.solicitanteNome || '-';
+      return `Destino: ${destino} | Setor: ${setor} | Solicitante: ${solicitante}`;
+    }
+    if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
+      return `Destino: ${evento.detalhe?.localDestino || '-'}`;
+    }
+    if (evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO') {
+      const contraparte = evento.detalhe?.nomeContraparte || '-';
+      return evento.tipo === 'USO_EXTERNO_INICIADO' ? `Entregue para: ${contraparte}` : `Recebido de: ${contraparte}`;
+    }
+    return this.descricaoEventoHistorico(evento) || '-';
+  }
+
+  eventoEhUsoExterno(evento: EventoHistoricoVeiculo): boolean {
+    return evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO';
   }
 
   historicoVeiculoBadgePrincipal(evento: EventoHistoricoVeiculo): string {
@@ -1526,6 +1593,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   contraparteUsoExternoLabel(veiculo: Veiculo): string {
     return veiculo.usoExternoEntreguePara || '-';
+  }
+
+  tipoUsoExternoLabel(tipo: TipoUsoExternoVeiculo | string | null | undefined): string {
+    return this.tiposUsoExterno.find(item => item.value === tipo)?.label || '-';
   }
 
   destinoRetornoUsoExternoLabel(): string {
@@ -1794,10 +1865,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   totalVeiculosAguardandoRealocacao(): number {
     return this.veiculosDaCategoria('REALOCACAO').length;
-  }
-
-  totalVeiculosOficina(): number {
-    return this.veiculosDaCategoria('OFICINA').length;
   }
 
   totalVeiculosBloqueados(): number {
@@ -2529,6 +2596,43 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.eventoHistoricoSelecionado = this.eventosHistoricoFiltrados()[0] || null;
   }
 
+  private eventosHistoricoBase(): EventoHistoricoVeiculo[] {
+    const eventos = this.historicoVeiculo?.eventos || [];
+    if (this.modoHistoricoVeiculo === 'AUDITORIA') {
+      return eventos;
+    }
+    return eventos.filter(evento => this.eventoEhOperacional(evento));
+  }
+
+  private filtroHistoricoDisponivel(filtro: FiltroHistoricoVeiculo): boolean {
+    const permitidos = this.modoHistoricoVeiculo === 'OPERACIONAL'
+      ? this.filtrosHistoricoOperacional
+      : this.filtrosHistoricoAuditoria;
+    return permitidos.includes(filtro);
+  }
+
+  private eventoEhOperacional(evento: EventoHistoricoVeiculo): boolean {
+    if (evento.tipo === 'MISSAO_INICIADA' || evento.tipo === 'MISSAO_FINALIZADA') {
+      return true;
+    }
+    if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
+      return true;
+    }
+    if (evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO') {
+      return true;
+    }
+    if (evento.tipo === 'VISTORIA_COMPLETA_SAIDA' || evento.tipo === 'VISTORIA_COMPLETA_CHEGADA') {
+      return true;
+    }
+    if (evento.tipo === 'EXCECAO_ABERTA' || evento.tipo === 'EXCECAO_REGULARIZADA') {
+      return true;
+    }
+    if (evento.tipo === 'STATUS_ALTERADO') {
+      return evento.detalhe?.statusNovo === 'BLOQUEADO';
+    }
+    return false;
+  }
+
   private eventoHistoricoCorrespondeAoFiltro(
     evento: EventoHistoricoVeiculo,
     filtro: FiltroHistoricoVeiculo
@@ -2625,7 +2729,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       || value === 'VIAGEM'
       || value === 'PATIO'
       || value === 'REALOCACAO'
-      || value === 'OFICINA'
       || value === 'BLOQUEADO';
   }
 
@@ -2725,7 +2828,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       VIAGEM: [],
       PATIO: [],
       REALOCACAO: [],
-      OFICINA: [],
       BLOQUEADO: []
     };
   }
@@ -2761,7 +2863,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return 'REALOCACAO';
     }
     if (veiculo.statusAtual === 'OFICINA' || veiculo.statusAtual === 'MANUTENCAO') {
-      return 'OFICINA';
+      return 'USO_EXTERNO';
     }
     return 'BLOQUEADO';
   }
@@ -2799,9 +2901,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (categoria === 'REALOCACAO') {
       return 'AGUARDANDO_REALOCACAO';
-    }
-    if (categoria === 'OFICINA') {
-      return 'OFICINA';
     }
     if (categoria === 'BLOQUEADO') {
       return 'BLOQUEADO';

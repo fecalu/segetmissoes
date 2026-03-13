@@ -42,7 +42,6 @@
           <article class="kpi"><h3>{{ totalVeiculosEmMissao() }}</h3><p>Em missao</p></article>
           <article class="kpi"><h3>{{ totalVeiculosNoPatio() }}</h3><p>No patio</p></article>
           <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosOficina() }}</h3><p>Oficina</p></article>
           <article class="kpi"><h3>{{ totalVeiculosAguardandoRealocacao() }}</h3><p>Aguardando realocacao</p></article>
           <article class="kpi"><h3>{{ totalVeiculosEmUsoExterno() }}</h3><p>Em uso externo</p></article>
           <article class="kpi"><h3>{{ totalVeiculosBloqueados() }}</h3><p>Bloqueados</p></article>
@@ -100,7 +99,7 @@
                   </div>
                 </ng-container>
                 <ng-template #dadosPadraoStatus>
-                  <p class="vehicle-driver"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
+                  <p class="vehicle-driver" *ngIf="v.statusAtual !== 'EM_USO_EXTERNO'"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
                   <ng-container *ngIf="v.statusAtual === 'EM_VIAGEM'">
                     <ng-container *ngIf="v.viagemId; else viagemPorMissao">
                       <p class="vehicle-missao-meta"><strong>Motorista da viagem:</strong> {{ motoristaViagemLabel(v) }}</p>
@@ -114,6 +113,7 @@
                   </ng-container>
                   <ng-container *ngIf="v.statusAtual === 'EM_USO_EXTERNO'">
                     <p class="vehicle-missao-meta"><strong>Entregue para:</strong> {{ contraparteUsoExternoLabel(v) }}</p>
+                    <p class="vehicle-missao-meta"><strong>Tipo:</strong> {{ tipoUsoExternoLabel(v.usoExternoTipo) }}</p>
                     <p class="vehicle-missao-meta" *ngIf="v.usoExternoDataHoraSaida"><strong>Saida:</strong> {{ v.usoExternoDataHoraSaida | date:'dd/MM/yyyy HH:mm' }}</p>
                   </ng-container>
                   <p class="vehicle-admin-state">
@@ -624,6 +624,7 @@
               <p><strong>Registro:</strong> {{ formatarDataHora(v.dataHora) }} | <strong>Quilometragem:</strong> {{ v.quilometragem }}</p>
               <p><strong>Localizacao:</strong> {{ v.localizacao || '-' }}</p>
               <p><strong>{{ labelContraparteVistoria(v.tipoOperacao) }}:</strong> {{ v.nomeContraparte || '-' }}</p>
+              <p><strong>Tipo do uso externo:</strong> {{ tipoUsoExternoLabel(v.tipoUsoExterno) }}</p>
               <div class="row-badges">
                 <span class="status-pill" [ngClass]="v.tipoOperacao === 'SAIDA' ? 'status-circulando' : 'status-no_patio'">{{ tipoOperacaoLabel(v.tipoOperacao) }}</span>
                 <span class="status-pill" [ngClass]="classeResultadoVistoria(v.resultado)">{{ resultadoVistoriaLabel(v.resultado) }}</span>
@@ -1085,6 +1086,7 @@
     <p><strong>Veiculo:</strong> {{ selectedVistoriaCompleta.veiculoPlaca }} - {{ selectedVistoriaCompleta.veiculoMarca }} {{ selectedVistoriaCompleta.veiculoModelo }}</p>
     <p><strong>Operacao:</strong> {{ tipoOperacaoLabel(selectedVistoriaCompleta.tipoOperacao) }} | <strong>Data:</strong> {{ selectedVistoriaCompleta.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
     <p><strong>Quilometragem:</strong> {{ selectedVistoriaCompleta.quilometragem }} | <strong>Localizacao:</strong> {{ selectedVistoriaCompleta.localizacao || '-' }}</p>
+    <p><strong>Tipo do uso externo:</strong> {{ tipoUsoExternoLabel(selectedVistoriaCompleta.tipoUsoExterno) }}</p>
     <div class="row-actions align-start">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>{{ labelContraparteVistoria(selectedVistoriaCompleta.tipoOperacao) }}</mat-label>
@@ -1214,9 +1216,18 @@
     </header>
 
     <form [formGroup]="usoExternoForm" class="form-grid" (ngSubmit)="salvarRegistroUsoExterno()">
+      <p class="inclusion-helper full-width">Informe somente para quem o veiculo foi entregue.</p>
+
       <mat-form-field appearance="outline">
         <mat-label>Entregue para / Em uso por</mat-label>
         <input matInput formControlName="nomeEntreguePara" maxlength="180">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo do uso externo</mat-label>
+        <mat-select formControlName="tipoUsoExterno">
+          <mat-option *ngFor="let tipo of tiposUsoExterno" [value]="tipo.value">{{ tipo.label }}</mat-option>
+        </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -1227,6 +1238,11 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Observacao</mat-label>
         <textarea matInput rows="3" formControlName="observacao" maxlength="700"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa por nao haver vistoria</mat-label>
+        <textarea matInput rows="3" formControlName="justificativaSemVistoria" maxlength="700"></textarea>
       </mat-form-field>
 
       <div class="row-actions">
@@ -1252,6 +1268,8 @@
     <p><strong>Destino apos o retorno:</strong> {{ destinoRetornoUsoExternoLabel() }}</p>
 
     <form [formGroup]="retornoUsoExternoForm" class="form-grid" (ngSubmit)="salvarRetornoUsoExterno()">
+      <p class="inclusion-helper full-width">Informe de quem o setor recebeu o veiculo de volta.</p>
+
       <mat-form-field appearance="outline">
         <mat-label>Recebido de</mat-label>
         <input matInput formControlName="nomeRecebidoDe" maxlength="180">
@@ -1265,6 +1283,11 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Observacao</mat-label>
         <textarea matInput rows="3" formControlName="observacao" maxlength="700"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Justificativa por nao haver vistoria</mat-label>
+        <textarea matInput rows="3" formControlName="justificativaSemVistoria" maxlength="700"></textarea>
       </mat-form-field>
 
       <div class="row-actions">
@@ -1326,10 +1349,27 @@
       </section>
 
       <section class="history-filters">
+        <div class="history-mode-toggle">
+          <button
+            mat-stroked-button
+            type="button"
+            [class.active]="modoHistoricoVeiculo === 'OPERACIONAL'"
+            (click)="alternarModoHistoricoVeiculo('OPERACIONAL')">
+            Historico operacional
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
+            [class.active]="modoHistoricoVeiculo === 'AUDITORIA'"
+            (click)="alternarModoHistoricoVeiculo('AUDITORIA')">
+            Auditoria completa
+          </button>
+        </div>
+
         <mat-form-field appearance="outline">
           <mat-label>Tipo de evento</mat-label>
           <mat-select [(ngModel)]="filtroHistoricoVeiculo" (selectionChange)="aplicarFiltroHistoricoVeiculo()">
-            <mat-option *ngFor="let filtro of filtrosHistoricoVeiculo" [value]="filtro.value">{{ filtro.label }}</mat-option>
+            <mat-option *ngFor="let filtro of filtrosHistoricoDisponiveis()" [value]="filtro.value">{{ filtro.label }}</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -1364,7 +1404,7 @@
               <span class="status-pill" [ngClass]="historicoVeiculoBadgeClasse(evento)">{{ historicoVeiculoBadgePrincipal(evento) }}</span>
             </div>
             <strong>{{ evento.titulo }}</strong>
-            <p>{{ descricaoEventoHistorico(evento) }}</p>
+            <p>{{ modoHistoricoVeiculo === 'OPERACIONAL' ? resumoOperacionalEvento(evento) : descricaoEventoHistorico(evento) }}</p>
             <div class="history-event-meta">
               <span
                 class="status-pill"
@@ -1372,6 +1412,8 @@
                 [ngClass]="historicoVeiculoBadgeSecundariaClasse(evento)">
                 {{ badgeSecundaria }}
               </span>
+              <span *ngIf="evento.motoristaNome && !eventoEhUsoExterno(evento)">Motorista: {{ evento.motoristaNome }}</span>
+              <span *ngIf="!evento.motoristaNome && evento.responsavelNome">Por: {{ evento.responsavelNome }}</span>
               <span *ngIf="evento.possuiFotos">Fotos: {{ evento.quantidadeFotos }}</span>
               <span *ngIf="evento.possuiAvarias">Avarias: {{ evento.quantidadeAvarias }}</span>
             </div>
@@ -1394,7 +1436,7 @@
           </div>
 
           <p><strong>Resumo:</strong> {{ descricaoEventoHistorico(evento) }}</p>
-          <p *ngIf="evento.motoristaNome"><strong>Motorista:</strong> {{ evento.motoristaNome }}</p>
+          <p *ngIf="evento.motoristaNome && !eventoEhUsoExterno(evento)"><strong>Motorista:</strong> {{ evento.motoristaNome }}</p>
           <p *ngIf="evento.responsavelNome"><strong>Registrado por:</strong> {{ evento.responsavelNome }}</p>
           <p *ngIf="evento.possuiFotos"><strong>Fotos vinculadas:</strong> {{ evento.quantidadeFotos }}</p>
           <p *ngIf="evento.possuiAvarias"><strong>Avarias registradas:</strong> {{ evento.quantidadeAvarias }}</p>
@@ -1416,6 +1458,7 @@
             <p *ngIf="detalhe.justificativa"><strong>Justificativa:</strong> {{ detalhe.justificativa }}</p>
             <p *ngIf="detalhe.justificativaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ detalhe.justificativaEncerramento }}</p>
             <p *ngIf="detalhe.resultadoVistoria"><strong>Resultado da vistoria:</strong> {{ resultadoVistoriaLabel(detalhe.resultadoVistoria) }}</p>
+            <p *ngIf="detalhe.tipoUsoExterno"><strong>Tipo do uso externo:</strong> {{ tipoUsoExternoLabel(detalhe.tipoUsoExterno) }}</p>
             <p *ngIf="detalhe.nomeContraparte">
               <strong>{{ detalhe.tipoOperacao === 'SAIDA' ? 'Entregue para' : 'Recebido de' }}:</strong>
               {{ detalhe.nomeContraparte }}

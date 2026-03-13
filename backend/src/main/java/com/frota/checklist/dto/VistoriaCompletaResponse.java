@@ -6,6 +6,7 @@ import com.frota.checklist.entity.TipoAvariaVistoriaCompleta;
 import com.frota.checklist.entity.TipoFotoVistoriaCompleta;
 import com.frota.checklist.entity.TipoItemObrigatorioVistoriaCompleta;
 import com.frota.checklist.entity.TipoOperacao;
+import com.frota.checklist.entity.TipoUsoExternoVeiculo;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ public record VistoriaCompletaResponse(
         String localizacao,
         String observacaoGeral,
         String nomeContraparte,
+        TipoUsoExternoVeiculo tipoUsoExterno,
         ResultadoVistoriaCompleta resultado,
         Long motoristaId,
         String motoristaNome,

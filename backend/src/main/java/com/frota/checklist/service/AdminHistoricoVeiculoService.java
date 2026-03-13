@@ -72,6 +72,8 @@ public class AdminHistoricoVeiculoService {
 
         Map<Long, Checklist> checklistsPorId = new HashMap<>();
         checklists.forEach(checklist -> checklistsPorId.put(checklist.getId(), checklist));
+        Map<Long, VistoriaCompleta> vistoriasPorId = new HashMap<>();
+        vistorias.forEach(vistoria -> vistoriasPorId.put(vistoria.getId(), vistoria));
 
         List<HistoricoVeiculoResponse.Evento> eventos = new ArrayList<>();
 
@@ -106,9 +108,9 @@ public class AdminHistoricoVeiculoService {
             }
         });
         usosExternos.forEach(registro -> {
-            eventos.add(mapearUsoExternoIniciado(registro));
+            eventos.add(mapearUsoExternoIniciado(registro, vistoriasPorId));
             if (registro.getDataHoraRetorno() != null) {
-                eventos.add(mapearUsoExternoFinalizado(registro, historicoStatus));
+                eventos.add(mapearUsoExternoFinalizado(registro, historicoStatus, vistoriasPorId));
             }
         });
 
@@ -133,8 +135,11 @@ public class AdminHistoricoVeiculoService {
                 checklists.size(),
                 excecoes.size(),
                 vistorias.size(),
-                usosExternos.size() + (int) vistorias.stream().filter(v -> v.getTipoOperacao() == TipoOperacao.SAIDA).count(),
-                (int) historicoStatus.stream().filter(h -> h.getStatusNovo() == StatusVeiculo.OFICINA).count(),
+                usosExternos.size(),
+                (int) usosExternos.stream()
+                        .filter(registro -> registro.getTipoUsoExterno() != null)
+                        .filter(registro -> "OFICINA".equals(registro.getTipoUsoExterno().name()))
+                        .count(),
                 missoes.stream()
                         .map(this::ultimaDataMissao)
                         .flatMap(Optional::stream)
@@ -188,6 +193,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         missao.getMotivoContingencia(),
+                        null,
                         missao.getLocalDestino(),
                         missao.getSetorSolicitante(),
                         missao.getSolicitanteNome(),
@@ -228,6 +234,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         missao.getOrigemEncerramento(),
                         missao.getStatusDocumental(),
+                        null,
                         null,
                         null,
                         null,
@@ -283,6 +290,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         null,
+                        null,
                         checklist.getQuilometragem(),
                         null,
                         null,
@@ -324,6 +332,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         auditoria.getMissao().getMotivoContingencia(),
+                        null,
                         auditoria.getMissao().getLocalDestino(),
                         auditoria.getMissao().getSetorSolicitante(),
                         auditoria.getMissao().getSolicitanteNome(),
@@ -372,6 +381,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         auditoria.getMissao().getMotivoContingencia(),
+                        null,
                         auditoria.getMissao().getLocalDestino(),
                         auditoria.getMissao().getSetorSolicitante(),
                         auditoria.getMissao().getSolicitanteNome(),
@@ -413,6 +423,7 @@ public class AdminHistoricoVeiculoService {
                         excecao.getStatus(),
                         null,
                         excecao.getMotivo(),
+                        null,
                         null,
                         null,
                         null,
@@ -458,6 +469,7 @@ public class AdminHistoricoVeiculoService {
                         excecao.getStatus(),
                         null,
                         excecao.getMotivo(),
+                        null,
                         null,
                         null,
                         null,
@@ -509,6 +521,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         vistoria.getResultado(),
                         null,
+                        vistoria.getTipoUsoExterno() != null ? vistoria.getTipoUsoExterno().name() : null,
                         null,
                         null,
                         null,
@@ -543,6 +556,7 @@ public class AdminHistoricoVeiculoService {
                 null,
                 null,
                 new HistoricoVeiculoResponse.Detalhe(
+                        null,
                         null,
                         null,
                         null,
@@ -591,6 +605,7 @@ public class AdminHistoricoVeiculoService {
                         null,
                         null,
                         null,
+                        null,
                         viagem.getLocalDestino(),
                         null,
                         null,
@@ -606,41 +621,53 @@ public class AdminHistoricoVeiculoService {
         );
     }
 
-    private HistoricoVeiculoResponse.Evento mapearUsoExternoIniciado(RegistroUsoExternoVeiculo registro) {
+    private HistoricoVeiculoResponse.Evento mapearUsoExternoIniciado(
+            RegistroUsoExternoVeiculo registro,
+            Map<Long, VistoriaCompleta> vistoriasPorId
+    ) {
+        VistoriaCompleta vistoriaSaida = registro.getVistoriaSaidaId() == null ? null : vistoriasPorId.get(registro.getVistoriaSaidaId());
+        String nomeContraparte = registro.getNomeEntreguePara() != null ? registro.getNomeEntreguePara() : vistoriaSaida != null ? vistoriaSaida.getNomeContraparte() : null;
+        String observacao = registro.getObservacaoSaida() != null ? registro.getObservacaoSaida() : vistoriaSaida != null ? vistoriaSaida.getObservacaoGeral() : null;
+        String responsavel = registro.getAdministradorRegistro() != null
+                ? registro.getAdministradorRegistro().getNome()
+                : vistoriaSaida != null ? vistoriaSaida.getMotorista().getNome() : null;
+        int quantidadeFotos = vistoriaSaida == null ? 0 : vistoriaSaida.getFotos().size();
+        int quantidadeAvarias = vistoriaSaida == null ? 0 : vistoriaSaida.getAvarias().size();
         return new HistoricoVeiculoResponse.Evento(
                 "USO-EXTERNO-INICIO-" + registro.getId(),
                 TipoEventoHistoricoVeiculo.USO_EXTERNO_INICIADO,
                 registro.getDataHoraSaida(),
                 "Uso externo iniciado",
-                "Entregue para: %s".formatted(valorOuTraco(registro.getNomeEntreguePara())),
+                "Entregue para: %s".formatted(valorOuTraco(nomeContraparte)),
                 null,
-                registro.getAdministradorRegistro().getNome(),
-                false,
-                0,
-                false,
-                0,
-                null,
-                null,
+                responsavel,
+                quantidadeFotos > 0,
+                quantidadeFotos,
+                quantidadeAvarias > 0,
+                quantidadeAvarias,
                 null,
                 null,
+                null,
+                vistoriaSaida != null ? vistoriaSaida.getId() : null,
                 null,
                 new HistoricoVeiculoResponse.Detalhe(
+                        vistoriaSaida != null ? vistoriaSaida.getTipoOperacao() : null,
                         null,
                         null,
                         null,
                         null,
+                        vistoriaSaida != null ? vistoriaSaida.getResultado() : null,
+                        null,
+                        registro.getTipoUsoExterno() != null ? registro.getTipoUsoExterno().name() : null,
                         null,
                         null,
                         null,
+                        registro.getJustificativaSemVistoriaAbertura(),
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        registro.getNomeEntreguePara(),
-                        null,
-                        null,
-                        registro.getObservacaoSaida(),
+                        nomeContraparte,
+                        vistoriaSaida != null ? vistoriaSaida.getQuilometragem() : null,
+                        vistoriaSaida != null ? vistoriaSaida.getLocalizacao() : null,
+                        observacao,
                         null,
                         StatusVeiculo.EM_USO_EXTERNO
                 )
@@ -649,49 +676,59 @@ public class AdminHistoricoVeiculoService {
 
     private HistoricoVeiculoResponse.Evento mapearUsoExternoFinalizado(
             RegistroUsoExternoVeiculo registro,
-            List<HistoricoStatusVeiculo> historicoStatus
+            List<HistoricoStatusVeiculo> historicoStatus,
+            Map<Long, VistoriaCompleta> vistoriasPorId
     ) {
+        VistoriaCompleta vistoriaChegada = registro.getVistoriaChegadaId() == null ? null : vistoriasPorId.get(registro.getVistoriaChegadaId());
         StatusVeiculo destino = historicoStatus.stream()
                 .filter(item -> item.getDataHora() != null && registro.getDataHoraRetorno() != null)
                 .filter(item -> !item.getDataHora().isBefore(registro.getDataHoraRetorno().minusSeconds(1)))
                 .min(Comparator.comparingLong(item -> Math.abs(ChronoUnit.SECONDS.between(registro.getDataHoraRetorno(), item.getDataHora()))))
                 .map(HistoricoStatusVeiculo::getStatusNovo)
                 .orElse(null);
+        String nomeContraparte = registro.getNomeRecebidoDe() != null ? registro.getNomeRecebidoDe() : vistoriaChegada != null ? vistoriaChegada.getNomeContraparte() : null;
+        String observacao = registro.getObservacaoRetorno() != null ? registro.getObservacaoRetorno() : vistoriaChegada != null ? vistoriaChegada.getObservacaoGeral() : null;
+        String responsavel = registro.getAdministradorEncerramento() != null
+                ? registro.getAdministradorEncerramento().getNome()
+                : vistoriaChegada != null ? vistoriaChegada.getMotorista().getNome() : null;
+        int quantidadeFotos = vistoriaChegada == null ? 0 : vistoriaChegada.getFotos().size();
+        int quantidadeAvarias = vistoriaChegada == null ? 0 : vistoriaChegada.getAvarias().size();
 
         return new HistoricoVeiculoResponse.Evento(
                 "USO-EXTERNO-FIM-" + registro.getId(),
                 TipoEventoHistoricoVeiculo.USO_EXTERNO_FINALIZADO,
                 registro.getDataHoraRetorno(),
                 "Uso externo finalizado",
-                "Recebido de: %s".formatted(valorOuTraco(registro.getNomeRecebidoDe())),
+                "Recebido de: %s".formatted(valorOuTraco(nomeContraparte)),
                 null,
-                registro.getAdministradorEncerramento() != null ? registro.getAdministradorEncerramento().getNome() : null,
-                false,
-                0,
-                false,
-                0,
-                null,
-                null,
+                responsavel,
+                quantidadeFotos > 0,
+                quantidadeFotos,
+                quantidadeAvarias > 0,
+                quantidadeAvarias,
                 null,
                 null,
+                null,
+                vistoriaChegada != null ? vistoriaChegada.getId() : null,
                 null,
                 new HistoricoVeiculoResponse.Detalhe(
+                        vistoriaChegada != null ? vistoriaChegada.getTipoOperacao() : null,
                         null,
                         null,
                         null,
                         null,
+                        vistoriaChegada != null ? vistoriaChegada.getResultado() : null,
+                        null,
+                        registro.getTipoUsoExterno() != null ? registro.getTipoUsoExterno().name() : null,
                         null,
                         null,
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        registro.getNomeRecebidoDe(),
-                        null,
-                        null,
-                        registro.getObservacaoRetorno(),
+                        registro.getJustificativaSemVistoriaRetorno(),
+                        nomeContraparte,
+                        vistoriaChegada != null ? vistoriaChegada.getQuilometragem() : null,
+                        vistoriaChegada != null ? vistoriaChegada.getLocalizacao() : null,
+                        observacao,
                         StatusVeiculo.EM_USO_EXTERNO,
                         destino
                 )
@@ -717,6 +754,7 @@ public class AdminHistoricoVeiculoService {
                 null,
                 item.getId(),
                 new HistoricoVeiculoResponse.Detalhe(
+                        null,
                         null,
                         null,
                         null,

@@ -2,6 +2,7 @@ package com.frota.checklist.service;
 
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.MissaoExcecao;
+import com.frota.checklist.entity.RegistroViagemVeiculo;
 import com.frota.checklist.entity.StatusExcecaoMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
@@ -11,6 +12,7 @@ import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.repository.ChecklistRepository;
 import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MissaoRepository;
+import com.frota.checklist.repository.RegistroViagemVeiculoRepository;
 import com.frota.checklist.repository.projection.UltimoChecklistStatusProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class VeiculoStatusResolver {
     private final ChecklistRepository checklistRepository;
     private final MissaoRepository missaoRepository;
     private final MissaoExcecaoRepository missaoExcecaoRepository;
+    private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
 
     public VeiculoStatusSnapshot resolver(Veiculo veiculo) {
         return resolverPorVeiculos(List.of(veiculo))
@@ -77,12 +80,22 @@ public class VeiculoStatusResolver {
                         maisRecenteChecklist()
                 ));
 
+        Map<Long, RegistroViagemVeiculo> viagemAtivaPorVeiculo = registroViagemVeiculoRepository
+                .findByVeiculoIdInAndDataHoraRetornoIsNull(veiculoIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        viagem -> viagem.getVeiculo().getId(),
+                        viagem -> viagem,
+                        maisRecenteViagem()
+                ));
+
         Map<Long, VeiculoStatusSnapshot> snapshots = new LinkedHashMap<>();
         for (Veiculo veiculo : veiculos) {
             Missao missaoAtiva = missaoAtivaPorVeiculo.get(veiculo.getId());
             MissaoExcecao excecaoAberta = excecaoAbertaPorVeiculo.get(veiculo.getId());
             UltimoChecklistStatusProjection ultimoChecklist = ultimoChecklistPorVeiculo.get(veiculo.getId());
-            snapshots.put(veiculo.getId(), resolverInterno(veiculo, missaoAtiva, excecaoAberta, ultimoChecklist));
+            RegistroViagemVeiculo viagemAtiva = viagemAtivaPorVeiculo.get(veiculo.getId());
+            snapshots.put(veiculo.getId(), resolverInterno(veiculo, missaoAtiva, excecaoAberta, ultimoChecklist, viagemAtiva));
         }
 
         return snapshots;
@@ -92,7 +105,8 @@ public class VeiculoStatusResolver {
             Veiculo veiculo,
             Missao missaoAtiva,
             MissaoExcecao excecaoAberta,
-            UltimoChecklistStatusProjection ultimoChecklist
+            UltimoChecklistStatusProjection ultimoChecklist,
+            RegistroViagemVeiculo viagemAtiva
     ) {
         StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
         if (Boolean.TRUE.equals(veiculo.getDesativado()) && statusAdministrativo == null) {
@@ -110,6 +124,10 @@ public class VeiculoStatusResolver {
                     : StatusVeiculo.EM_VIAGEM;
             motoristaAtualId = missaoAtiva.getMotorista().getId();
             motoristaAtualNome = missaoAtiva.getMotorista().getNome();
+        } else if (viagemAtiva != null) {
+            statusAutomatico = StatusVeiculo.EM_VIAGEM;
+            motoristaAtualId = viagemAtiva.getMotorista().getId();
+            motoristaAtualNome = viagemAtiva.getMotorista().getNome();
         } else if (excecaoAbertaVigente) {
             statusAutomatico = StatusVeiculo.CIRCULANDO;
             motoristaAtualId = excecaoAberta.getMotorista().getId();
@@ -154,6 +172,10 @@ public class VeiculoStatusResolver {
 
     private BinaryOperator<UltimoChecklistStatusProjection> maisRecenteChecklist() {
         return (a, b) -> a.getDataHora().isAfter(b.getDataHora()) ? a : b;
+    }
+
+    private BinaryOperator<RegistroViagemVeiculo> maisRecenteViagem() {
+        return (a, b) -> a.getDataHoraSaida().isAfter(b.getDataHoraSaida()) ? a : b;
     }
 
     private TipoOperacao parseTipoOperacao(String tipoOperacaoRaw) {

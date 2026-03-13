@@ -10,11 +10,14 @@ import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.HistoricoStatusVeiculo;
 import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.entity.OrigemRegistroUsoExterno;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
 import com.frota.checklist.entity.RegistroViagemVeiculo;
 import com.frota.checklist.entity.StatusVeiculo;
+import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
+import com.frota.checklist.entity.VistoriaCompleta;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.AuditoriaExclusaoVeiculoRepository;
@@ -25,6 +28,7 @@ import com.frota.checklist.repository.MotoristaRepository;
 import com.frota.checklist.repository.RegistroUsoExternoVeiculoRepository;
 import com.frota.checklist.repository.RegistroViagemVeiculoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
+import com.frota.checklist.repository.VistoriaCompletaRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -47,6 +51,7 @@ public class AdminVeiculoService {
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
     private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
+    private final VistoriaCompletaRepository vistoriaCompletaRepository;
     private final AuditoriaExclusaoVeiculoRepository auditoriaExclusaoVeiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
@@ -60,9 +65,10 @@ public class AdminVeiculoService {
         Map<Long, VeiculoStatusSnapshot> snapshots = veiculoStatusResolver.resolverPorVeiculos(veiculos);
         Map<Long, RegistroViagemVeiculo> viagensAtivas = carregarViagensAtivasPorVeiculo(veiculos);
         Map<Long, RegistroUsoExternoVeiculo> usosExternosAtivos = carregarUsosExternosAtivosPorVeiculo(veiculos);
+        Map<Long, VistoriaCompleta> vistoriasSaidaRecentes = carregarUltimasVistoriasSaidaPorVeiculo(veiculos);
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return veiculos.stream()
-                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos, viagensAtivas.get(v.getId()), usosExternosAtivos.get(v.getId())))
+                .map(v -> toResponse(v, snapshots.get(v.getId()), rotulos, viagensAtivas.get(v.getId()), usosExternosAtivos.get(v.getId()), vistoriasSaidaRecentes.get(v.getId())))
                 .toList();
     }
 
@@ -244,7 +250,10 @@ public class AdminVeiculoService {
         registro.setVeiculo(veiculo);
         registro.setAdministradorRegistro(administrador);
         registro.setNomeEntreguePara(request.nomeEntreguePara().trim());
+        registro.setTipoUsoExterno(request.tipoUsoExterno());
         registro.setObservacaoSaida(trimToNull(request.observacao()));
+        registro.setJustificativaSemVistoriaAbertura(request.justificativaSemVistoria().trim());
+        registro.setOrigemAbertura(OrigemRegistroUsoExterno.CONTINGENCIA_ADMIN);
         registro.setDataHoraSaida(request.dataHoraSaida());
         registroUsoExternoVeiculoRepository.save(registro);
 
@@ -260,9 +269,7 @@ public class AdminVeiculoService {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         Motorista administrador = validarAdministrador(administradorId);
-        RegistroUsoExternoVeiculo registro = registroUsoExternoVeiculoRepository
-                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id)
-                .orElseThrow(() -> new BusinessException("Nao existe registro de uso externo em aberto para este veiculo"));
+        RegistroUsoExternoVeiculo registro = obterOuCriarRegistroUsoExternoAbertoParaRetorno(veiculo);
 
         StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(request.statusAdministrativoDestino());
         if (request.statusAdministrativoDestino() != null && destinoNormalizado == null) {
@@ -278,6 +285,8 @@ public class AdminVeiculoService {
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         registro.setNomeRecebidoDe(request.nomeRecebidoDe().trim());
         registro.setObservacaoRetorno(trimToNull(request.observacao()));
+        registro.setJustificativaSemVistoriaRetorno(request.justificativaSemVistoria().trim());
+        registro.setOrigemRetorno(OrigemRegistroUsoExterno.CONTINGENCIA_ADMIN);
         registro.setDataHoraRetorno(request.dataHoraRetorno());
         registro.setAdministradorEncerramento(administrador);
         registroUsoExternoVeiculoRepository.save(registro);
@@ -287,6 +296,34 @@ public class AdminVeiculoService {
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
         return toResponse(salvo);
+    }
+
+    private RegistroUsoExternoVeiculo obterOuCriarRegistroUsoExternoAbertoParaRetorno(Veiculo veiculo) {
+        Optional<RegistroUsoExternoVeiculo> registroExistente = registroUsoExternoVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId());
+        if (registroExistente.isPresent()) {
+            return registroExistente.get();
+        }
+
+        VeiculoStatusSnapshot snapshotAtual = veiculoStatusResolver.resolver(veiculo);
+        if (snapshotAtual.statusAtual() != StatusVeiculo.EM_USO_EXTERNO) {
+            throw new BusinessException("Nao existe registro de uso externo em aberto para este veiculo");
+        }
+
+        VistoriaCompleta vistoriaSaida = vistoriaCompletaRepository
+                .findTopByVeiculoIdAndTipoOperacaoOrderByDataHoraDescIdDesc(veiculo.getId(), TipoOperacao.SAIDA)
+                .orElseThrow(() -> new BusinessException("Nao existe registro de uso externo em aberto para este veiculo"));
+
+        RegistroUsoExternoVeiculo registro = new RegistroUsoExternoVeiculo();
+        registro.setVeiculo(veiculo);
+        registro.setAdministradorRegistro(null);
+        registro.setNomeEntreguePara(vistoriaSaida.getNomeContraparte());
+        registro.setTipoUsoExterno(vistoriaSaida.getTipoUsoExterno());
+        registro.setObservacaoSaida(vistoriaSaida.getObservacaoGeral());
+        registro.setOrigemAbertura(OrigemRegistroUsoExterno.COM_VISTORIA);
+        registro.setDataHoraSaida(vistoriaSaida.getDataHora());
+        registro.setVistoriaSaidaId(vistoriaSaida.getId());
+        return registroUsoExternoVeiculoRepository.save(registro);
     }
 
     public List<HistoricoStatusVeiculoResponse> listarHistoricoStatus(Long veiculoId) {
@@ -384,7 +421,8 @@ public class AdminVeiculoService {
                 veiculoStatusResolver.resolver(veiculo),
                 rotulos,
                 registroViagemVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId()).orElse(null),
-                registroUsoExternoVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId()).orElse(null)
+                registroUsoExternoVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculo.getId()).orElse(null),
+                vistoriaCompletaRepository.findTopByVeiculoIdAndTipoOperacaoOrderByDataHoraDescIdDesc(veiculo.getId(), TipoOperacao.SAIDA).orElse(null)
         );
     }
 
@@ -393,13 +431,24 @@ public class AdminVeiculoService {
             VeiculoStatusSnapshot snapshot,
             Map<StatusVeiculo, String> rotulos,
             RegistroViagemVeiculo viagemAtiva,
-            RegistroUsoExternoVeiculo usoExternoAtivo
+            RegistroUsoExternoVeiculo usoExternoAtivo,
+            VistoriaCompleta vistoriaSaidaRecente
     ) {
+        StatusVeiculo statusAutomaticoEfetivo = snapshot.statusAutomatico();
+        Long motoristaAtualIdEfetivo = snapshot.motoristaAtualId();
+        String motoristaAtualNomeEfetivo = snapshot.motoristaAtualNome();
+        if (snapshot.statusAtual() == StatusVeiculo.EM_VIAGEM && viagemAtiva != null && motoristaAtualIdEfetivo == null) {
+            statusAutomaticoEfetivo = StatusVeiculo.EM_VIAGEM;
+            motoristaAtualIdEfetivo = viagemAtiva.getMotorista().getId();
+            motoristaAtualNomeEfetivo = viagemAtiva.getMotorista().getNome();
+        }
+
         String statusAtualRotulo = rotulos.getOrDefault(snapshot.statusAtual(), snapshot.statusAtual().name());
-        String statusAutomaticoRotulo = rotulos.getOrDefault(snapshot.statusAutomatico(), snapshot.statusAutomatico().name());
+        String statusAutomaticoRotulo = rotulos.getOrDefault(statusAutomaticoEfetivo, statusAutomaticoEfetivo.name());
         String statusAdministrativoRotulo = snapshot.statusAdministrativo() == null
                 ? null
                 : rotulos.getOrDefault(snapshot.statusAdministrativo(), snapshot.statusAdministrativo().name());
+        UsoExternoContexto usoExterno = resolverUsoExternoContexto(snapshot, usoExternoAtivo, vistoriaSaidaRecente);
 
         return new VeiculoResponse(
                 veiculo.getId(),
@@ -408,10 +457,10 @@ public class AdminVeiculoService {
                 veiculo.getMarca(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
-                snapshot.statusAutomatico(),
+                statusAutomaticoEfetivo,
                 snapshot.statusAdministrativo(),
-                snapshot.motoristaAtualId(),
-                snapshot.motoristaAtualNome(),
+                motoristaAtualIdEfetivo,
+                motoristaAtualNomeEfetivo,
                 statusAtualRotulo,
                 statusAutomaticoRotulo,
                 statusAdministrativoRotulo,
@@ -421,10 +470,13 @@ public class AdminVeiculoService {
                 viagemAtiva != null ? viagemAtiva.getLocalDestino() : null,
                 viagemAtiva != null ? viagemAtiva.getObservacao() : null,
                 viagemAtiva != null ? viagemAtiva.getDataHoraSaida() : null,
-                usoExternoAtivo != null ? usoExternoAtivo.getId() : null,
-                usoExternoAtivo != null ? usoExternoAtivo.getNomeEntreguePara() : null,
-                usoExternoAtivo != null ? usoExternoAtivo.getObservacaoSaida() : null,
-                usoExternoAtivo != null ? usoExternoAtivo.getDataHoraSaida() : null
+                usoExterno.registroId(),
+                usoExterno.nomeContraparte(),
+                usoExterno.tipoUsoExterno(),
+                usoExterno.observacaoSaida(),
+                usoExterno.dataHoraSaida(),
+                usoExterno.origem(),
+                usoExterno.vistoriaId()
         );
     }
 
@@ -490,6 +542,66 @@ public class AdminVeiculoService {
                 .forEach(registro -> usosExternos.put(registro.getVeiculo().getId(), registro));
         return usosExternos;
     }
+
+    private Map<Long, VistoriaCompleta> carregarUltimasVistoriasSaidaPorVeiculo(List<Veiculo> veiculos) {
+        if (veiculos.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = veiculos.stream().map(Veiculo::getId).toList();
+        Map<Long, VistoriaCompleta> vistorias = new java.util.HashMap<>();
+        vistoriaCompletaRepository.findByVeiculoIdInAndTipoOperacaoOrderByDataHoraDescIdDesc(ids, TipoOperacao.SAIDA)
+                .forEach(vistoria -> vistorias.putIfAbsent(vistoria.getVeiculo().getId(), vistoria));
+        return vistorias;
+    }
+
+    private UsoExternoContexto resolverUsoExternoContexto(
+            VeiculoStatusSnapshot snapshot,
+            RegistroUsoExternoVeiculo usoExternoAtivo,
+            VistoriaCompleta vistoriaSaidaRecente
+    ) {
+        if (usoExternoAtivo != null) {
+            boolean possuiVistoriaSaida = usoExternoAtivo.getVistoriaSaidaId() != null;
+            return new UsoExternoContexto(
+                    usoExternoAtivo.getId(),
+                    usoExternoAtivo.getNomeEntreguePara(),
+                    usoExternoAtivo.getTipoUsoExterno() != null ? usoExternoAtivo.getTipoUsoExterno().name() : null,
+                    usoExternoAtivo.getObservacaoSaida(),
+                    usoExternoAtivo.getDataHoraSaida(),
+                    possuiVistoriaSaida ? "VISTORIA_COMPLETA" : "REGISTRO_MANUAL",
+                    usoExternoAtivo.getVistoriaSaidaId()
+            );
+        }
+
+        if (snapshot.statusAtual() == StatusVeiculo.EM_USO_EXTERNO
+                && vistoriaSaidaRecente != null
+                && vistoriaSaidaRecente.getTipoOperacao() == TipoOperacao.SAIDA) {
+            return new UsoExternoContexto(
+                    null,
+                    vistoriaSaidaRecente.getNomeContraparte(),
+                    vistoriaSaidaRecente.getTipoUsoExterno() != null ? vistoriaSaidaRecente.getTipoUsoExterno().name() : null,
+                    vistoriaSaidaRecente.getObservacaoGeral(),
+                    vistoriaSaidaRecente.getDataHora(),
+                    "VISTORIA_COMPLETA",
+                    vistoriaSaidaRecente.getId()
+            );
+        }
+
+        if (snapshot.statusAtual() == StatusVeiculo.OFICINA || snapshot.statusAtual() == StatusVeiculo.MANUTENCAO) {
+            return new UsoExternoContexto(null, null, "OFICINA", null, null, null, null);
+        }
+
+        return new UsoExternoContexto(null, null, null, null, null, null, null);
+    }
+
+    private record UsoExternoContexto(
+            Long registroId,
+            String nomeContraparte,
+            String tipoUsoExterno,
+            String observacaoSaida,
+            java.time.LocalDateTime dataHoraSaida,
+            String origem,
+            Long vistoriaId
+    ) {}
 
     private String trimToNull(String value) {
         if (value == null) {

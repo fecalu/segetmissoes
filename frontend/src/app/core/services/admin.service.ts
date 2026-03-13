@@ -14,7 +14,7 @@ import {
 import { SalvarSugestoesCamposMissaoRequest, SugestoesCamposMissaoResponse } from '../models/missao-suggestion.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
-import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, Veiculo } from '../models/veiculo.model';
+import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../models/veiculo.model';
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../models/vistoria-completa.model';
 import { environment } from '../../../environments/environment';
 
@@ -61,8 +61,10 @@ export interface RegistrarVeiculoEmViagemPayload {
 
 export interface RegistrarVeiculoEmUsoExternoPayload {
   nomeEntreguePara: string;
+  tipoUsoExterno: TipoUsoExternoVeiculo;
   dataHoraSaida: string;
   observacao: string | null;
+  justificativaSemVistoria: string;
 }
 
 export interface RegistrarRetornoUsoExternoPayload {
@@ -70,6 +72,7 @@ export interface RegistrarRetornoUsoExternoPayload {
   nomeRecebidoDe: string;
   dataHoraRetorno: string;
   observacao: string | null;
+  justificativaSemVistoria: string;
 }
 
 export interface AtualizarDadosAdministrativosMissaoPayload {
