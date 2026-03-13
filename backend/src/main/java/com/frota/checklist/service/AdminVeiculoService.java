@@ -4,6 +4,7 @@ import com.frota.checklist.dto.AdminVeiculoRequest;
 import com.frota.checklist.entity.AuditoriaExclusaoVeiculo;
 import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
 import com.frota.checklist.dto.RegistrarRetornoUsoExternoRequest;
+import com.frota.checklist.dto.RegistrarRetornoViagemRequest;
 import com.frota.checklist.dto.RegistrarVeiculoEmUsoExternoRequest;
 import com.frota.checklist.dto.RegistrarVeiculoEmViagemRequest;
 import com.frota.checklist.dto.VeiculoResponse;
@@ -14,6 +15,7 @@ import com.frota.checklist.entity.OrigemRegistroUsoExterno;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
 import com.frota.checklist.entity.RegistroViagemVeiculo;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.entity.StatusVeiculo;
 import com.frota.checklist.entity.TipoOperacao;
 import com.frota.checklist.entity.Veiculo;
@@ -23,6 +25,7 @@ import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.AuditoriaExclusaoVeiculoRepository;
 import com.frota.checklist.repository.ChecklistRepository;
 import com.frota.checklist.repository.HistoricoStatusVeiculoRepository;
+import com.frota.checklist.repository.MissaoRepository;
 import com.frota.checklist.repository.MissaoExcecaoRepository;
 import com.frota.checklist.repository.MotoristaRepository;
 import com.frota.checklist.repository.RegistroUsoExternoVeiculoRepository;
@@ -48,6 +51,7 @@ public class AdminVeiculoService {
     private final ChecklistRepository checklistRepository;
     private final MotoristaRepository motoristaRepository;
     private final HistoricoStatusVeiculoRepository historicoStatusVeiculoRepository;
+    private final MissaoRepository missaoRepository;
     private final MissaoExcecaoRepository missaoExcecaoRepository;
     private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
     private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
@@ -55,6 +59,7 @@ public class AdminVeiculoService {
     private final AuditoriaExclusaoVeiculoRepository auditoriaExclusaoVeiculoRepository;
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
+    private final MissaoService missaoService;
     private final PasswordEncoder passwordEncoder;
 
     public List<VeiculoResponse> listar(String buscaPlaca) {
@@ -207,21 +212,63 @@ public class AdminVeiculoService {
         if (registroViagemVeiculoRepository.findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id).isPresent()) {
             throw new BusinessException("Ja existe um registro de viagem em aberto para este veiculo");
         }
+        String justificativaAbertura = trimToNull(request.observacao());
+        if (justificativaAbertura == null || justificativaAbertura.length() < 10) {
+            justificativaAbertura = "Viagem registrada manualmente pela administracao.";
+        }
 
-        RegistroViagemVeiculo viagem = new RegistroViagemVeiculo();
-        viagem.setVeiculo(veiculo);
-        viagem.setMotorista(motoristaViagem);
-        viagem.setAdministradorRegistro(administrador);
-        viagem.setLocalDestino(request.localDestino().trim());
-        viagem.setObservacao(trimToNull(request.observacao()));
-        viagem.setDataHoraSaida(request.dataHoraSaida());
+        missaoService.abrirContingenciaAdministrativa(
+                administrador,
+                motoristaViagem,
+                veiculo,
+                request.dataHoraSaida(),
+                null,
+                TipoDeslocamentoMissao.VIAGEM,
+                justificativaAbertura,
+                request.localDestino(),
+                null,
+                null
+        );
+
+        Veiculo salvo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        return toResponse(salvo);
+    }
+
+    @Transactional
+    public VeiculoResponse registrarRetornoViagem(Long id, RegistrarRetornoViagemRequest request, Long administradorId) {
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        Motorista administrador = validarAdministrador(administradorId);
+        Optional<com.frota.checklist.entity.Missao> missaoViagemAtiva = missaoRepository
+                .findFirstByVeiculoIdAndStatusOrderByDataHoraInicioDesc(id, com.frota.checklist.entity.StatusMissao.ATIVA)
+                .filter(missao -> missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM);
+        if (missaoViagemAtiva.isPresent()) {
+            missaoService.encerrarPendenteAdministrativamente(
+                    missaoViagemAtiva.get(),
+                    administrador,
+                    request.dataHoraRetorno(),
+                    request.justificativaSemChecklist().trim()
+            );
+            Veiculo salvo = veiculoRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+            return toResponse(salvo);
+        }
+        RegistroViagemVeiculo viagem = registroViagemVeiculoRepository
+                .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id)
+                .orElseThrow(() -> new BusinessException("Nao existe registro de viagem em aberto para este veiculo"));
+
+        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        viagem.setDataHoraRetorno(request.dataHoraRetorno());
+        viagem.setObservacaoRetorno(trimToNull(request.observacao()));
+        viagem.setJustificativaSemChecklistRetorno(request.justificativaSemChecklist().trim());
+        viagem.setAdministradorEncerramento(administrador);
         registroViagemVeiculoRepository.save(viagem);
 
-        veiculo.setStatusAdministrativo(StatusVeiculo.EM_VIAGEM);
+        veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
         Veiculo salvo = veiculoRepository.save(veiculo);
-
-        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), StatusVeiculo.EM_VIAGEM);
-
+        VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
         return toResponse(salvo);
     }
 

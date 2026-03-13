@@ -2,6 +2,7 @@ package com.frota.checklist.service;
 
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
 import com.lowagie.text.Document;
@@ -148,7 +149,7 @@ public class RelatorioMissaoPdfService {
 
         adicionarHeaderTabela(tabela, "Veiculo");
         adicionarHeaderTabela(tabela, "Motorista");
-        adicionarHeaderTabela(tabela, "Destino | Setor | Solicitante");
+        adicionarHeaderTabela(tabela, "Contexto");
         adicionarHeaderTabela(tabela, "Inicio");
         adicionarHeaderTabela(tabela, "Fim");
 
@@ -205,6 +206,9 @@ public class RelatorioMissaoPdfService {
     }
 
     private String dadosMissaoResumidos(Missao missao) {
+        if (missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM) {
+            return "Local da viagem: " + valorOuTraco(missao.getLocalDestino());
+        }
         String destino = valorOuTraco(missao.getLocalDestino());
         String setor = valorOuTraco(missao.getSetorSolicitante());
         String solicitante = valorOuTraco(missao.getSolicitanteNome());

@@ -92,6 +92,7 @@ public class AdminMissaoController {
                 request.veiculoId(),
                 request.dataHoraInicio(),
                 request.motivoContingencia(),
+                request.tipoDeslocamento(),
                 request.justificativaAbertura(),
                 request.localDestino(),
                 request.setorSolicitante(),

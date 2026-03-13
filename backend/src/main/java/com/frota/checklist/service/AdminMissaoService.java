@@ -11,6 +11,7 @@ import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.entity.Veiculo;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
@@ -519,6 +520,7 @@ public class AdminMissaoService {
             Long veiculoId,
             LocalDateTime dataHoraInicio,
             MotivoExcecaoMissao motivoContingencia,
+            TipoDeslocamentoMissao tipoDeslocamento,
             String justificativaAbertura,
             String localDestino,
             String setorSolicitante,
@@ -558,6 +560,7 @@ public class AdminMissaoService {
                 veiculo,
                 dataHoraInicio,
                 motivoContingenciaNormalizado,
+                tipoDeslocamento,
                 justificativaNormalizada,
                 localDestino,
                 setorSolicitante,

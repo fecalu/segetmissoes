@@ -55,6 +55,12 @@ public class RegistroViagemVeiculo {
     @Column(length = 700)
     private String observacao;
 
+    @Column(name = "observacao_retorno", length = 700)
+    private String observacaoRetorno;
+
+    @Column(name = "justificativa_sem_checklist_retorno", length = 700)
+    private String justificativaSemChecklistRetorno;
+
     @Column(name = "data_hora_saida", nullable = false)
     private LocalDateTime dataHoraSaida;
 

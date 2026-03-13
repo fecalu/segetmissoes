@@ -8,6 +8,7 @@ import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
 import com.frota.checklist.dto.RegistrarRetornoUsoExternoRequest;
 import com.frota.checklist.dto.RegistrarVeiculoEmUsoExternoRequest;
 import com.frota.checklist.dto.RegistrarVeiculoEmViagemRequest;
+import com.frota.checklist.dto.RegistrarRetornoViagemRequest;
 import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.security.CustomUserDetails;
 import com.frota.checklist.service.AdminHistoricoVeiculoService;
@@ -73,6 +74,15 @@ public class AdminVeiculoController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(adminVeiculoService.registrarEmViagem(id, request, userDetails.getMotoristaId()));
+    }
+
+    @PostMapping("/{id}/retorno-viagem")
+    public ResponseEntity<VeiculoResponse> registrarRetornoViagem(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrarRetornoViagemRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.registrarRetornoViagem(id, request, userDetails.getMotoristaId()));
     }
 
     @PostMapping("/{id}/em-uso-externo")

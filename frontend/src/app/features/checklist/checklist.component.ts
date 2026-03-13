@@ -441,9 +441,7 @@ export class ChecklistComponent implements OnInit, AfterViewChecked, OnDestroy {
     const payload: ChecklistPayload = {
       veiculoId: raw.veiculoId,
       tipoOperacao: raw.tipoOperacao as 'SAIDA' | 'ENTRADA',
-      tipoDeslocamento: raw.tipoOperacao === 'SAIDA'
-        ? raw.tipoDeslocamento as TipoDeslocamentoMissao
-        : 'NA_CIDADE',
+      tipoDeslocamento: raw.tipoDeslocamento as TipoDeslocamentoMissao,
       fotoPainel: this.files.fotoPainel!,
       fotoEstepe: this.files.fotoEstepe!,
       fotoLateralEsq: this.files.fotoLateralEsq!,

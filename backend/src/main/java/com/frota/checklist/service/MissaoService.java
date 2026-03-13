@@ -126,6 +126,7 @@ public class MissaoService {
             Veiculo veiculo,
             LocalDateTime dataHoraInicio,
             MotivoExcecaoMissao motivoContingencia,
+            TipoDeslocamentoMissao tipoDeslocamento,
             String justificativaAbertura,
             String localDestino,
             String setorSolicitante,
@@ -134,6 +135,15 @@ public class MissaoService {
         validarMotoristaSemMissaoAtiva(motoristaMissao.getId());
         validarVeiculoSemMissaoAtiva(veiculo.getId());
 
+        TipoDeslocamentoMissao tipoDeslocamentoNormalizado =
+                tipoDeslocamento == null ? TipoDeslocamentoMissao.NA_CIDADE : tipoDeslocamento;
+        String localDestinoNormalizado = trimToNull(localDestino);
+        String setorSolicitanteNormalizado = trimToNull(setorSolicitante);
+        String solicitanteNomeNormalizado = trimToNull(solicitanteNome);
+        if (tipoDeslocamentoNormalizado == TipoDeslocamentoMissao.VIAGEM && localDestinoNormalizado == null) {
+            throw new BusinessException("Informe o local da viagem");
+        }
+
         Missao missao = new Missao();
         missao.setMotorista(motoristaMissao);
         missao.setVeiculo(veiculo);
@@ -141,13 +151,13 @@ public class MissaoService {
         missao.setStatus(StatusMissao.ATIVA);
         missao.setDataHoraInicio(dataHoraInicio == null ? LocalDateTime.now() : dataHoraInicio);
         missao.setOrigemAbertura(OrigemAberturaMissao.CONTINGENCIA_ADMIN);
-        missao.setTipoDeslocamento(TipoDeslocamentoMissao.NA_CIDADE);
+        missao.setTipoDeslocamento(tipoDeslocamentoNormalizado);
         missao.setAdministradorAbertura(administrador);
         missao.setMotivoContingencia(motivoContingencia == null ? MotivoExcecaoMissao.OUTROS : motivoContingencia);
         missao.setJustificativaContingenciaAbertura(trimToNull(justificativaAbertura));
-        missao.setLocalDestino(trimToNull(localDestino));
-        missao.setSetorSolicitante(trimToNull(setorSolicitante));
-        missao.setSolicitanteNome(trimToNull(solicitanteNome));
+        missao.setLocalDestino(localDestinoNormalizado);
+        missao.setSetorSolicitante(tipoDeslocamentoNormalizado == TipoDeslocamentoMissao.VIAGEM ? null : setorSolicitanteNormalizado);
+        missao.setSolicitanteNome(tipoDeslocamentoNormalizado == TipoDeslocamentoMissao.VIAGEM ? null : solicitanteNomeNormalizado);
         missao.atualizarStatusDocumental();
 
         Missao saved = missaoRepository.save(missao);

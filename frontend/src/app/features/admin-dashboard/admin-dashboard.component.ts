@@ -25,7 +25,8 @@ import {
   OrigemAberturaMissao,
   OrigemEncerramentoMissao,
   StatusDocumentalMissao,
-  StatusMissao
+  StatusMissao,
+  TipoDeslocamentoMissao
 } from '../../core/models/missao.model';
 import { SugestoesCamposMissaoResponse } from '../../core/models/missao-suggestion.model';
 import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from '../../core/models/missao-excecao.model';
@@ -40,6 +41,7 @@ import {
   CriarMissaoContingenciaPayload,
   EditarMissaoManualPayload,
   EncerrarMissaoPendentePayload,
+  RegistrarRetornoViagemPayload,
   RegistrarRetornoUsoExternoPayload,
   RegistrarVeiculoEmUsoExternoPayload,
   RegistrarVeiculoEmViagemPayload
@@ -180,10 +182,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   };
   dataRelatorioMissoes = this.hojeIso();
   showNovaMissaoModal = false;
-  novaMissaoModo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA';
+  novaMissaoModo: 'CONTINGENCIA' | 'VIAGEM' | 'PENDENTE' = 'CONTINGENCIA';
   salvandoNovaMissaoContingencia = false;
   encerrandoMissaoPendente = false;
   salvandoRegistroViagem = false;
+  salvandoRetornoViagem = false;
   salvandoRegistroUsoExterno = false;
   salvandoRetornoUsoExterno = false;
   glossarioMissoesAberto = false;
@@ -193,6 +196,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   contraparteVistoriaEdicao = '';
   showRegistroViagemModal = false;
   selectedVeiculoViagem: Veiculo | null = null;
+  showRetornoViagemModal = false;
+  selectedVeiculoRetornoViagem: Veiculo | null = null;
   showRegistroUsoExternoModal = false;
   selectedVeiculoUsoExterno: Veiculo | null = null;
   showRetornoUsoExternoModal = false;
@@ -255,6 +260,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     PENDENTE_DADOS_ADMIN: 'DADOS PENDENTES',
     DADOS_ADMIN_COMPLETOS: 'DADOS COMPLETOS'
   };
+  private readonly statusDocumentalViagemLabels: Record<StatusDocumentalMissao, string> = {
+    PENDENTE_DADOS_ADMIN: 'LOCAL PENDENTE',
+    DADOS_ADMIN_COMPLETOS: 'LOCAL INFORMADO'
+  };
   private readonly origemAberturaMissaoLabels: Record<OrigemAberturaMissao, string> = {
     CHECKLIST: 'INICIO: COM CHECKLIST',
     SEM_CHECKLIST: 'INICIO: SEM CHECKLIST',
@@ -274,6 +283,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: this.statusMissaoLabels.FINALIZADA, descricao: 'Missao ja finalizada.', exemplo: 'Ex.: inicio 08:00 e fim 09:15 ja registrados.', classe: 'status-finalizada' },
     { termo: this.statusDocumentalMissaoLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda faltam destino, setor ou solicitante.', exemplo: 'Ex.: destino foi informado, mas setor e solicitante ainda faltam.', classe: 'status-documental-pendente' },
     { termo: this.statusDocumentalMissaoLabels.DADOS_ADMIN_COMPLETOS, descricao: 'Destino, setor e solicitante ja foram preenchidos.', exemplo: 'Ex.: destino SEGET, setor ATOS e solicitante VAL ja informados.', classe: 'status-documental-ok' },
+    { termo: this.statusDocumentalViagemLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda falta informar o local da viagem.', exemplo: 'Ex.: a viagem foi aberta, mas o local ainda nao foi preenchido.', classe: 'status-documental-pendente' },
+    { termo: this.statusDocumentalViagemLabels.DADOS_ADMIN_COMPLETOS, descricao: 'O local da viagem ja foi informado.', exemplo: 'Ex.: local da viagem Juazeiro ja registrado.', classe: 'status-documental-ok' },
     { termo: this.tipoMissaoLabels.MANUAL, descricao: 'Missao registrada manualmente pela administracao.', exemplo: 'Ex.: administrador registrou a missao porque o celular descarregou.', classe: 'status-bloqueado' },
     { termo: this.tipoMissaoLabels.VIAGEM, descricao: 'Missao aberta como viagem, para deslocamentos fora da rotina urbana.', exemplo: 'Ex.: motorista iniciou uma viagem e o veiculo passou a aparecer em Em viagem.', classe: 'status-em_viagem' },
     { termo: this.origemAberturaMissaoLabels.CHECKLIST, descricao: 'Inicio registrado pelo checklist de saida.', exemplo: 'Ex.: a missao foi aberta logo apos o checklist de saida.', classe: 'status-base_joao_goulart' },
@@ -285,7 +296,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: 'DURACAO: 16 s', descricao: 'Tempo total entre o inicio e o fim da missao.', exemplo: 'Ex.: inicio 13:12:00 e fim 13:12:16.', classe: 'status-oficina' }
   ];
   readonly glossarioMissoesCampos: GlossarioItem[] = [
-    { termo: 'Destino | Setor | Solicitante', descricao: 'Dados da missao usados nos relatorios e no acompanhamento operacional.' },
+    { termo: 'Destino | Setor | Solicitante', descricao: 'Contexto da missao na cidade, usado nos relatorios e no acompanhamento operacional.' },
+    { termo: 'Local da viagem', descricao: 'Contexto principal das viagens. Substitui setor e solicitante nesse tipo de deslocamento.' },
     { termo: 'Justificativa do registro manual', descricao: 'Texto explicando por que a missao foi registrada manualmente pela administracao.' },
     { termo: 'Justificativa do encerramento manual', descricao: 'Texto explicando por que o encerramento precisou ser feito manualmente, e nao pelo motorista.' },
     { termo: 'Registrada por', descricao: 'Quem registrou o inicio da missao, motorista ou administrador.' },
@@ -341,6 +353,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   readonly missaoContingenciaForm;
   readonly missaoPendenteForm;
   readonly viagemForm;
+  readonly retornoViagemForm;
   readonly usoExternoForm;
   readonly retornoUsoExternoForm;
 
@@ -448,6 +461,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       localDestino: ['', [Validators.required, Validators.maxLength(180)]],
       dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
       observacao: ['', [Validators.maxLength(700)]]
+    });
+
+    this.retornoViagemForm = this.fb.nonNullable.group({
+      dataHoraRetorno: [this.agoraDateTimeLocal(), [Validators.required]],
+      observacao: ['', [Validators.maxLength(700)]],
+      justificativaSemChecklist: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
 
     this.usoExternoForm = this.fb.nonNullable.group({
@@ -617,10 +636,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  abrirNovaMissao(modo: 'CONTINGENCIA' | 'PENDENTE' = 'CONTINGENCIA'): void {
+  abrirNovaMissao(modo: 'CONTINGENCIA' | 'VIAGEM' | 'PENDENTE' = 'CONTINGENCIA'): void {
     this.showNovaMissaoModal = true;
-    this.novaMissaoModo = modo;
-    if (modo === 'CONTINGENCIA') {
+    this.setNovaMissaoModo(modo);
+    if (modo !== 'PENDENTE') {
       this.missaoContingenciaForm.patchValue({ dataHoraInicio: this.agoraDateTimeLocal() });
       return;
     }
@@ -641,7 +660,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   fecharNovaMissao(): void {
     this.showNovaMissaoModal = false;
-    this.novaMissaoModo = 'CONTINGENCIA';
+    this.setNovaMissaoModo('CONTINGENCIA');
     this.missaoContingenciaForm.reset({
       motoristaId: 0,
       veiculoId: 0,
@@ -665,6 +684,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const raw = this.missaoContingenciaForm.getRawValue();
+    const ehViagem = this.novaMissaoModo === 'VIAGEM';
     if (raw.motoristaId <= 0 || raw.veiculoId <= 0) {
       this.snackBar.open('Selecione motorista e veiculo para registrar a missao manual.', 'Fechar', { duration: 2600 });
       return;
@@ -674,10 +694,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       motoristaId: raw.motoristaId,
       veiculoId: raw.veiculoId,
       dataHoraInicio: raw.dataHoraInicio,
+      tipoDeslocamento: ehViagem ? 'VIAGEM' : 'NA_CIDADE',
       justificativaAbertura: raw.justificativaAbertura.trim(),
       localDestino: this.toNullIfBlank(raw.localDestino),
-      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
-      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
+      setorSolicitante: ehViagem ? null : this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: ehViagem ? null : this.toNullIfBlank(raw.solicitanteNome)
     };
 
     this.salvandoNovaMissaoContingencia = true;
@@ -685,7 +706,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => (this.salvandoNovaMissaoContingencia = false)))
       .subscribe({
         next: () => {
-          this.snackBar.open('Missao manual registrada com sucesso.', 'Fechar', { duration: 2400 });
+          this.snackBar.open(ehViagem ? 'Viagem registrada com sucesso.' : 'Missao manual registrada com sucesso.', 'Fechar', { duration: 2400 });
           this.fecharNovaMissao();
           this.buscarMissoes();
           this.carregarMissoesTempoReal(false);
@@ -977,7 +998,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   categoriaPermiteInclusao(categoria: PainelCategoria): boolean {
-    return categoria !== 'MISSAO';
+    return categoria !== 'MISSAO' && categoria !== 'VIAGEM';
   }
 
   onDropCategoria(event: CdkDragDrop<Veiculo[]>, categoriaDestino: PainelCategoria): void {
@@ -987,6 +1008,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const veiculo = event.item.data as Veiculo | undefined;
     if (!veiculo) {
+      return;
+    }
+
+    if (categoriaDestino === 'VIAGEM') {
+      this.snackBar.open('Use Controle > Missoes para registrar uma viagem.', 'Fechar', { duration: 3200 });
       return;
     }
 
@@ -1005,16 +1031,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     if (this.veiculoComDeslocamentoAutomatico(veiculo)) {
       this.snackBar.open('Veiculo com missao em andamento nao pode ser movido manualmente de coluna.', 'Fechar', { duration: 3200 });
-      return;
-    }
-
-    if (categoriaOrigem === 'USO_EXTERNO' && categoriaDestino === 'VIAGEM') {
-      this.snackBar.open('Receba o veiculo do uso externo antes de registrar uma nova viagem.', 'Fechar', { duration: 3200 });
-      return;
-    }
-
-    if (categoriaDestino === 'VIAGEM') {
-      this.abrirRegistroViagem(veiculo);
       return;
     }
 
@@ -1121,12 +1137,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const veiculo = this.veiculos.find(v => v.id === this.veiculoInclusaoSelecionadoId);
     if (!veiculo) {
       this.snackBar.open('Veiculo nao encontrado.', 'Fechar', { duration: 2400 });
-      return;
-    }
-
-    if (this.selectedCategoriaInclusao === 'VIAGEM') {
-      this.fecharInclusaoCategoria();
-      this.abrirRegistroViagem(veiculo);
       return;
     }
 
@@ -1258,6 +1268,64 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           }
         },
         error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar a viagem.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  abrirRetornoViagem(veiculo: Veiculo): void {
+    if (!veiculo.viagemId) {
+      this.snackBar.open('Esta viagem foi aberta pelo app. Use o encerramento da missao para finalizar administrativamente.', 'Fechar', { duration: 3600 });
+      return;
+    }
+    this.selectedVeiculoRetornoViagem = veiculo;
+    this.showRetornoViagemModal = true;
+    this.retornoViagemForm.reset({
+      dataHoraRetorno: this.agoraDateTimeLocal(),
+      observacao: '',
+      justificativaSemChecklist: ''
+    });
+  }
+
+  fecharRetornoViagem(): void {
+    this.showRetornoViagemModal = false;
+    this.selectedVeiculoRetornoViagem = null;
+    this.retornoViagemForm.reset({
+      dataHoraRetorno: this.agoraDateTimeLocal(),
+      observacao: '',
+      justificativaSemChecklist: ''
+    });
+  }
+
+  salvarRetornoViagem(): void {
+    if (!this.selectedVeiculoRetornoViagem) {
+      return;
+    }
+    if (this.retornoViagemForm.invalid) {
+      this.retornoViagemForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.retornoViagemForm.getRawValue();
+    const payload: RegistrarRetornoViagemPayload = {
+      dataHoraRetorno: raw.dataHoraRetorno,
+      observacao: this.toNullIfBlank(raw.observacao),
+      justificativaSemChecklist: raw.justificativaSemChecklist.trim()
+    };
+
+    this.salvandoRetornoViagem = true;
+    this.adminService.registrarRetornoViagem(this.selectedVeiculoRetornoViagem.id, payload)
+      .pipe(finalize(() => (this.salvandoRetornoViagem = false)))
+      .subscribe({
+        next: () => {
+          const historicoAbertoParaMesmoVeiculo = this.selectedVeiculoHistorico?.id === this.selectedVeiculoRetornoViagem?.id;
+          const veiculoHistorico = this.selectedVeiculoHistorico;
+          this.snackBar.open('Retorno da viagem registrado com sucesso.', 'Fechar', { duration: 2400 });
+          this.fecharRetornoViagem();
+          this.carregarVeiculos(this.veiculoBusca);
+          if (historicoAbertoParaMesmoVeiculo && veiculoHistorico) {
+            this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar o retorno da viagem.', 'Fechar', { duration: 3200 })
       });
   }
 
@@ -1451,7 +1519,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return `Destino: ${destino} | Setor: ${setor} | Solicitante: ${solicitante}`;
     }
     if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
-      return `Destino: ${evento.detalhe?.localDestino || '-'}`;
+      return `Local da viagem: ${evento.detalhe?.localDestino || '-'}`;
     }
     if (evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO') {
       const contraparte = evento.detalhe?.nomeContraparte || '-';
@@ -1462,6 +1530,21 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   eventoEhUsoExterno(evento: EventoHistoricoVeiculo): boolean {
     return evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO';
+  }
+
+  eventoEhViagemHistorico(evento: EventoHistoricoVeiculo): boolean {
+    return evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA';
+  }
+
+  statusDocumentalEventoHistoricoLabel(evento: EventoHistoricoVeiculo): string {
+    const status = evento.detalhe?.statusDocumentalMissao;
+    if (!status) {
+      return '-';
+    }
+    return this.statusDocumentalMissaoLabel(
+      status,
+      this.eventoEhViagemHistorico(evento) ? 'VIAGEM' : 'NA_CIDADE'
+    );
   }
 
   historicoVeiculoBadgePrincipal(evento: EventoHistoricoVeiculo): string {
@@ -1895,6 +1978,25 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return veiculo.statusAutomatico === 'CIRCULANDO' || veiculo.statusAutomatico === 'EM_VIAGEM';
   }
 
+  novaMissaoEhViagem(): boolean {
+    return this.novaMissaoModo === 'VIAGEM';
+  }
+
+  setNovaMissaoModo(modo: 'CONTINGENCIA' | 'VIAGEM' | 'PENDENTE'): void {
+    this.novaMissaoModo = modo;
+    const controleLocalDestino = this.missaoContingenciaForm.controls.localDestino;
+    if (modo === 'VIAGEM') {
+      controleLocalDestino.setValidators([Validators.required, Validators.maxLength(180)]);
+      this.missaoContingenciaForm.patchValue({
+        setorSolicitante: '',
+        solicitanteNome: ''
+      });
+    } else {
+      controleLocalDestino.setValidators([Validators.maxLength(180)]);
+    }
+    controleLocalDestino.updateValueAndValidity({ emitEvent: false });
+  }
+
   private veiculoDisponivelParaNovaMissao(veiculo: Veiculo): boolean {
     return veiculo.statusAtual === 'BASE_JOAO_GOULART'
       || veiculo.statusAtual === 'NO_PATIO'
@@ -1969,6 +2071,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.statusMissaoLabels[status];
   }
 
+  tipoDeslocamentoMissaoLabel(tipo: TipoDeslocamentoMissao): string {
+    return tipo === 'VIAGEM' ? 'Viagem' : 'Missao na cidade';
+  }
+
   classeLinhaMissao(missao: MissaoResponse): string {
     if (missao.statusDocumental === 'PENDENTE_DADOS_ADMIN') {
       return 'missao-row-pendente';
@@ -1979,8 +2085,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return 'missao-row-finalizada';
   }
 
-  statusDocumentalMissaoLabel(status: StatusDocumentalMissao): string {
-    return this.statusDocumentalMissaoLabels[status];
+  statusDocumentalMissaoLabel(status: StatusDocumentalMissao, tipoDeslocamento: TipoDeslocamentoMissao = 'NA_CIDADE'): string {
+    return tipoDeslocamento === 'VIAGEM'
+      ? this.statusDocumentalViagemLabels[status]
+      : this.statusDocumentalMissaoLabels[status];
   }
 
   classeStatusDocumentalMissao(status: StatusDocumentalMissao): string {
@@ -1990,10 +2098,31 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   resumoDadosAdministrativos(missao: MissaoResponse): string {
+    if (missao.tipoDeslocamento === 'VIAGEM') {
+      return `Local da viagem: ${missao.localDestino || '-'}`;
+    }
     const destino = missao.localDestino || '-';
     const setor = missao.setorSolicitante || '-';
     const solicitante = missao.solicitanteNome || '-';
     return `Destino: ${destino} | Setor: ${setor} | Solicitante: ${solicitante}`;
+  }
+
+  labelStatusDocumentalMissao(missao: MissaoResponse | null | undefined): string {
+    if (!missao) {
+      return this.statusDocumentalMissaoLabels.PENDENTE_DADOS_ADMIN;
+    }
+    return this.statusDocumentalMissaoLabel(
+      missao.statusDocumental,
+      missao.tipoDeslocamento || 'NA_CIDADE'
+    );
+  }
+
+  labelCampoContextoMissao(missao: MissaoResponse | null | undefined): string {
+    return missao?.tipoDeslocamento === 'VIAGEM' ? 'Local da viagem' : 'Destino';
+  }
+
+  exibeCamposUrbanosMissao(missao: MissaoResponse | null | undefined): boolean {
+    return (missao?.tipoDeslocamento || 'NA_CIDADE') !== 'VIAGEM';
   }
 
   origemAberturaMissaoLabel(origem: OrigemAberturaMissao): string {
@@ -2160,11 +2289,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   abrirEdicaoDadosMissao(missao: MissaoResponse): void {
+    const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     this.selectedMissaoDadosAdmin = missao;
     this.missaoDadosForm.reset({
       localDestino: missao.localDestino || '',
-      setorSolicitante: missao.setorSolicitante || '',
-      solicitanteNome: missao.solicitanteNome || ''
+      setorSolicitante: exibeCamposUrbanos ? (missao.setorSolicitante || '') : '',
+      solicitanteNome: exibeCamposUrbanos ? (missao.solicitanteNome || '') : ''
     });
   }
 
@@ -2184,10 +2314,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const raw = this.missaoDadosForm.getRawValue();
+    const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     this.adminService.atualizarDadosAdministrativosMissao(missao.id, {
       localDestino: this.toNullIfBlank(raw.localDestino),
-      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
-      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
+      setorSolicitante: exibeCamposUrbanos ? this.toNullIfBlank(raw.setorSolicitante) : null,
+      solicitanteNome: exibeCamposUrbanos ? this.toNullIfBlank(raw.solicitanteNome) : null
     }).subscribe({
       next: (updated) => {
         this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
@@ -2223,6 +2354,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   abrirEdicaoManualMissao(missao: MissaoResponse): void {
+    const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     this.selectedMissaoEdicaoManual = missao;
     this.missaoEdicaoManualForm.reset({
       motoristaId: missao.motoristaId,
@@ -2232,8 +2364,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       justificativaAbertura: missao.justificativaContingenciaAbertura || '',
       justificativaEncerramento: missao.justificativaContingenciaEncerramento || '',
       localDestino: missao.localDestino || '',
-      setorSolicitante: missao.setorSolicitante || '',
-      solicitanteNome: missao.solicitanteNome || '',
+      setorSolicitante: exibeCamposUrbanos ? (missao.setorSolicitante || '') : '',
+      solicitanteNome: exibeCamposUrbanos ? (missao.solicitanteNome || '') : '',
       justificativaEdicao: ''
     });
 
@@ -2291,6 +2423,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const raw = this.missaoEdicaoManualForm.getRawValue();
+    const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     const payload: EditarMissaoManualPayload = {
       motoristaId: raw.motoristaId,
       veiculoId: raw.veiculoId,
@@ -2301,8 +2434,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         ? this.toNullIfBlank(raw.justificativaEncerramento)
         : missao.justificativaContingenciaEncerramento,
       localDestino: this.toNullIfBlank(raw.localDestino),
-      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
-      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome),
+      setorSolicitante: exibeCamposUrbanos ? this.toNullIfBlank(raw.setorSolicitante) : null,
+      solicitanteNome: exibeCamposUrbanos ? this.toNullIfBlank(raw.solicitanteNome) : null,
       justificativaEdicao: raw.justificativaEdicao.trim()
     };
 
@@ -2439,7 +2572,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       motorista: 'Motorista',
       veiculo: 'Veiculo',
-      localDestino: 'Destino',
+      localDestino: 'Destino / local',
       setorSolicitante: 'Setor solicitante',
       solicitanteNome: 'Quem solicitou',
       justificativaContingenciaAbertura: 'Justificativa do registro manual',
@@ -2582,6 +2715,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   resumoDadosAdministrativosPainel(veiculoId: number): string {
     const missao = this.missaoAtivaPorVeiculo(veiculoId);
+    if (missao?.tipoDeslocamento === 'VIAGEM') {
+      return `Local da viagem: ${this.valorPainelOuPendente(missao.localDestino)}`;
+    }
     const destino = this.valorPainelOuPendente(missao?.localDestino);
     const setor = this.valorPainelOuPendente(missao?.setorSolicitante);
     const solicitante = this.valorPainelOuPendente(missao?.solicitanteNome);

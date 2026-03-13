@@ -5,6 +5,7 @@ import com.frota.checklist.dto.FotoResponse;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.Foto;
 import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.entity.RegistroViagemVeiculo;
 import com.frota.checklist.entity.TipoFoto;
 import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.entity.TipoOperacao;
@@ -14,6 +15,7 @@ import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.ChecklistRepository;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.RegistroViagemVeiculoRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class ChecklistService {
     private final ChecklistRepository checklistRepository;
     private final VeiculoRepository veiculoRepository;
     private final MotoristaRepository motoristaRepository;
+    private final RegistroViagemVeiculoRepository registroViagemVeiculoRepository;
     private final FileStorageService fileStorageService;
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final MissaoExcecaoService missaoExcecaoService;
@@ -108,7 +112,15 @@ public class ChecklistService {
         if (saved.getTipoOperacao() == TipoOperacao.SAIDA) {
             missaoService.abrirComChecklist(saved, tipoDeslocamento);
         } else {
-            missaoService.encerrarComChecklist(saved);
+            Optional<RegistroViagemVeiculo> viagemAdministrativaAtiva = registroViagemVeiculoRepository
+                    .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(veiculoId);
+            if (tipoDeslocamento == TipoDeslocamentoMissao.VIAGEM
+                    && missaoService.buscarMissaoAtivaPorVeiculo(veiculoId).isEmpty()
+                    && viagemAdministrativaAtiva.isPresent()) {
+                encerrarViagemAdministrativaComChecklist(saved, viagemAdministrativaAtiva.get());
+            } else {
+                missaoService.encerrarComChecklist(saved);
+            }
         }
         missaoExcecaoService.regularizarPorChecklistChegada(saved);
         return toResponse(saved);
@@ -127,6 +139,19 @@ public class ChecklistService {
         if (fotoPainel == null || fotoEstepe == null || fotoLateralEsq == null || fotoLateralDir == null) {
             throw new BusinessException("E obrigatorio enviar as 4 fotos: PAINEL, ESTEPE, LATERAL_ESQ e LATERAL_DIR");
         }
+    }
+
+    private void encerrarViagemAdministrativaComChecklist(Checklist checklist, RegistroViagemVeiculo viagem) {
+        if (!viagem.getMotorista().getId().equals(checklist.getMotorista().getId())) {
+            throw new BusinessException("Checklist de chegada permitido somente para o motorista da viagem do veiculo");
+        }
+
+        viagem.setDataHoraRetorno(checklist.getDataHora());
+        registroViagemVeiculoRepository.save(viagem);
+
+        Veiculo veiculo = checklist.getVeiculo();
+        veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        veiculoRepository.save(veiculo);
     }
 
     private ChecklistResponse toResponse(Checklist checklist) {

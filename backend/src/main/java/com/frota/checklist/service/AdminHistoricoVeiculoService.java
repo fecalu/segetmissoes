@@ -785,6 +785,9 @@ public class AdminHistoricoVeiculoService {
     }
 
     private String descricaoDadosMissao(Missao missao) {
+        if (missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM) {
+            return "Local da viagem: %s".formatted(valorOuTraco(missao.getLocalDestino()));
+        }
         return "Destino: %s | Setor: %s | Solicitante: %s".formatted(
                 valorOuTraco(missao.getLocalDestino()),
                 valorOuTraco(missao.getSetorSolicitante()),
@@ -873,10 +876,10 @@ public class AdminHistoricoVeiculoService {
             case "veiculo" -> "Veiculo corrigido";
             case "justificativaContingenciaAbertura" -> "Justificativa do registro manual corrigida";
             case "justificativaContingenciaEncerramento" -> "Justificativa do encerramento manual corrigida";
-            case "localDestino" -> "Destino corrigido";
+            case "localDestino" -> "Destino / local corrigido";
             case "setorSolicitante" -> "Setor solicitante corrigido";
             case "solicitanteNome" -> "Quem solicitou corrigido";
-            case "statusDocumental" -> "Status dos dados da missao atualizado";
+            case "statusDocumental" -> "Status dos dados atualizado";
             default -> "Campo da missao ajustado";
         };
     }

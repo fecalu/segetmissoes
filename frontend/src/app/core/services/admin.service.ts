@@ -9,7 +9,8 @@ import {
   MissaoResponse,
   OrigemAberturaMissao,
   StatusDocumentalMissao,
-  StatusMissao
+  StatusMissao,
+  TipoDeslocamentoMissao
 } from '../models/missao.model';
 import { SalvarSugestoesCamposMissaoRequest, SugestoesCamposMissaoResponse } from '../models/missao-suggestion.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
@@ -59,6 +60,12 @@ export interface RegistrarVeiculoEmViagemPayload {
   observacao: string | null;
 }
 
+export interface RegistrarRetornoViagemPayload {
+  dataHoraRetorno: string;
+  observacao: string | null;
+  justificativaSemChecklist: string;
+}
+
 export interface RegistrarVeiculoEmUsoExternoPayload {
   nomeEntreguePara: string;
   tipoUsoExterno: TipoUsoExternoVeiculo;
@@ -85,6 +92,7 @@ export interface CriarMissaoContingenciaPayload {
   motoristaId: number;
   veiculoId: number;
   dataHoraInicio: string;
+  tipoDeslocamento: TipoDeslocamentoMissao;
   justificativaAbertura: string;
   localDestino: string | null;
   setorSolicitante: string | null;
@@ -271,6 +279,10 @@ export class AdminService {
 
   registrarVeiculoEmViagem(id: number, payload: RegistrarVeiculoEmViagemPayload): Observable<Veiculo> {
     return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/em-viagem`, payload);
+  }
+
+  registrarRetornoViagem(id: number, payload: RegistrarRetornoViagemPayload): Observable<Veiculo> {
+    return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/retorno-viagem`, payload);
   }
 
   registrarVeiculoEmUsoExterno(id: number, payload: RegistrarVeiculoEmUsoExternoPayload): Observable<Veiculo> {
