@@ -199,3 +199,28 @@ Depois, no Render:
 1. Abra o servico `seget-frontend` e confirme o dominio `segetmissoes.com.br`.
 2. Abra o servico `seget-backend` e confirme o dominio `api.segetmissoes.com.br`.
 3. Aguarde emissao do certificado TLS (SSL) e propagacao do DNS.
+
+## Deploy na Hostinger VPS
+
+O projeto tambem esta preparado para rodar em VPS propria usando Docker Compose de producao.
+
+Arquivos principais:
+
+- `docker-compose.prod.yml`: sobe frontend, backend e PostgreSQL em rede isolada.
+- `.env.prod.example`: modelo das variaveis reais de producao.
+- `deploy/nginx/segetmissoes.conf`: proxy Nginx para dominio e API.
+- `docs/deploy-hostinger.md`: passo a passo completo para subir na VPS.
+
+Resumo do fluxo:
+
+```bash
+cp .env.prod.example .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+Na VPS atual, a configuracao sugerida usa:
+
+- Frontend interno: `127.0.0.1:4320`
+- Backend interno: `127.0.0.1:8092`
+- Dominio: `segetmissoes.com.br`
+- API: `api.segetmissoes.com.br`
