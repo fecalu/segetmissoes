@@ -224,3 +224,20 @@ Na VPS atual, a configuracao sugerida usa:
 - Backend interno: `127.0.0.1:8092`
 - Dominio: `segetmissoes.com.br`
 - API: `api.segetmissoes.com.br`
+
+## Fluxo profissional de desenvolvimento
+
+Para usar este projeto como base de estudos e simular uma rotina de empresa, foi documentado um fluxo simples com branches, Pull Requests, CI e deploy manual para VPS.
+
+Leia:
+
+- `docs/dev-setup.md`
+- `docs/git-workflow.md`
+
+Resumo:
+
+- `main`: producao.
+- `develop`: integracao/testes.
+- `feature/*`, `fix/*`, `chore/*`: branches de trabalho.
+- GitHub Actions `CI`: valida backend, frontend e Docker Compose.
+- GitHub Actions `Deploy VPS`: publica manualmente na VPS usando SSH.
