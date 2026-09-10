@@ -21,14 +21,14 @@
     <section class="process-groups">
       <article class="process-group mission-group">
         <header class="group-header">
-          <h3>Missao na cidade</h3>
-          <p>Saidas e retornos da rotina urbana do setor.</p>
+          <h3>Missão na cidade</h3>
+          <p>Saídas e retornos da rotina urbana do setor.</p>
         </header>
         <div class="group-actions">
           <div class="mission-flow-shell" [class.expanded]="selectedMissaoCidadeFluxo === 'INICIAR'">
             <button mat-flat-button class="group-action-btn primary-card" type="button" [disabled]="hasMissaoAtiva()" (click)="toggleMissaoCidade('INICIAR')">
-              <strong>Iniciar Missao</strong>
-              <span class="line-break">Abrir missao urbana</span>
+              <strong>Iniciar Missão</strong>
+              <span class="line-break">Abrir missão urbana</span>
             </button>
             <div class="group-subactions" *ngIf="selectedMissaoCidadeFluxo === 'INICIAR'">
               <button mat-flat-button class="subaction-btn recommended-card" type="button" [disabled]="hasMissaoAtiva()" (click)="iniciarMissaoComChecklist()">
@@ -37,14 +37,14 @@
               </button>
               <button mat-flat-button class="subaction-btn warning-card" type="button" [disabled]="hasMissaoAtiva()" (click)="iniciarMissaoSemChecklist()">
                 <strong>Sem checklist</strong>
-                <span class="line-break">Somente emergencia operacional</span>
+                <span class="line-break">Somente emergência operacional</span>
               </button>
             </div>
           </div>
 
           <div class="mission-flow-shell" [class.expanded]="selectedMissaoCidadeFluxo === 'FINALIZAR'">
             <button mat-flat-button class="group-action-btn secondary-card" type="button" [disabled]="!hasMissaoNaCidadeAtiva()" (click)="toggleMissaoCidade('FINALIZAR')">
-              <strong>Finalizar Missao</strong>
+              <strong>Finalizar Missão</strong>
               <span class="line-break">{{ subtituloFinalizarMissao() }}</span>
             </button>
             <div class="group-subactions" *ngIf="selectedMissaoCidadeFluxo === 'FINALIZAR'">
@@ -54,7 +54,7 @@
               </button>
               <button mat-flat-button class="subaction-btn warning-card" type="button" [disabled]="!hasMissaoNaCidadeAtiva()" (click)="finalizarMissaoSemChecklist()">
                 <strong>Sem checklist</strong>
-                <span class="line-break">Somente emergencia operacional</span>
+                <span class="line-break">Somente emergência operacional</span>
               </button>
             </div>
           </div>
@@ -81,7 +81,7 @@
       <article class="process-group inspection-group">
         <header class="group-header">
           <h3>Vistoria Completa</h3>
-          <p>Entrega e recebimento de veiculos em uso externo com vistoria detalhada.</p>
+          <p>Entrega e recebimento de veículos em uso externo com vistoria detalhada.</p>
         </header>
         <div class="group-actions">
           <button
