@@ -3,15 +3,15 @@
     <div>
       <p class="eyebrow">CADASTROS / CONTROLE</p>
       <h1>Controle de alocações</h1>
-      <p class="page-description">Um controle independente para acompanhar veículo, responsável e histórico de cada alocação.</p>
+      <p class="page-description">Consulte as vagas por órgão e setor, o veículo e responsável atuais e todas as alterações registradas.</p>
     </div>
     <button mat-flat-button class="primary-action" type="button" (click)="abrirCriacao()"><app-icon name="plus" /> Nova alocação</button>
   </header>
 
   <section class="summary" aria-label="Resumo das alocações">
     <article><strong>{{ totalAtivas }}</strong><span>Alocações ativas</span></article>
+    <article><strong>{{ totalGrupos }}</strong><span>Grupos de órgão e setor</span></article>
     <article><strong>{{ totalEncerradas }}</strong><span>Encerradas na consulta</span></article>
-    <article><strong>{{ alocacoes.length }}</strong><span>Registros nesta consulta</span></article>
   </section>
 
   <section class="toolbar" aria-label="Filtros de alocações">
@@ -22,15 +22,14 @@
   <p class="empty-state" *ngIf="!carregando && !alocacoes.length">Nenhuma alocação encontrada. Crie a primeira para começar o controle.</p>
   <div class="table-wrap" *ngIf="alocacoes.length">
     <table class="allocation-table">
-      <thead><tr><th>Vaga</th><th>Placa</th><th>Responsável</th><th>Limite autorizado</th><th>Setor</th><th>Secretaria / órgão</th><th>Modelo</th><th>Situação</th><th>Observação</th><th>Ações</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let alocacao of alocacoes" [class.closed]="!alocacao.ativa">
+      <thead><tr><th>Vaga</th><th>Placa</th><th>Responsável</th><th>Limite autorizado</th><th>Modelo</th><th>Observação</th><th>Situação</th><th>Ações</th></tr></thead>
+      <tbody *ngFor="let grupo of gruposAlocacoes">
+        <tr class="group-row"><th colspan="8"><span>{{ grupo.orgao }}</span><span class="group-divider">/</span><strong>{{ grupo.setor }}</strong><small>{{ grupo.alocacoes.length }} {{ grupo.alocacoes.length === 1 ? 'vaga' : 'vagas' }} na consulta</small></th></tr>
+        <tr *ngFor="let alocacao of grupo.alocacoes; let impar = odd" [class.closed]="!alocacao.ativa" [class.pale-row]="impar">
           <td class="number">{{ alocacao.numeroControle }}</td>
-          <td><strong>{{ alocacao.placa }}</strong><small *ngIf="alocacao.marca">{{ alocacao.marca }}</small></td>
+          <td><button *ngIf="alocacao.linkConsulta; else placaSemLink" class="plate-link" type="button" (click)="abrirLinkConsulta(alocacao.linkConsulta)" title="Abrir link de consulta cadastrado">{{ alocacao.placa }}</button><ng-template #placaSemLink><span class="plate-no-link" title="Cadastre um link de consulta para esta placa">{{ alocacao.placa }}</span></ng-template><small *ngIf="alocacao.marca">{{ alocacao.marca }}</small></td>
           <td>{{ alocacao.responsavelNome }}</td>
           <td>{{ alocacao.limiteAutorizado }}</td>
-          <td>{{ alocacao.setor }}</td>
-          <td>{{ alocacao.secretariaOrgao }}</td>
           <td>{{ alocacao.modelo }}</td>
           <td><span class="status" [class.inactive]="!alocacao.ativa">{{ alocacao.ativa ? 'ATIVA' : 'ENCERRADA' }}</span></td>
           <td class="observation">{{ alocacao.observacao || '—' }}</td>
@@ -58,6 +57,7 @@
         <label>Setor <input formControlName="setor" /></label>
         <label>Limite autorizado <input formControlName="limiteAutorizado" placeholder="Ex.: R$ 1.000,00 ou Não Renova" /></label>
         <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
+        <label class="full">Link de consulta da placa <input type="url" formControlName="linkConsulta" placeholder="https://..." /><small>Opcional. Quando informado, a placa abrirá este endereço em uma nova aba.</small></label>
         <label class="full">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional"></textarea></label>
         <button mat-flat-button class="primary-action full" [disabled]="salvando" type="submit">{{ salvando ? 'Salvando...' : (editorMode === 'CRIAR' ? 'Criar alocação' : 'Salvar dados') }}</button>
       </form>
@@ -94,7 +94,7 @@
     <ng-container *ngIf="editorMode === 'HISTORICO'">
       <p class="eyebrow">ALOC. {{ selected?.numeroControle }}</p><h2>Histórico da alocação</h2>
       <p class="history-empty" *ngIf="!historico.length">Carregando histórico...</p>
-      <ol class="history-list" *ngIf="historico.length"><li *ngFor="let evento of historico"><div><strong>{{ labelEvento(evento.tipo) }}</strong><span>{{ formatarData(evento.dataHora) }} por {{ evento.administradorNome }}</span></div><p *ngIf="evento.veiculoAnteriorPlaca || evento.veiculoNovoPlaca">Veículo: {{ evento.veiculoAnteriorPlaca || '—' }} <span aria-hidden="true">→</span> {{ evento.veiculoNovoPlaca || '—' }}</p><p *ngIf="evento.responsavelAnterior || evento.responsavelNovo">Responsável: {{ evento.responsavelAnterior || '—' }} <span aria-hidden="true">→</span> {{ evento.responsavelNovo || '—' }}</p><p *ngIf="evento.observacao">{{ evento.observacao }}</p></li></ol>
+      <div class="history-table-wrap" *ngIf="historico.length"><table class="history-table"><thead><tr><th>Data e hora</th><th>Evento</th><th>Antes</th><th>Depois</th><th>Motivo / observação</th><th>Alterado por</th></tr></thead><tbody><tr *ngFor="let evento of historico"><td>{{ formatarData(evento.dataHora) }}</td><td><strong>{{ labelEvento(evento.tipo) }}</strong></td><td class="change-cell">{{ resumoAntes(evento) }}</td><td class="change-cell">{{ resumoDepois(evento) }}</td><td>{{ observacaoEvento(evento) }}</td><td>{{ evento.administradorNome }}</td></tr></tbody></table></div>
     </ng-container>
   </section>
 </div>

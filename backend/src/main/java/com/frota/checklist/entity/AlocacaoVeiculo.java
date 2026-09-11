@@ -49,6 +49,9 @@ public class AlocacaoVeiculo {
     private String documentoReferencia;
 
     @Column(length = 500)
+    private String linkConsulta;
+
+    @Column(length = 500)
     private String observacao;
 
     @Column(nullable = false)

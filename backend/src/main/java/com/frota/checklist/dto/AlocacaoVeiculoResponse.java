@@ -13,6 +13,7 @@ public record AlocacaoVeiculoResponse(
         String setor,
         String limiteAutorizado,
         String documentoReferencia,
+        String linkConsulta,
         String observacao,
         Boolean ativa,
         LocalDateTime criadaEm,

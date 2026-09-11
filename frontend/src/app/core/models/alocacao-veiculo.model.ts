@@ -17,6 +17,7 @@ export interface AlocacaoVeiculo {
   setor: string;
   limiteAutorizado: string;
   documentoReferencia: string | null;
+  linkConsulta: string | null;
   observacao: string | null;
   ativa: boolean;
   criadaEm: string;
@@ -48,6 +49,7 @@ export interface CriarAlocacaoVeiculoPayload {
   setor: string;
   limiteAutorizado: string;
   documentoReferencia: string | null;
+  linkConsulta: string | null;
   observacao: string | null;
 }
 
@@ -56,5 +58,6 @@ export interface AtualizarDadosAlocacaoVeiculoPayload {
   setor: string;
   limiteAutorizado: string;
   documentoReferencia: string | null;
+  linkConsulta: string | null;
   observacao: string | null;
 }

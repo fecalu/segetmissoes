@@ -16,6 +16,12 @@ import { AppIconComponent } from '../../shared/ui/app-icon.component';
 
 type EditorMode = 'CRIAR' | 'DADOS' | 'VEICULO' | 'RESPONSAVEL' | 'ENCERRAR' | 'HISTORICO' | null;
 
+interface GrupoAlocacao {
+  orgao: string;
+  setor: string;
+  alocacoes: AlocacaoVeiculo[];
+}
+
 @Component({
   selector: 'app-admin-allocation',
   imports: [CommonModule, FormsModule, ReactiveFormsModule, MatButtonModule, MatSnackBarModule, AppIconComponent],
@@ -45,6 +51,7 @@ export class AdminAllocationComponent implements OnInit {
     setor: ['', [Validators.required, Validators.maxLength(160)]],
     limiteAutorizado: ['', [Validators.required, Validators.maxLength(60)]],
     documentoReferencia: ['', Validators.maxLength(180)],
+    linkConsulta: ['', [Validators.maxLength(500), Validators.pattern(/^https?:\/\/.+/i)]],
     observacao: ['', Validators.maxLength(500)]
   });
   readonly veiculoForm = this.fb.group({
@@ -67,6 +74,21 @@ export class AdminAllocationComponent implements OnInit {
 
   get totalAtivas(): number { return this.alocacoes.filter(item => item.ativa).length; }
   get totalEncerradas(): number { return this.alocacoes.filter(item => !item.ativa).length; }
+  get gruposAlocacoes(): GrupoAlocacao[] {
+    const grupos = new Map<string, GrupoAlocacao>();
+    for (const alocacao of this.alocacoes) {
+      const orgao = alocacao.secretariaOrgao.trim();
+      const setor = alocacao.setor.trim();
+      const chave = `${orgao}\u0000${setor}`.toLocaleLowerCase('pt-BR');
+      const grupo = grupos.get(chave) ?? { orgao, setor, alocacoes: [] };
+      grupo.alocacoes.push(alocacao);
+      grupos.set(chave, grupo);
+    }
+    return [...grupos.values()]
+      .sort((a, b) => a.orgao.localeCompare(b.orgao, 'pt-BR') || a.setor.localeCompare(b.setor, 'pt-BR'))
+      .map(grupo => ({ ...grupo, alocacoes: [...grupo.alocacoes].sort((a, b) => a.numeroControle - b.numeroControle) }));
+  }
+  get totalGrupos(): number { return this.gruposAlocacoes.length; }
 
   carregar(): void {
     this.carregando = true;
@@ -82,7 +104,7 @@ export class AdminAllocationComponent implements OnInit {
     this.selected = null;
     this.alocacaoForm.reset({
       placa: '', modelo: '', marca: '', responsavelNome: '', secretariaOrgao: '', setor: '', limiteAutorizado: '',
-      documentoReferencia: '', observacao: ''
+      documentoReferencia: '', linkConsulta: '', observacao: ''
     });
     this.editorMode = 'CRIAR';
   }
@@ -98,6 +120,7 @@ export class AdminAllocationComponent implements OnInit {
       setor: alocacao.setor,
       limiteAutorizado: alocacao.limiteAutorizado,
       documentoReferencia: alocacao.documentoReferencia || '',
+      linkConsulta: alocacao.linkConsulta || '',
       observacao: alocacao.observacao || ''
     });
     this.editorMode = 'DADOS';
@@ -131,6 +154,10 @@ export class AdminAllocationComponent implements OnInit {
     });
   }
 
+  abrirLinkConsulta(link: string): void {
+    window.open(link, '_blank', 'noopener');
+  }
+
   salvarAlocacao(): void {
     if (this.alocacaoForm.invalid) {
       this.alocacaoForm.markAllAsTouched();
@@ -141,7 +168,7 @@ export class AdminAllocationComponent implements OnInit {
     if (this.editorMode === 'CRIAR') {
       const payload: CriarAlocacaoVeiculoPayload = {
         placa: value.placa!, modelo: value.modelo!, marca: this.nulo(value.marca), responsavelNome: value.responsavelNome!, secretariaOrgao: value.secretariaOrgao!,
-        setor: value.setor!, limiteAutorizado: value.limiteAutorizado!, documentoReferencia: this.nulo(value.documentoReferencia),
+        setor: value.setor!, limiteAutorizado: value.limiteAutorizado!, documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.nulo(value.linkConsulta),
         observacao: this.nulo(value.observacao)
       };
       this.adminService.criarAlocacao(payload).pipe(finalize(() => this.salvando = false)).subscribe({
@@ -153,7 +180,7 @@ export class AdminAllocationComponent implements OnInit {
 
     const payload: AtualizarDadosAlocacaoVeiculoPayload = {
       secretariaOrgao: value.secretariaOrgao!, setor: value.setor!, limiteAutorizado: value.limiteAutorizado!,
-      documentoReferencia: this.nulo(value.documentoReferencia), observacao: this.nulo(value.observacao)
+      documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.nulo(value.linkConsulta), observacao: this.nulo(value.observacao)
     };
     this.adminService.atualizarDadosAlocacao(this.selected!.id, payload).pipe(finalize(() => this.salvando = false)).subscribe({
       next: () => { this.mensagem('Dados da alocação atualizados.'); this.fecharEditor(); this.carregar(); },
@@ -183,6 +210,11 @@ export class AdminAllocationComponent implements OnInit {
     return { IMPORTACAO_INICIAL: 'Importação inicial', CRIACAO: 'Alocação criada', TROCA_VEICULO: 'Veículo trocado', TROCA_RESPONSAVEL: 'Responsável trocado', ATUALIZACAO_DADOS: 'Dados atualizados', ENCERRAMENTO: 'Alocação encerrada' }[tipo];
   }
   formatarData(value: string): string { return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
+  resumoAntes(evento: HistoricoAlocacaoVeiculo): string { return this.resumoEvento(evento, 'ANTES'); }
+  resumoDepois(evento: HistoricoAlocacaoVeiculo): string { return this.resumoEvento(evento, 'DEPOIS'); }
+  observacaoEvento(evento: HistoricoAlocacaoVeiculo): string {
+    return this.dadosAdministrativosEvento(evento) ? 'Dados administrativos atualizados.' : evento.observacao || '—';
+  }
 
   private executar(requisicao: () => ReturnType<AdminService['encerrarAlocacao']>, sucesso: string): void {
     this.salvando = true;
@@ -194,4 +226,42 @@ export class AdminAllocationComponent implements OnInit {
   private nulo(value: string | null | undefined): string | null { return value?.trim() || null; }
   private mensagem(texto: string): void { this.snackBar.open(texto, 'Fechar', { duration: 4000 }); }
   private erroApi(error: { error?: { message?: string } }, padrao: string): string { return error?.error?.message || padrao; }
+  private resumoEvento(evento: HistoricoAlocacaoVeiculo, lado: 'ANTES' | 'DEPOIS'): string {
+    const dadosAdministrativos = this.dadosAdministrativosEvento(evento);
+    if (dadosAdministrativos) {
+      const dados = lado === 'ANTES' ? dadosAdministrativos.antes : dadosAdministrativos.depois;
+      const outroLado = lado === 'ANTES' ? dadosAdministrativos.depois : dadosAdministrativos.antes;
+      const alteracoes = dados
+        .map((valor, indice) => valor !== outroLado[indice] ? `${dadosAdministrativos.rotulos[indice]}: ${valor}` : '')
+        .filter(Boolean);
+      return alteracoes.join('\n') || 'Sem alteração identificada';
+    }
+    const placa = lado === 'ANTES' ? evento.veiculoAnteriorPlaca : evento.veiculoNovoPlaca;
+    const responsavel = lado === 'ANTES' ? evento.responsavelAnterior : evento.responsavelNovo;
+    const limite = lado === 'ANTES' ? evento.limiteAnterior : evento.limiteNovo;
+    const dados = [
+      placa ? `Veículo: ${placa}` : '',
+      responsavel ? `Responsável: ${responsavel}` : '',
+      limite ? `Limite: ${limite}` : ''
+    ].filter(Boolean);
+    return dados.join('\n') || '—';
+  }
+  private dadosAdministrativosEvento(evento: HistoricoAlocacaoVeiculo): { antes: string[]; depois: string[]; rotulos: string[] } | null {
+    if (evento.tipo !== 'ATUALIZACAO_DADOS' || !evento.observacao?.includes('->')) return null;
+    const versao2 = /^Dados atualizados v2:/i.test(evento.observacao);
+    const conteudo = evento.observacao.replace(/^Dados atualizados(?: v2)?:\s*/i, '');
+    const [antes, depois, ...restante] = conteudo.split(/\s*->\s*/);
+    if (!antes || !depois || restante.length) return null;
+    const rotulos = versao2
+      ? ['Órgão', 'Setor', 'Limite autorizado', 'Documento', 'Link de consulta', 'Observação']
+      : ['Órgão', 'Setor', 'Limite autorizado', 'Documento', 'Observação'];
+    return { antes: this.camposAdministrativos(antes, rotulos.length), depois: this.camposAdministrativos(depois, rotulos.length), rotulos };
+  }
+  private camposAdministrativos(valor: string, quantidade: number): string[] {
+    const campos = valor.split('|');
+    return Array.from({ length: quantidade }, (_, indice) => {
+      const campo = campos[indice]?.trim();
+      return !campo || campo.toLowerCase() === 'null' ? 'Não informado' : campo;
+    });
+  }
 }

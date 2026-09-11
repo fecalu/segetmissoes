@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -60,6 +61,7 @@ public class AdminAlocacaoVeiculoService {
         alocacao.setSetor(obrigatorio(request.setor()));
         alocacao.setLimiteAutorizado(obrigatorio(request.limiteAutorizado()));
         alocacao.setDocumentoReferencia(opcional(request.documentoReferencia()));
+        alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
         alocacao.setObservacao(opcional(request.observacao()));
         alocacao.setAtiva(true);
         alocacao.setCriadaEm(LocalDateTime.now());
@@ -80,13 +82,14 @@ public class AdminAlocacaoVeiculoService {
         alocacao.setSetor(obrigatorio(request.setor()));
         alocacao.setLimiteAutorizado(obrigatorio(request.limiteAutorizado()));
         alocacao.setDocumentoReferencia(opcional(request.documentoReferencia()));
+        alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
         alocacao.setObservacao(opcional(request.observacao()));
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         String depois = resumoDados(salva);
         if (!antes.equals(depois)) {
             registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.ATUALIZACAO_DADOS,
                     salva.getPlaca(), salva.getPlaca(), null, null, limiteAnterior, salva.getLimiteAutorizado(),
-                    "Dados atualizados: " + antes + " -> " + depois);
+                    "Dados atualizados v2: " + antes + " -> " + depois);
         }
         return toResponse(salva);
     }
@@ -214,14 +217,28 @@ public class AdminAlocacaoVeiculoService {
     }
     private String opcional(String valor) { return valor == null || valor.isBlank() ? null : valor.trim(); }
     private String normalizarPlaca(String placa) { return obrigatorio(placa).replace("-", "").toUpperCase(); }
+    private String validarLinkConsulta(String valor) {
+        String link = opcional(valor);
+        if (link == null) return null;
+        try {
+            URI uri = URI.create(link);
+            if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+                throw new BusinessException("O link de consulta deve começar com http:// ou https://");
+            }
+            return link;
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException("Informe um link de consulta válido");
+        }
+    }
     private String resumoDados(AlocacaoVeiculo alocacao) {
         return alocacao.getSecretariaOrgao() + "|" + alocacao.getSetor() + "|" + alocacao.getLimiteAutorizado()
-                + "|" + opcional(alocacao.getDocumentoReferencia()) + "|" + opcional(alocacao.getObservacao());
+                + "|" + opcional(alocacao.getDocumentoReferencia()) + "|" + opcional(alocacao.getLinkConsulta())
+                + "|" + opcional(alocacao.getObservacao());
     }
     private AlocacaoVeiculoResponse toResponse(AlocacaoVeiculo alocacao) {
         return new AlocacaoVeiculoResponse(alocacao.getId(), alocacao.getNumeroControle(), alocacao.getPlaca(),
                 alocacao.getModelo(), alocacao.getMarca(), alocacao.getResponsavelNome(), alocacao.getSecretariaOrgao(),
-                alocacao.getSetor(), alocacao.getLimiteAutorizado(), alocacao.getDocumentoReferencia(), alocacao.getObservacao(),
+                alocacao.getSetor(), alocacao.getLimiteAutorizado(), alocacao.getDocumentoReferencia(), alocacao.getLinkConsulta(), alocacao.getObservacao(),
                 alocacao.getAtiva(), alocacao.getCriadaEm(), alocacao.getEncerradaEm());
     }
 }

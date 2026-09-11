@@ -504,10 +504,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.carregarRotulosStatus(false);
     this.iniciarRelogioTempoReal();
     this.menuSub = this.route.queryParamMap.pipe(
-      map(params => params.get('menu')),
-      map(menu => this.isAdminMenu(menu) ? this.normalizarMenu(menu) : 'operacao' as AdminMenu),
-      distinctUntilChanged()
-    ).subscribe(menu => this.aplicarMenu(menu));
+      map(params => ({
+        menu: this.isAdminMenu(params.get('menu')) ? this.normalizarMenu(params.get('menu') as AdminMenu) : 'operacao' as AdminMenu,
+        buscaPlaca: params.get('buscaPlaca') || ''
+      })),
+      distinctUntilChanged((anterior, atual) => anterior.menu === atual.menu && anterior.buscaPlaca === atual.buscaPlaca)
+    ).subscribe(({ menu, buscaPlaca }) => {
+      this.veiculoBusca = buscaPlaca;
+      this.aplicarMenu(menu);
+    });
   }
 
   ngOnDestroy(): void {
@@ -551,6 +556,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.garantirDadosBasicos(menu);
+    if (menu === 'veiculos' && !this.loadingVeiculos) {
+      this.carregarVeiculos(this.veiculoBusca);
+    }
     if (menu !== 'tempo-real' && menu !== 'operacao') {
       this.carregarDadosDoMenu(menu, true);
     }
@@ -3040,7 +3048,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.carregarMotoristas();
     }
     if (precisaVeiculos && this.veiculos.length === 0 && !this.loadingVeiculos) {
-      this.carregarVeiculos();
+      this.carregarVeiculos(menu === 'veiculos' ? this.veiculoBusca : undefined);
     }
   }
 
