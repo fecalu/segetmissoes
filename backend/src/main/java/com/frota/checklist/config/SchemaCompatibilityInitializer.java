@@ -52,19 +52,22 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_anterior_check");
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_novo_check");
 
-        String allowed = """
-                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO','EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
-                """;
         executarSilencioso("""
                 alter table historico_status_veiculo
                 add constraint historico_status_veiculo_status_anterior_check
-                check (status_anterior in
-                """ + allowed + ")");
+                check (status_anterior in (
+                    'CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO'
+                ))
+                """);
         executarSilencioso("""
                 alter table historico_status_veiculo
                 add constraint historico_status_veiculo_status_novo_check
-                check (status_novo in
-                """ + allowed + ")");
+                check (status_novo in (
+                    'CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO'
+                ))
+                """);
     }
 
     private void atualizarConstraintsConfigRotuloStatusVeiculo() {

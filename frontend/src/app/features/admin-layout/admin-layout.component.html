@@ -26,24 +26,26 @@
     <span class="brand-symbol"><app-icon name="fleet" /></span>
     <span><strong>SEGET<span class="brand-dot">.</span></strong><small>Gestão de frota</small></span>
   </a>
-  <p class="nav-caption">ÁREA ADMINISTRATIVA</p>
   <nav class="side-navigation" aria-label="Navegação administrativa">
-    <div class="nav-group" *ngFor="let item of navigation">
-      <a *ngIf="!item.children" class="nav-item" [class.active]="activeId === item.id" [routerLink]="item.path" [queryParams]="item.menu ? {menu: item.menu} : {}" [attr.aria-current]="activeId === item.id ? 'page' : null" (click)="closeMenu()">
-        <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
-        <span class="active-indicator" *ngIf="activeId === item.id" aria-hidden="true"></span>
-      </a>
-      <button *ngIf="item.children" class="nav-item" [class.active]="activeId === item.id" type="button" [attr.aria-expanded]="isExpanded(item)" (click)="toggleGroup(item)">
-        <app-icon [name]="item.icon" /><span>{{ item.label }}</span><app-icon class="nav-chevron" [class.expanded]="isExpanded(item)" name="arrow" />
-      </button>
-      <div class="nav-children" *ngIf="item.children && isExpanded(item)">
-        <a *ngFor="let child of item.children" [routerLink]="child.path" [queryParams]="{menu: child.menu}" [class.current]="isCurrent(child)" [attr.aria-current]="isCurrent(child) ? 'page' : null" (click)="closeMenu()">{{ child.label }}</a>
+    <section class="nav-section" *ngFor="let section of navigationGroups">
+      <p class="nav-caption">{{ section.label }}</p>
+      <div class="nav-group" *ngFor="let item of section.items">
+        <a *ngIf="!item.children" class="nav-item" [class.active]="activeId === item.id" [routerLink]="item.path" [queryParams]="item.menu ? {menu: item.menu} : {}" [attr.aria-current]="activeId === item.id ? 'page' : null" (click)="closeMenu()">
+          <app-icon [name]="item.icon" /><span>{{ item.label }}</span>
+          <span class="active-indicator" *ngIf="activeId === item.id" aria-hidden="true"></span>
+        </a>
+        <button *ngIf="item.children" class="nav-item" [class.active]="activeId === item.id" type="button" [attr.aria-expanded]="isExpanded(item)" (click)="toggleGroup(item)">
+          <app-icon [name]="item.icon" /><span>{{ item.label }}</span><app-icon class="nav-chevron" [class.expanded]="isExpanded(item)" name="arrow" />
+        </button>
+        <div class="nav-children" *ngIf="item.children && isExpanded(item)">
+          <a *ngFor="let child of item.children" [routerLink]="child.path" [queryParams]="{menu: child.menu}" [class.current]="isCurrent(child)" [attr.aria-current]="isCurrent(child) ? 'page' : null" (click)="closeMenu()">{{ child.label }}</a>
+        </div>
       </div>
-    </div>
+    </section>
   </nav>
   <footer class="sidebar-footer">
     <p class="institution">Serviços Gerais<br>e Transportes</p>
-    <div class="account"><span class="avatar">{{ initials }}</span><span><strong>{{ auth.loggedName() || 'Administrador' }}</strong><small>Administrador</small></span></div>
-    <button *ngIf="activeId === 'operacao'" class="logout-button" type="button" (click)="auth.logout()"><app-icon name="logout" /> Sair do sistema</button>
+    <div class="account"><span class="avatar">{{ initials }}</span><span><strong>{{ auth.loggedName() || 'Administrador' }}</strong><small>{{ auth.perfilLabel }}</small></span></div>
+    <button class="logout-button" type="button" (click)="auth.logout()"><app-icon name="logout" /> Sair do sistema</button>
   </footer>
 </ng-template>

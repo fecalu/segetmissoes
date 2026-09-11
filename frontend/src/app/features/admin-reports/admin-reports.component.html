@@ -13,5 +13,5 @@
     <p class="success" role="status" *ngIf="success">{{ success }}</p>
   </section>
   <a class="report-card report-link" routerLink="/admin/checklists/relatorio"><span class="report-icon"><app-icon name="inspection" /></span><h2>Relatório de checklists</h2><p>Selecione um período e exporte os checklists registrados.</p><span class="link-label">Selecionar período <app-icon name="arrow" /></span></a>
-  <a class="report-card report-link" routerLink="/admin/estatisticas/missoes"><span class="report-icon"><app-icon name="report" /></span><h2>Estatísticas de missões</h2><p>Compare a quantidade de missões e o tempo em deslocamento.</p><span class="link-label">Ver estatísticas <app-icon name="arrow" /></span></a>
+  <a *ngIf="auth.can('ESTATISTICA_CONSULTAR')" class="report-card report-link" routerLink="/admin/estatisticas/missoes"><span class="report-icon"><app-icon name="report" /></span><h2>Estatísticas de missões</h2><p>Compare a quantidade de missões e o tempo em deslocamento.</p><span class="link-label">Ver estatísticas <app-icon name="arrow" /></span></a>
 </div>

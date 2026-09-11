@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.MissaoResponse;
 import com.frota.checklist.entity.Missao;
@@ -39,6 +41,8 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class AdminMissaoService {
+
+    private final AutorizacaoService autorizacao;
 
     private static final DateTimeFormatter AUDITORIA_DATA_HORA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -202,20 +206,31 @@ public class AdminMissaoService {
             Long administradorId,
             String localDestino,
             String setorSolicitante,
-            String solicitanteNome
+            String solicitanteNome,
+            String justificativa
     ) {
-        Missao missao = missaoRepository.findById(missaoId)
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
                 .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_COMPLEMENTAR);
 
         String novoLocalDestino = trimToNull(localDestino);
         String novoSetorSolicitante = trimToNull(setorSolicitante);
         String novoSolicitanteNome = trimToNull(solicitanteNome);
+
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            boolean corrige = substituiTexto(missao.getLocalDestino(), novoLocalDestino)
+                    || substituiTexto(missao.getSetorSolicitante(), novoSetorSolicitante)
+                    || substituiTexto(missao.getSolicitanteNome(), novoSolicitanteNome);
+            if (corrige) {
+                autorizacao.exigir(administradorId, Permissao.MISSAO_CORRIGIR);
+                if (justificativa == null || justificativa.trim().length() < 10)
+                    throw new BusinessException("Informe uma justificativa com pelo menos 10 caracteres para corrigir os dados finalizados");
+                missaoAuditoriaService.registrarAlteracaoCampo(missao, administrador, "justificativaCorrecao", null, justificativa.trim());
+            }
+        }
 
         registrarAlteracaoTexto(missao, administrador, "localDestino", missao.getLocalDestino(), novoLocalDestino);
         missao.setLocalDestino(novoLocalDestino);
@@ -258,9 +273,7 @@ public class AdminMissaoService {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_CORRIGIR);
         if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN
                 && missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
             throw new BusinessException("Somente missoes registradas manualmente podem ter horario ajustado por este fluxo");
@@ -335,9 +348,7 @@ public class AdminMissaoService {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_CORRIGIR);
         if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN
                 && missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
             throw new BusinessException("Somente missoes registradas manualmente podem ser editadas por este fluxo");
@@ -531,9 +542,7 @@ public class AdminMissaoService {
     ) {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_ENCERRAR_EXCECAO);
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
@@ -585,9 +594,7 @@ public class AdminMissaoService {
     ) {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_REGISTRAR);
 
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
@@ -615,6 +622,7 @@ public class AdminMissaoService {
         }
 
         StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
+        autorizacao.validarInicio(administrador, veiculo, statusAdministrativo == null ? StatusVeiculo.BASE_JOAO_GOULART : statusAdministrativo);
         if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoAdministrativa()) {
             throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusAdministrativo);
         }
@@ -639,17 +647,16 @@ public class AdminMissaoService {
             LocalDateTime dataHoraFim,
             StatusVeiculo statusAdministrativoDestino
     ) {
-        Missao missao = missaoRepository.findById(missaoId)
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
                 .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_REGISTRAR);
         if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
             throw new BusinessException("Use o encerramento correspondente a origem desta missao");
         }
+        autorizacao.validarRetornoMissao(administrador, missao);
         if (missao.getStatus() != StatusMissao.ATIVA) {
             throw new BusinessException("Esta missao ja foi finalizada");
         }
@@ -657,6 +664,7 @@ public class AdminMissaoService {
             throw new BusinessException("Data/hora de retorno deve ser posterior a saida");
         }
 
+        autorizacao.validarDestinoRetorno(administrador, statusAdministrativoDestino);
         StatusVeiculo destinoNormalizado = validarDestinoAdministrativoDeRetorno(statusAdministrativoDestino);
 
         Missao finalizada = missaoService.encerrarRegistroAdministrativo(missao, administrador, dataHoraFim);
@@ -673,14 +681,12 @@ public class AdminMissaoService {
             String justificativaEncerramento,
             StatusVeiculo statusAdministrativoDestino
     ) {
-        Missao missao = missaoRepository.findById(missaoId)
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
                 .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Usuario sem permissao administrativa");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_ENCERRAR_EXCECAO);
         if (missao.getStatus() != StatusMissao.ATIVA) {
             throw new BusinessException("Somente missoes em andamento podem ser finalizadas por este fluxo");
         }
@@ -695,6 +701,7 @@ public class AdminMissaoService {
             throw new BusinessException("Informe a justificativa do encerramento manual com pelo menos 10 caracteres");
         }
 
+        autorizacao.validarDestinoRetorno(administrador, statusAdministrativoDestino);
         StatusVeiculo destinoNormalizado = validarDestinoAdministrativoDeRetorno(statusAdministrativoDestino);
 
         Missao encerrada = missaoService.encerrarPendenteAdministrativamente(
@@ -705,6 +712,10 @@ public class AdminMissaoService {
         );
         aplicarDestinoAdministrativoDeRetorno(encerrada, destinoNormalizado, administradorId);
         return toResponse(encerrada);
+    }
+
+    private boolean substituiTexto(String anterior, String novo) {
+        return trimToNull(anterior) != null && !java.util.Objects.equals(trimToNull(anterior), novo);
     }
 
     private StatusVeiculo validarDestinoAdministrativoDeRetorno(StatusVeiculo statusAdministrativoDestino) {
@@ -720,7 +731,7 @@ public class AdminMissaoService {
 
     private void aplicarDestinoAdministrativoDeRetorno(Missao missao, StatusVeiculo destino, Long administradorId) {
         if (destino != null) {
-            adminVeiculoService.atualizarStatusAdministrativo(missao.getVeiculo().getId(), destino, administradorId);
+            adminVeiculoService.aplicarDestinoDeRetorno(missao, destino, administradorId);
         }
     }
 

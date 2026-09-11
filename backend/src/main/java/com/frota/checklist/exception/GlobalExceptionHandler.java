@@ -21,6 +21,26 @@ import java.util.List;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMediaType(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Formato de envio nao suportado", List.of(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidBody(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Os dados enviados sao invalidos. Revise os campos.", List.of(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleIntegrity(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT, "Este registro possui vinculos ou dados duplicados. Preserve o historico e revise os dados.", List.of(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, "Seu perfil nao permite realizar esta operacao", List.of(), req.getRequestURI());
+    }
+
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of(), req.getRequestURI());
@@ -57,8 +77,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
         log.error("Erro interno em {} {}", req.getMethod(), req.getRequestURI(), ex);
-        String detail = ex.getClass().getSimpleName() + ": " + (ex.getMessage() == null ? "sem mensagem" : ex.getMessage());
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", List.of(detail), req.getRequestURI());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", List.of(), req.getRequestURI());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String message, List<String> details, String path) {

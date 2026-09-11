@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ChecklistResponse, TipoOperacao } from '../models/checklist.model';
 import { EstatisticasMissoesResponse } from '../models/estatisticas-missoes.model';
 import { HistoricoVeiculoResponse } from '../models/historico-veiculo.model';
@@ -89,6 +89,7 @@ export interface RegistrarRetornoUsoExternoPayload {
 }
 
 export interface AtualizarDadosAdministrativosMissaoPayload {
+  justificativa?: string;
   localDestino: string | null;
   setorSolicitante: string | null;
   solicitanteNome: string | null;
@@ -167,6 +168,12 @@ export class AdminService {
       params = params.set('busca', busca.trim());
     }
     return this.http.get<Motorista[]>(this.motoristaUrl, { params });
+  }
+
+  listarMotoristasOpcoes(): Observable<Motorista[]> {
+    return this.http.get<Array<Pick<Motorista, 'id' | 'nome' | 'perfil'>>>(this.motoristaUrl + '/opcoes').pipe(
+      map(opcoes => opcoes.map(opcao => ({ ...opcao, cpf: '', login: '', acessoHabilitado: true })))
+    );
   }
 
   criarMotorista(payload: MotoristaAdminPayload): Observable<Motorista> {
@@ -307,8 +314,8 @@ export class AdminService {
     return this.http.put<Veiculo>(`${this.veiculoUrl}/${id}`, payload);
   }
 
-  atualizarStatusAdministrativoVeiculo(id: number, statusAdministrativo: StatusAdministrativoVeiculo | null): Observable<Veiculo> {
-    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo });
+  atualizarStatusAdministrativoVeiculo(id: number, statusAdministrativo: StatusAdministrativoVeiculo | null, justificativa?: string): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo, justificativa });
   }
 
   registrarVeiculoEmViagem(id: number, payload: RegistrarVeiculoEmViagemPayload): Observable<Veiculo> {
@@ -335,12 +342,12 @@ export class AdminService {
     return this.http.get<HistoricoVeiculoResponse>(`${this.veiculoUrl}/${id}/historico`);
   }
 
-  desativarVeiculo(id: number): Observable<Veiculo> {
-    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/desativar`, {});
+  desativarVeiculo(id: number, justificativa?: string): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/desativar`, { justificativa });
   }
 
-  reativarVeiculo(id: number): Observable<Veiculo> {
-    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/reativar`, {});
+  reativarVeiculo(id: number, justificativa?: string): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/reativar`, { justificativa });
   }
 
   excluirVeiculo(id: number): Observable<void> {

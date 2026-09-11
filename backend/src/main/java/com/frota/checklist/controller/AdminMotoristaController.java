@@ -26,6 +26,9 @@ public class AdminMotoristaController {
 
     private final AdminMotoristaService adminMotoristaService;
 
+    @GetMapping("/opcoes")
+    public List<AdminMotoristaService.MotoristaOpcao> opcoes() { return adminMotoristaService.opcoes(); }
+
     @GetMapping
     public ResponseEntity<List<MotoristaResponse>> listar(@RequestParam(required = false) String busca) {
         return ResponseEntity.ok(adminMotoristaService.listar(busca));

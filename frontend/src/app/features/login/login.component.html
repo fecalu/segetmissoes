@@ -27,18 +27,18 @@
           <mat-form-field appearance="outline" class="full-width input-field">
             <mat-label>Senha</mat-label>
             <mat-icon matPrefix class="field-icon" fontSet="material-symbols-rounded">lock</mat-icon>
-            <input matInput type="password" formControlName="senha" autocomplete="new-password">
+            <input matInput type="password" formControlName="senha" autocomplete="current-password">
           </mat-form-field>
 
           <mat-checkbox color="primary" formControlName="lembrarAcesso" class="remember-option">
-            Salvar login e senha neste aparelho
+            Lembrar meu login neste aparelho
           </mat-checkbox>
 
           <button mat-flat-button color="primary" class="full-width cta" [disabled]="loading">
             {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
           </button>
 
-          <a routerLink="/admin/login" class="admin-link">Sou administrador</a>
+          <a routerLink="/admin/login" class="admin-link">Acessar área administrativa</a>
         </form>
       </section>
     </mat-card>

@@ -13,6 +13,7 @@ import { VistoriaCompletaComponent } from './features/vistoria-completa/vistoria
 import { AdminLayoutComponent } from './features/admin-layout/admin-layout.component';
 import { AdminReportsComponent } from './features/admin-reports/admin-reports.component';
 import { AdminAllocationComponent } from './features/admin-allocation/admin-allocation.component';
+import { AdminUsersComponent } from './features/admin-users/admin-users.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -23,10 +24,12 @@ export const routes: Routes = [
   { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
   { path: 'admin', component: AdminLayoutComponent, canActivate: [adminGuard], canActivateChild: [adminGuard], children: [
     { path: 'checklists/relatorio', component: AdminReportComponent },
-    { path: 'estatisticas/missoes', component: AdminMissionStatsComponent },
+    { path: 'estatisticas/missoes', component: AdminMissionStatsComponent, data: { permission: 'ESTATISTICA_CONSULTAR' } },
     { path: 'relatorios', component: AdminReportsComponent },
     { path: 'alocacoes', component: AdminAllocationComponent },
-    { path: '', component: AdminDashboardComponent }
+    { path: 'usuarios', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR' } },
+    { path: 'auditoria-acessos', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR', auditOnly: true } },
+    { path: '', component: AdminDashboardComponent, runGuardsAndResolvers: 'paramsOrQueryParamsChange' }
   ] },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: '**', redirectTo: 'login' }

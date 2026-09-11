@@ -18,7 +18,7 @@
   </section>
 
   <div class="board-toolbar">
-    <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>Use “Mover veículo” para registrar uma alteração. Arrastar o cartão é apenas um atalho.</p></div>
+    <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>Use o menu do cartão para registrar uma alteração. Arrastar o cartão é apenas um atalho.</p></div>
     <label class="search-field"><app-icon name="search" /><input type="search" aria-label="Buscar veículo por placa, modelo ou motorista" placeholder="Placa, modelo ou motorista" [(ngModel)]="search"><button type="button" class="clear-search" *ngIf="search" aria-label="Limpar busca" (click)="search = ''"><app-icon name="close" /></button></label>
   </div>
   <p class="search-result" *ngIf="search" role="status">{{ matches }} {{ matches === 1 ? 'veículo encontrado' : 'veículos encontrados' }}. Os totais acima consideram toda a frota.</p>
@@ -31,7 +31,7 @@
       </header>
       <p class="column-description">{{ column.description }}</p>
       <div class="column-dropzone" cdkDropList [id]="column.id" [cdkDropListData]="visibleCards(column)" [cdkDropListConnectedTo]="ids" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="move.emit({ event: $event, category: column.id })">
-        <article class="fleet-vehicle" *ngFor="let card of visibleCards(column); trackBy: trackCard" cdkDrag [cdkDragData]="card.vehicle" [cdkDragDisabled]="loading || vehicleError" [cdkDragStartDelay]="{touch: 300, mouse: 0}" (cdkDragStarted)="dragging.emit(true)" (cdkDragEnded)="dragging.emit(false)">
+        <article class="fleet-vehicle" *ngFor="let card of visibleCards(column); trackBy: trackCard" cdkDrag [cdkDragData]="card.vehicle" [cdkDragDisabled]="loading || vehicleError || !card.allowedDestinations.length" [cdkDragStartDelay]="{touch: 300, mouse: 0}" (cdkDragStarted)="dragging.emit(true)" (cdkDragEnded)="dragging.emit(false)">
           <div class="vehicle-topline">
             <strong class="plate">{{ card.vehicle.placa }}</strong>
             <div class="vehicle-top-actions">
@@ -48,8 +48,8 @@
             <button type="button" class="details-button" *ngIf="card.details.length" [attr.aria-expanded]="!hiddenDetailsVehicleIds.has(card.vehicle.id)" (click)="toggleDetails(card.vehicle.id)">{{ hiddenDetailsVehicleIds.has(card.vehicle.id) ? 'Ver dados' : 'Ocultar dados' }}</button>
           </div>
           <div class="move-menu" *ngIf="movingVehicleId === card.vehicle.id" aria-label="Escolha a nova situação do veículo">
-            <p>Para onde deseja mover?</p>
-            <button type="button" *ngFor="let destination of moveDestinations(column.id)" (click)="moveTo(card.vehicle, destination.id)">{{ destination.title }}</button>
+            <p>{{ card.allowedDestinations.length ? "Para onde deseja mover?" : "A alteração deste veículo precisa de um Gestor ou Administrador." }}</p>
+            <button type="button" *ngFor="let destination of moveDestinations(column.id, card)" (click)="moveTo(card.vehicle, destination.id)">{{ destination.title }}</button>
           </div>
           <footer class="vehicle-footer"><button type="button" class="history-button" [attr.aria-label]="'Ver histórico de ' + card.vehicle.placa" (click)="history.emit(card.vehicle)"><app-icon name="history" />Histórico</button><span *ngIf="card.moving" class="automatic-label">Em andamento</span></footer>
         </article>

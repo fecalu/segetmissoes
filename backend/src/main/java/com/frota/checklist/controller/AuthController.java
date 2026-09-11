@@ -21,6 +21,14 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @org.springframework.web.bind.annotation.GetMapping("/me")
+    public com.frota.checklist.dto.SessaoResponse sessao(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.frota.checklist.security.CustomUserDetails usuario) {
+        return new com.frota.checklist.dto.SessaoResponse(usuario.getMotoristaId(), usuario.getNome(),
+                usuario.getPerfil(), usuario.getPerfil().permissoes());
+    }
+
     @PostMapping("/register")
     public ResponseEntity<MotoristaResponse> register(@Valid @RequestBody RegisterMotoristaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));

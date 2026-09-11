@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, ViewChild, effect, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { catchError, exhaustMap, filter, fromEvent, interval, merge, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/services/auth.service';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
@@ -18,6 +18,13 @@ export class AdminLayoutComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly navigation = ADMIN_NAVIGATION;
+  get navigationGroups() { return [
+    { label: 'OPERAÇÃO DIÁRIA', items: ADMIN_NAVIGATION.filter(item => item.section === 'OPERACAO') },
+    { label: 'CONTROLE ADMINISTRATIVO', items: ADMIN_NAVIGATION.filter(item => item.section === 'CONTROLE') },
+    { label: 'ALOCAÇÕES', items: ADMIN_NAVIGATION.filter(item => item.section === 'ALOCACOES') },
+    { label: 'SISTEMA', items: ADMIN_NAVIGATION.filter(item => item.section === 'SISTEMA') }
+  ].map(group => ({ ...group, items: group.items.filter(item => !item.permission || this.auth.can(item.permission)) }))
+    .filter(group => group.items.length > 0); }
   readonly today = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   activeId = 'operacao';
   pageLabel = 'Operação da frota';
@@ -31,6 +38,24 @@ export class AdminLayoutComponent {
     this.syncNavigation();
     this.router.events.pipe(filter(event => event instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => { this.syncNavigation(); this.closeMenu(); });
+    merge(interval(30000), fromEvent(window, 'focus'))
+      .pipe(filter(() => document.visibilityState === 'visible' && this.auth.isAuthenticated()),
+        exhaustMap(() => this.auth.refreshSession().pipe(catchError(() => of(null)))),
+        takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+    effect(() => {
+      const perfil = this.auth.perfil();
+      if (!perfil) return;
+      if (!this.auth.isAdministrative()) { void this.router.navigate(['/login']); return; }
+      const url = this.router.parseUrl(this.router.url);
+      const menu = url.queryParams['menu'] || 'operacao';
+      let route = this.router.routerState.snapshot.root;
+      while (route.firstChild) route = route.firstChild;
+      const permission = route.data['permission'];
+      if (!this.auth.canAccessMenu(menu) || (permission && !this.auth.can(permission))) {
+        void this.router.navigate(['/admin'], { queryParams: { menu: 'operacao' } });
+      }
+    });
   }
 
   isCurrent(link: AdminNavLink): boolean {
@@ -60,7 +85,7 @@ export class AdminLayoutComponent {
       this.navigation.find(item => item.menu === this.currentMenu || item.children?.some(child => child.menu === this.currentMenu)) || this.navigation[0];
     this.activeId = item.id;
     this.expandedGroup = item.children ? item.id : '';
-    this.pageLabel = reportPage ? (path.includes('alocacoes') ? 'Controle de alocações' : path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
+    this.pageLabel = reportPage ? (path.includes('usuarios') ? 'Usuários e acessos' : path.includes('auditoria-acessos') ? 'Auditoria de acessos' : path.includes('alocacoes') ? 'Controle de alocações' : path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
       item.children?.find(child => child.menu === this.currentMenu)?.label || item.label;
   }
 }

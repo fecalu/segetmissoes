@@ -12,6 +12,8 @@ public record HistoricoStatusVeiculoResponse(
         StatusVeiculo statusNovo,
         Long administradorId,
         String administradorNome,
-        LocalDateTime dataHora
+        LocalDateTime dataHora,
+        com.frota.checklist.entity.Perfil administradorPerfil,
+        String justificativa
 ) {
 }

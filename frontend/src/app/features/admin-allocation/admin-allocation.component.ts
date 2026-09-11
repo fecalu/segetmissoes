@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -29,6 +30,7 @@ interface GrupoAlocacao {
   styleUrl: './admin-allocation.component.css'
 })
 export class AdminAllocationComponent implements OnInit {
+  readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);

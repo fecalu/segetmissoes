@@ -31,7 +31,8 @@ public class JwtService {
                 .claims(Map.of(
                         "motoristaId", userDetails.getMotoristaId(),
                         "nome", userDetails.getNome(),
-                        "perfil", userDetails.getPerfil().name()
+                        "perfil", userDetails.getPerfil().name(),
+                        "versaoAcesso", userDetails.getVersaoAcesso()
                 ))
                 .subject(userDetails.getUsername())
                 .issuedAt(now)
@@ -42,6 +43,14 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
+    }
+
+    public boolean correspondeAoUsuario(String token, CustomUserDetails usuario) {
+        Claims claims = extractAllClaims(token);
+        Number id = claims.get("motoristaId", Number.class);
+        Number versao = claims.get("versaoAcesso", Number.class);
+        return usuario.isEnabled() && id != null && id.longValue() == usuario.getMotoristaId()
+                && (versao == null ? 0 : versao.longValue()) == usuario.getVersaoAcesso();
     }
 
     public boolean isTokenValid(String token) {

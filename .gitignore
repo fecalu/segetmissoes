@@ -36,3 +36,6 @@ coverage/
 uploads/
 backend/uploads/
 tmp_logo/
+
+# Database backups contain private data and credentials.
+backups/

@@ -47,6 +47,12 @@ public class AuditoriaMissao {
     @JoinColumn(name = "usuario_acao_id")
     private Motorista usuarioAcao;
 
+    private String usuarioAcaoNome;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Perfil usuarioAcaoPerfil;
+
     @Column(name = "data_hora", nullable = false)
     private LocalDateTime dataHora;
 

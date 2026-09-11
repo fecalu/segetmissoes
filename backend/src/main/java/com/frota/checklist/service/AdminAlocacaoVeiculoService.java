@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.AlocacaoVeiculoResponse;
 import com.frota.checklist.dto.AtualizarDadosAlocacaoVeiculoRequest;
 import com.frota.checklist.dto.CriarAlocacaoVeiculoRequest;
@@ -28,6 +30,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AdminAlocacaoVeiculoService {
+
+    private final AutorizacaoService autorizacao;
 
     private final AlocacaoVeiculoRepository alocacaoRepository;
     private final HistoricoAlocacaoVeiculoRepository historicoRepository;
@@ -188,9 +192,7 @@ public class AdminAlocacaoVeiculoService {
     private Motorista validarAdministrador(Long id) {
         Motorista administrador = motoristaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Administrador não encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem alterar alocações");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.ALOCACAO_GERIR);
         return administrador;
     }
 

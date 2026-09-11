@@ -65,7 +65,7 @@
             </div>
             <div class="inline-buttons">
               <button mat-flat-button color="primary" type="button" (click)="reativarVeiculo(v)">Reativar</button>
-              <button mat-stroked-button color="warn" type="button" (click)="excluirVeiculoDefinitivamente(v)">Excluir definitivo</button>
+              <button *ngIf="auth.can('CADASTRO_EXCLUIR')" mat-stroked-button color="warn" type="button" (click)="excluirVeiculoDefinitivamente(v)">Excluir definitivo</button>
             </div>
           </article>
           <p class="empty-column" *ngIf="veiculosDesativados().length === 0">Nenhum veiculo baixado/desativado.</p>
@@ -75,13 +75,12 @@
 
     <section class="content" *ngIf="activeMenu === 'motoristas'">
       <mat-card class="panel-card">
-        <h3>Cadastro de motoristas e administradores</h3>
+        <h3>Cadastro de motoristas</h3>
         <form [formGroup]="motoristaForm" (ngSubmit)="salvarMotorista()" class="form-grid">
           <mat-form-field appearance="outline"><mat-label>Nome</mat-label><input matInput formControlName="nome"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Login</mat-label><input matInput formControlName="login"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>CPF</mat-label><input matInput formControlName="cpf"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Senha</mat-label><input matInput type="password" formControlName="senha"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Perfil</mat-label><mat-select formControlName="perfil"><mat-option value="MOTORISTA">MOTORISTA</mat-option><mat-option value="ADMIN">ADMIN</mat-option></mat-select></mat-form-field>
           <div class="row-actions">
             <button mat-flat-button color="primary">{{ editingMotoristaId ? 'Atualizar' : 'Criar' }}</button>
             <button mat-stroked-button type="button" (click)="cancelarEdicaoMotorista()">Limpar</button>
@@ -104,13 +103,21 @@
           </div>
         </section>
 
-        <div class="list-header"><strong>Lista de usuarios</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
+        <div class="list-header"><strong>Motoristas cadastrados</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
         <div class="table">
           <article class="table-row" *ngFor="let m of motoristas">
-            <div><strong>{{ m.nome }}</strong><p>{{ m.login }} - {{ m.cpf }} - {{ m.perfil }}</p></div>
+            <div>
+              <strong>{{ m.nome }}</strong>
+              <p>{{ m.login }} · {{ m.cpf }}</p>
+            </div>
+            <div>
+              <span class="acesso-badge" [class.badge-suspended]="!m.acessoHabilitado" [class.badge-active]="m.acessoHabilitado">
+                {{ m.acessoHabilitado ? 'Acesso ativo' : 'Acesso suspenso' }}
+              </span>
+            </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="editarMotorista(m)">Editar</button>
-              <button mat-stroked-button type="button" (click)="excluirMotorista(m.id)">Excluir</button>
+              <button *ngIf="auth.can('CADASTRO_EXCLUIR')" mat-stroked-button type="button" (click)="excluirMotorista(m.id)">Excluir</button>
             </div>
           </article>
         </div>
@@ -322,7 +329,7 @@
               <button mat-flat-button color="primary" type="button" *ngIf="podeEditarMissaoManual(m)" (click)="abrirEdicaoManualMissao(m)">Editar missao manual</button>
               <button mat-stroked-button type="button" *ngIf="!podeEditarMissaoManual(m) && podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horário</button>
               <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="abrirRetornoAdministrativo(m.id)">Registrar retorno</button>
-              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO'" (click)="abrirEncerramentoPendente(m.id)">Registrar chegada sem checklist</button>
+              <button mat-stroked-button type="button" *ngIf="(m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO') && auth.can('MISSAO_ENCERRAR_EXCECAO')" (click)="abrirEncerramentoPendente(m.id)">Registrar chegada sem checklist</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Histórico</button>
             </div>
           </article>
@@ -635,7 +642,7 @@
       >
         Registrar retorno
       </button>
-      <button
+      <button *ngIf="auth.can('MISSAO_ENCERRAR_EXCECAO')"
         mat-stroked-button
         type="button"
         [class.active]="novaMissaoModo === 'PENDENTE'"
@@ -737,7 +744,7 @@
           <mat-option value="DISPONIVEL">Disponível</mat-option>
           <mat-option value="PATIO">No pátio</mat-option>
           <mat-option value="REALOCACAO">Aguardando realocação</mat-option>
-          <mat-option value="BLOQUEADO">Bloqueado</mat-option>
+          <mat-option *ngIf="auth.can('VEICULO_LIBERAR')" value="BLOQUEADO">Bloqueado</mat-option>
         </mat-select>
       </mat-form-field>
       <div class="row-actions">
@@ -774,7 +781,7 @@
           <mat-option value="DISPONIVEL">Disponível</mat-option>
           <mat-option value="PATIO">No pátio</mat-option>
           <mat-option value="REALOCACAO">Aguardando definição</mat-option>
-          <mat-option value="BLOQUEADO">Bloqueado</mat-option>
+          <mat-option *ngIf="auth.can('VEICULO_LIBERAR')" value="BLOQUEADO">Bloqueado</mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -981,7 +988,7 @@
       <article class="table-row" *ngFor="let item of auditoriaMissao">
         <div>
           <strong>{{ tituloAuditoriaMissao(item) }}</strong>
-          <p>{{ item.usuarioAcaoNome || '-' }} - {{ formatarDataHora(item.dataHora) }}</p>
+          <p>{{ item.usuarioAcaoNome || '-' }}<span *ngIf="item.usuarioAcaoPerfil"> ({{ item.usuarioAcaoPerfil }})</span> - {{ formatarDataHora(item.dataHora) }}</p>
           <p *ngIf="item.detalhe">{{ item.detalhe }}</p>
           <p *ngIf="item.campoAlterado"><strong>Campo:</strong> {{ campoAuditoriaMissaoLabel(item.campoAlterado) }}</p>
           <p *ngIf="item.campoAlterado"><strong>Valor anterior:</strong> {{ valorAuditoriaMissaoLabel(item.campoAlterado, item.valorAnterior) }}</p>
@@ -1053,9 +1060,9 @@
     <div class="row-actions align-start">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>{{ labelContraparteVistoria(selectedVistoriaCompleta.tipoOperacao) }}</mat-label>
-        <input matInput maxlength="180" [(ngModel)]="contraparteVistoriaEdicao" [ngModelOptions]="{standalone: true}">
+          <input matInput maxlength="180" [readonly]="!auth.can('VISTORIA_CORRIGIR')" [(ngModel)]="contraparteVistoriaEdicao" [ngModelOptions]="{standalone: true}">
       </mat-form-field>
-      <button mat-flat-button color="primary" type="button" [disabled]="salvandoContraparteVistoria" (click)="salvarContraparteVistoria()">
+      <button *ngIf="auth.can('VISTORIA_CORRIGIR')" mat-flat-button color="primary" type="button" [disabled]="salvandoContraparteVistoria" (click)="salvarContraparteVistoria()">
         {{ salvandoContraparteVistoria ? 'Salvando...' : 'Salvar' }}
       </button>
     </div>
@@ -1090,7 +1097,7 @@
       </div>
       <div class="photo-grid">
         <figure *ngFor="let avaria of selectedVistoriaCompleta.avarias">
-          <img [src]="fotoUrl(avaria.caminhoArquivoFoto)" [alt]="avaria.local">
+          <img [appProtectedImage]="fotoUrl(avaria.caminhoArquivoFoto)" [alt]="avaria.local">
           <figcaption>{{ avaria.local }}</figcaption>
         </figure>
       </div>
@@ -1100,7 +1107,7 @@
       <p class="missao-glossario-subtitle">Fotos da vistoria</p>
       <div class="photo-grid">
         <figure *ngFor="let foto of selectedVistoriaCompleta.fotos">
-          <img [src]="fotoUrl(foto.caminhoArquivo)" [alt]="tipoFotoVistoriaLabel(foto.tipoFoto)">
+          <img [appProtectedImage]="fotoUrl(foto.caminhoArquivo)" [alt]="tipoFotoVistoriaLabel(foto.tipoFoto)">
           <figcaption>{{ tipoFotoVistoriaLabel(foto.tipoFoto) }}</figcaption>
         </figure>
       </div>
@@ -1117,7 +1124,7 @@
     <p><strong>Data:</strong> {{ selectedChecklist.dataHora | date:'dd/MM/yyyy HH:mm' }}</p>
     <div class="photo-grid">
       <figure *ngFor="let foto of selectedChecklist.fotos">
-        <img [src]="fotoUrl(foto.caminhoArquivo)" [alt]="foto.tipoFoto">
+        <img [appProtectedImage]="fotoUrl(foto.caminhoArquivo)" [alt]="foto.tipoFoto">
         <figcaption>{{ foto.tipoFoto }}</figcaption>
       </figure>
     </div>

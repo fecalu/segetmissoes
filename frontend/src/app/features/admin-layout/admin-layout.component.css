@@ -19,8 +19,10 @@
 .brand strong { font-size: 25px; letter-spacing: -.8px; line-height: 1.1; }
 .brand-dot { color: var(--admin-blue); }
 .brand small { display: block; margin-top: 4px; color: var(--admin-muted); font-size: 12px; }
-.nav-caption { color: #75839a; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; margin: 0 14px 14px; }
-.side-navigation { display: grid; gap: 5px; }
+.nav-caption { color: #75839a; font-size: 10px; font-weight: 700; letter-spacing: 1.35px; margin: 0 14px 9px; }
+.side-navigation { display: grid; gap: 18px; }
+.nav-section { display: grid; gap: 5px; }
+.nav-section + .nav-section { padding-top: 16px; border-top: 1px solid #edf1f5; }
 .nav-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 12px 14px; background: transparent; color: #516179; text-decoration: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left; font: 500 14px 'Barlow', sans-serif; }
 .nav-item:hover { background: #f3f6fa; color: var(--admin-ink); }
 .nav-item.active { background: var(--admin-blue-soft); color: var(--admin-blue); font-weight: 600; }

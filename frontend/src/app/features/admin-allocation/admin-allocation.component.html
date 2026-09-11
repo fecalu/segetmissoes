@@ -1,11 +1,11 @@
 <section class="allocation-page">
   <header class="page-header">
     <div>
-      <p class="eyebrow">CADASTROS / CONTROLE</p>
-      <h1>Controle de alocações</h1>
-      <p class="page-description">Consulte as vagas por órgão e setor, o veículo e responsável atuais e todas as alterações registradas.</p>
+      <p class="eyebrow">REGISTRO ADMINISTRATIVO</p>
+      <h1>Alocações administrativas</h1>
+      <p class="page-description">Controle documental de vagas, órgãos, veículos e responsáveis. Este registro não altera a operação diária da frota.</p>
     </div>
-    <button mat-flat-button class="primary-action" type="button" (click)="abrirCriacao()"><app-icon name="plus" /> Nova alocação</button>
+    <button *ngIf="auth.can('ALOCACAO_GERIR')" mat-flat-button class="primary-action" type="button" (click)="abrirCriacao()"><app-icon name="plus" /> Nova alocação</button>
   </header>
 
   <section class="summary" aria-label="Resumo das alocações">
@@ -22,7 +22,7 @@
   <p class="empty-state" *ngIf="!carregando && !alocacoes.length">Nenhuma alocação encontrada. Crie a primeira para começar o controle.</p>
   <div class="table-wrap" *ngIf="alocacoes.length">
     <table class="allocation-table">
-      <thead><tr><th>Vaga</th><th>Placa</th><th>Responsável</th><th>Limite autorizado</th><th>Modelo</th><th>Observação</th><th>Situação</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Vaga</th><th>Placa</th><th>Responsável</th><th>Limite autorizado</th><th>Modelo</th><th>Situação</th><th>Observação</th><th>Ações</th></tr></thead>
       <tbody *ngFor="let grupo of gruposAlocacoes">
         <tr class="group-row"><th colspan="8"><span>{{ grupo.orgao }}</span><span class="group-divider">/</span><strong>{{ grupo.setor }}</strong><small>{{ grupo.alocacoes.length }} {{ grupo.alocacoes.length === 1 ? 'vaga' : 'vagas' }} na consulta</small></th></tr>
         <tr *ngFor="let alocacao of grupo.alocacoes; let impar = odd" [class.closed]="!alocacao.ativa" [class.pale-row]="impar">
@@ -33,7 +33,7 @@
           <td>{{ alocacao.modelo }}</td>
           <td><span class="status" [class.inactive]="!alocacao.ativa">{{ alocacao.ativa ? 'ATIVA' : 'ENCERRADA' }}</span></td>
           <td class="observation">{{ alocacao.observacao || '—' }}</td>
-          <td class="actions"><button type="button" title="Ver histórico" aria-label="Ver histórico" (click)="abrirHistorico(alocacao)"><app-icon name="history" /></button><ng-container *ngIf="alocacao.ativa"><button type="button" title="Editar dados" (click)="abrirDados(alocacao)">Editar</button><button type="button" title="Trocar veículo" (click)="abrirTrocaVeiculo(alocacao)">Veículo</button><button type="button" title="Trocar responsável" (click)="abrirTrocaResponsavel(alocacao)">Responsável</button><button class="danger" type="button" title="Encerrar alocação" (click)="abrirEncerramento(alocacao)">Encerrar</button></ng-container></td>
+          <td class="actions"><button type="button" title="Ver histórico" aria-label="Ver histórico" (click)="abrirHistorico(alocacao)"><app-icon name="history" /></button><ng-container *ngIf="alocacao.ativa"><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Editar dados" (click)="abrirDados(alocacao)">Editar</button><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar veículo" (click)="abrirTrocaVeiculo(alocacao)">Veículo</button><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar responsável" (click)="abrirTrocaResponsavel(alocacao)">Responsável</button><button *ngIf="auth.can('ALOCACAO_GERIR')" class="danger" type="button" title="Encerrar alocação" (click)="abrirEncerramento(alocacao)">Encerrar</button></ng-container></td>
         </tr>
       </tbody>
     </table>

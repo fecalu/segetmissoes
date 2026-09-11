@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/services/auth.service';
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +14,7 @@ import { AppIconComponent } from '../../shared/ui/app-icon.component';
   styleUrl: './admin-reports.component.css'
 })
 export class AdminReportsComponent {
+  readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
   date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   loading = false;

@@ -58,6 +58,7 @@ export interface AuditoriaMissaoResponse {
   statusNovo: StatusMissao | null;
   usuarioAcaoId: number | null;
   usuarioAcaoNome: string | null;
+  usuarioAcaoPerfil?: string | null;
   dataHora: string;
   detalhe: string | null;
   campoAlterado: string | null;

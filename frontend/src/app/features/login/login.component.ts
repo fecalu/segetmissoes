@@ -55,7 +55,6 @@ export class LoginComponent implements OnInit {
 
     this.form.patchValue({
       login: savedAccess.login,
-      senha: savedAccess.senha,
       lembrarAcesso: true
     });
   }
@@ -78,12 +77,12 @@ export class LoginComponent implements OnInit {
             this.snackBar.open('Este login nao e de motorista. Use a area administrativa.', 'Fechar', { duration: 3500 });
             return;
           }
-          this.authService.saveRememberedAccess('motorista', { login: normalizedLogin, senha }, lembrarAcesso);
+          this.authService.saveRememberedAccess('motorista', { login: normalizedLogin }, lembrarAcesso);
           this.router.navigate(['/inicio']);
         },
         error: (err: HttpErrorResponse) => {
           if (err.status === 401) {
-            this.authService.saveRememberedAccess('motorista', { login: '', senha: '' }, false);
+            this.authService.saveRememberedAccess('motorista', { login: '' }, false);
             this.form.patchValue({ lembrarAcesso: false });
           }
           const message = err.error?.message || 'Falha no login. Verifique suas credenciais.';

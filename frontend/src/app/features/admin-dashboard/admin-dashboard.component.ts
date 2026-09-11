@@ -1,5 +1,8 @@
+import { AuthService } from '../../core/services/auth.service';
+import { JustificativaDialogComponent } from '../../shared/dialogs/justificativa-dialog.component';
+import { ProtectedImageDirective } from '../../shared/ui/protected-image.directive';
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -96,6 +99,7 @@ interface GlossarioBadgeItem extends GlossarioItem {
   selector: 'app-admin-dashboard',
   imports: [
     CommonModule,
+    ProtectedImageDirective,
     FormsModule,
     ReactiveFormsModule,
     FleetBoardComponent,
@@ -112,6 +116,7 @@ interface GlossarioBadgeItem extends GlossarioItem {
   styleUrl: './admin-dashboard.component.css'
 })
 export class AdminDashboardComponent implements OnInit, OnDestroy {
+  readonly auth = inject(AuthService);
   activeMenu: AdminMenu = 'operacao';
   filtrosAbertos = false;
   filtrosVeiculoAbertos = false;
@@ -383,7 +388,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       login: ['', [Validators.required]],
       cpf: ['', [Validators.required, Validators.pattern(/^\d{11}$/)]],
       senha: [''],
-      perfil: ['MOTORISTA' as 'ADMIN' | 'MOTORISTA', [Validators.required]]
+      perfil: ['MOTORISTA' as const, [Validators.required]]
     });
 
     this.veiculoForm = this.fb.nonNullable.group({
@@ -531,7 +536,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private aplicarMenu(menu: AdminMenu): void {
+    if (!this.auth.canAccessMenu(menu)) {
+      this.snackBar.open('Seu perfil não tem acesso a esta área.', 'Fechar', { duration: 3000 });
+      this.setMenu('operacao'); return;
+    }
     this.activeMenu = menu;
+    if (menu === 'motoristas') this.motoristas = [];
     if (menu !== 'veiculos') {
       this.filtrosVeiculoAbertos = false;
     }
@@ -625,6 +635,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           duration: missao ? this.duracaoTempoRealLabel(missao) : null,
           manual: missao?.origemAbertura === 'CONTINGENCIA_ADMIN' || missao?.origemAbertura === 'REGISTRO_ADMINISTRATIVO',
           moving: this.veiculoComDeslocamentoAutomatico(vehicle),
+          allowedDestinations: this.categoriasPainel.filter(c => this.podeMoverVeiculo(vehicle, c.id)).map(c => c.id),
           details: detalhes
         };
       })
@@ -658,6 +669,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     modo: 'OPERACAO' | 'VIAGEM' | 'RETORNO' | 'PENDENTE' = 'OPERACAO',
     fixarModo = false
   ): void {
+    if (modo === 'PENDENTE' && !this.auth.can('MISSAO_ENCERRAR_EXCECAO')) return;
     this.showNovaMissaoModal = true;
     this.novaMissaoModoFixado = fixarModo;
     this.setNovaMissaoModo(modo);
@@ -935,7 +947,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   carregarMotoristas(busca?: string): void {
     this.loadingMotoristas = true;
-    this.adminService.listarMotoristas(busca)
+    (this.activeMenu === 'motoristas' ? this.adminService.listarMotoristas(busca) : this.adminService.listarMotoristasOpcoes())
       .pipe(finalize(() => (this.loadingMotoristas = false)))
       .subscribe({
         next: data => (this.motoristas = data),
@@ -981,7 +993,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       login: motorista.login,
       cpf: motorista.cpf,
       senha: '',
-      perfil: motorista.perfil
+      perfil: 'MOTORISTA'
     });
   }
 
@@ -1116,6 +1128,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  podeMoverVeiculo(veiculo: Veiculo, destino: PainelCategoria): boolean {
+    if (!this.auth.can('FROTA_OPERAR') || veiculo.desativado) return false;
+    const origem = this.categoriaDoVeiculo(veiculo);
+    if (origem === destino) return false;
+    if (this.auth.can('VEICULO_LIBERAR')) return true;
+    if (origem === 'BLOQUEADO' || origem === 'REALOCACAO' || destino === 'BLOQUEADO') return false;
+    if (origem === 'MISSAO' || origem === 'VIAGEM') {
+      return this.missaoAtivaPorVeiculo(veiculo.id)?.origemAbertura === 'REGISTRO_ADMINISTRATIVO'
+        && ['DISPONIVEL', 'PATIO', 'REALOCACAO'].includes(destino);
+    }
+    if (origem === 'USO_EXTERNO') return destino === 'REALOCACAO';
+    return ['DISPONIVEL', 'PATIO'].includes(origem) && ['DISPONIVEL', 'PATIO', 'MISSAO', 'VIAGEM', 'USO_EXTERNO'].includes(destino);
+  }
+
   onDropCategoria(event: CdkDragDrop<FleetCard[]>, categoriaDestino: PainelCategoria): void {
     if (event.previousContainer === event.container) {
       return;
@@ -1139,6 +1165,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     categoriaOrigem = this.categoriaDoVeiculo(veiculo)
   ): void {
 
+    if (!this.podeMoverVeiculo(veiculo, categoriaDestino)) {
+      this.snackBar.open('Esta operação precisa de um Gestor ou Administrador.', 'Fechar', { duration: 3500 }); return;
+    }
     if (categoriaOrigem === categoriaDestino) {
       return;
     }
@@ -1239,6 +1268,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private pedirMotivo(title: string, message: string, confirmar: (motivo: string) => void): void {
+    this.dialog.open(JustificativaDialogComponent, { width: '480px', maxWidth: '95vw', data: { title, message } })
+      .afterClosed().subscribe((motivo?: string) => { if (motivo) confirmar(motivo); });
+  }
+
   abrirInclusaoCategoria(categoria: PainelCategoria): void {
     if (!this.categoriaPermiteInclusao(categoria)) {
       return;
@@ -1294,7 +1328,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  atualizarSomenteSituacaoEntreBaseEPatio(): void {
+  atualizarSomenteSituacaoEntreBaseEPatio(justificativa?: string): void {
+    if (!justificativa) {
+      this.pedirMotivo('Corrigir a situação do veículo', 'Esta opção ajusta o local sem registrar deslocamento. Informe o motivo.', valor => this.atualizarSomenteSituacaoEntreBaseEPatio(valor)); return;
+    }
     const veiculo = this.veiculoDecisaoPatio;
     const destino = this.categoriaDestinoDecisaoPatio;
     if (!veiculo || !destino) {
@@ -1302,7 +1339,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const statusAdministrativo = destino === 'PATIO' ? 'NO_PATIO' as const : null;
-    this.adminService.atualizarStatusAdministrativoVeiculo(veiculo.id, statusAdministrativo).subscribe({
+    this.adminService.atualizarStatusAdministrativoVeiculo(veiculo.id, statusAdministrativo, justificativa).subscribe({
       next: () => {
         this.snackBar.open('Situação do veículo atualizada sem criar missão.', 'Fechar', { duration: 2600 });
         this.fecharDecisaoPatio();
@@ -1339,7 +1376,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const busca = this.buscaInclusaoVeiculo.trim().toLowerCase();
-    const base = this.veiculosElegiveisParaCategoria(this.selectedCategoriaInclusao);
+    const base = this.veiculosElegiveisParaCategoria(this.selectedCategoriaInclusao).filter(v => this.podeMoverVeiculo(v, this.selectedCategoriaInclusao!));
     if (!busca) {
       return base;
     }
@@ -1352,58 +1389,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   confirmarInclusaoCategoria(): void {
-    if (!this.selectedCategoriaInclusao || !this.veiculoInclusaoSelecionadoId || this.processandoInclusao) {
-      return;
-    }
-
+    const destino = this.selectedCategoriaInclusao;
     const veiculo = this.veiculos.find(v => v.id === this.veiculoInclusaoSelecionadoId);
-    if (!veiculo) {
-      this.snackBar.open('Veiculo nao encontrado.', 'Fechar', { duration: 2400 });
-      return;
-    }
-
-    if (this.selectedCategoriaInclusao === 'USO_EXTERNO') {
-      this.fecharInclusaoCategoria();
-      this.abrirRegistroUsoExterno(veiculo);
-      return;
-    }
-
-    if (veiculo.statusAtual === 'EM_USO_EXTERNO') {
-      const categoriaDestino = this.selectedCategoriaInclusao;
-      this.fecharInclusaoCategoria();
-      this.abrirRetornoUsoExterno(veiculo, categoriaDestino);
-      return;
-    }
-
-    const novoStatus = this.statusAdministrativoAlvoPorCategoria(this.selectedCategoriaInclusao);
-    if (novoStatus === undefined) {
-      this.snackBar.open('Categoria sem alteracao administrativa manual.', 'Fechar', { duration: 2400 });
-      return;
-    }
-
-    const atualLabel = veiculo.statusAdministrativo ? this.statusLabel(veiculo.statusAdministrativo) : 'AUTOMATICO';
-    const destinoLabel = novoStatus ? this.statusLabel(novoStatus) : 'DISPONIVEL (AUTOMATICO)';
-    const mensagemBase = `${atualLabel} -> ${destinoLabel}`;
-    const mensagem = veiculo.statusAtual === 'EM_VIAGEM'
-      ? `${mensagemBase}\nO registro de viagem em aberto sera encerrado automaticamente.`
-      : mensagemBase;
-    this.abrirConfirmacao({
-      title: `Alterar status de ${veiculo.placa}`,
-      message: mensagem,
-      confirmText: 'Confirmar'
-    }, () => {
-      this.processandoInclusao = true;
-      this.adminService.atualizarStatusAdministrativoVeiculo(veiculo.id, novoStatus)
-        .pipe(finalize(() => (this.processandoInclusao = false)))
-        .subscribe({
-          next: () => {
-            this.snackBar.open('Veiculo atualizado com sucesso.', 'Fechar', { duration: 2200 });
-            this.fecharInclusaoCategoria();
-            this.carregarVeiculos(this.veiculoBusca);
-          },
-          error: (err) => this.snackBar.open(err.error?.message || 'Erro ao atualizar veiculo.', 'Fechar', { duration: 3000 })
-        });
-    });
+    if (!destino || !veiculo) return;
+    this.fecharInclusaoCategoria();
+    this.moverVeiculoParaCategoria(veiculo, destino);
   }
 
   abrirHistoricoVeiculo(veiculo: Veiculo): void {
@@ -1911,7 +1901,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.statusLabel(this.statusDestinoRetornoUsoExterno);
   }
 
-  desativarVeiculo(veiculo: Veiculo): void {
+  desativarVeiculo(veiculo: Veiculo, justificativa?: string): void {
+    if (this.auth.hasRole('GESTOR') && !justificativa) {
+      this.pedirMotivo('Alterar situação do cadastro', 'Informe o motivo desta alteração para ' + veiculo.placa + '.', valor => this.desativarVeiculo(veiculo, valor)); return;
+    }
     if (veiculo.desativado) {
       return;
     }
@@ -1921,7 +1914,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       confirmText: 'Dar baixa',
       confirmColor: 'warn'
     }, () => {
-      this.adminService.desativarVeiculo(veiculo.id).subscribe({
+      this.adminService.desativarVeiculo(veiculo.id, justificativa).subscribe({
         next: () => {
           this.snackBar.open('Veiculo baixado/desativado.', 'Fechar', { duration: 2200 });
           this.carregarVeiculos(this.veiculoBusca);
@@ -1931,7 +1924,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  reativarVeiculo(veiculo: Veiculo): void {
+  reativarVeiculo(veiculo: Veiculo, justificativa?: string): void {
+    if (this.auth.hasRole('GESTOR') && !justificativa) {
+      this.pedirMotivo('Alterar situação do cadastro', 'Informe o motivo desta alteração para ' + veiculo.placa + '.', valor => this.reativarVeiculo(veiculo, valor)); return;
+    }
     if (!veiculo.desativado) {
       return;
     }
@@ -1940,7 +1936,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       message: `Deseja reativar o veiculo ${veiculo.placa}?`,
       confirmText: 'Reativar'
     }, () => {
-      this.adminService.reativarVeiculo(veiculo.id).subscribe({
+      this.adminService.reativarVeiculo(veiculo.id, justificativa).subscribe({
         next: () => {
           this.snackBar.open('Veiculo reativado.', 'Fechar', { duration: 2200 });
           this.carregarVeiculos(this.veiculoBusca);
@@ -2199,6 +2195,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   private veiculoDisponivelParaNovaMissao(veiculo: Veiculo): boolean {
+    if (!this.auth.can('VEICULO_LIBERAR') && veiculo.statusAtual === 'AGUARDANDO_REALOCACAO') return false;
     return veiculo.statusAtual === 'BASE_JOAO_GOULART'
       || veiculo.statusAtual === 'NO_PATIO'
       || veiculo.statusAtual === 'AGUARDANDO_REALOCACAO';
@@ -2495,12 +2492,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   abrirEdicaoDadosMissao(missao: MissaoResponse): void {
     const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
+    for (const control of Object.values(this.missaoDadosForm.controls)) control.enable();
     this.selectedMissaoDadosAdmin = missao;
     this.missaoDadosForm.reset({
       localDestino: missao.localDestino || '',
-      setorSolicitante: exibeCamposUrbanos ? (missao.setorSolicitante || '') : '',
-      solicitanteNome: exibeCamposUrbanos ? (missao.solicitanteNome || '') : ''
+      setorSolicitante: missao.setorSolicitante || '',
+      solicitanteNome: missao.solicitanteNome || ''
     });
+    if (!this.auth.can('MISSAO_CORRIGIR') && missao.status !== 'ATIVA') {
+      for (const campo of ['localDestino', 'setorSolicitante', 'solicitanteNome'] as const) {
+        if (missao[campo]?.trim()) this.missaoDadosForm.controls[campo].disable();
+      }
+    }
   }
 
   fecharEdicaoDadosMissao(): void {
@@ -2512,7 +2515,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  salvarDadosAdministrativosMissao(): void {
+  salvarDadosAdministrativosMissao(justificativa?: string): void {
     const missao = this.selectedMissaoDadosAdmin;
     if (!missao) {
       return;
@@ -2520,10 +2523,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const raw = this.missaoDadosForm.getRawValue();
     const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
+    const corrige = missao.status !== 'ATIVA' && (['localDestino', 'setorSolicitante', 'solicitanteNome'] as const)
+      .some(campo => !!missao[campo]?.trim() && missao[campo]?.trim() !== raw[campo].trim());
+    if (corrige && !justificativa) {
+      this.pedirMotivo('Corrigir dados da missão', 'Explique a correção dos dados já registrados.', valor => this.salvarDadosAdministrativosMissao(valor)); return;
+    }
     this.adminService.atualizarDadosAdministrativosMissao(missao.id, {
+      justificativa,
       localDestino: this.toNullIfBlank(raw.localDestino),
-      setorSolicitante: exibeCamposUrbanos ? this.toNullIfBlank(raw.setorSolicitante) : null,
-      solicitanteNome: exibeCamposUrbanos ? this.toNullIfBlank(raw.solicitanteNome) : null
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
     }).subscribe({
       next: (updated) => {
         this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
@@ -2545,6 +2554,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   podeEditarMissaoManual(missao: MissaoResponse): boolean {
+    if (!this.auth.can('MISSAO_CORRIGIR')) return false;
     return missao.origemAbertura === 'CONTINGENCIA_ADMIN';
   }
 
@@ -2678,6 +2688,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   podeAjustarHorarioMissao(missao: MissaoResponse): boolean {
+    if (!this.auth.can('MISSAO_CORRIGIR')) return false;
     return missao.origemAbertura === 'CONTINGENCIA_ADMIN' || missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO';
   }
 

@@ -17,6 +17,7 @@ public record AuditoriaMissaoResponse(
         String detalhe,
         String campoAlterado,
         String valorAnterior,
-        String valorNovo
+        String valorNovo,
+        com.frota.checklist.entity.Perfil usuarioAcaoPerfil
 ) {
 }

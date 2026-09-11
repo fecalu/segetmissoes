@@ -10,6 +10,7 @@ export interface FleetCard {
   duration: string | null;
   manual: boolean;
   moving: boolean;
+  allowedDestinations: PainelCategoria[];
   details: Array<{ label: string; value: string | null }>;
 }
 

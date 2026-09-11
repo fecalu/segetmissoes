@@ -78,7 +78,8 @@ public class AdminMissaoController {
                 userDetails.getMotoristaId(),
                 request.localDestino(),
                 request.setorSolicitante(),
-                request.solicitanteNome()
+                request.solicitanteNome(),
+                request.justificativa()
         );
         return ResponseEntity.ok(response);
     }

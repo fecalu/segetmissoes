@@ -50,12 +50,12 @@ export class FleetBoardComponent {
     this.moveVehicle.emit({ vehicle, category });
   }
 
-  moveDestinations(source: PainelCategoria): FleetColumn[] {
+  moveDestinations(source: PainelCategoria, card: FleetCard): FleetColumn[] {
     if (source === 'MISSAO' || source === 'VIAGEM' || source === 'USO_EXTERNO') {
       const returnDestinations: PainelCategoria[] = ['DISPONIVEL', 'PATIO', 'REALOCACAO', 'BLOQUEADO'];
-      return this.columns.filter(column => returnDestinations.includes(column.id));
+      return this.columns.filter(column => returnDestinations.includes(column.id) && card.allowedDestinations.includes(column.id));
     }
-    return this.columns.filter(column => column.id !== source);
+    return this.columns.filter(column => column.id !== source && card.allowedDestinations.includes(column.id));
   }
 
   visibleCards(column: FleetColumn): FleetCard[] {

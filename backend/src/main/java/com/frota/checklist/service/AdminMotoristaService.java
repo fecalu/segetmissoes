@@ -1,79 +1,175 @@
 package com.frota.checklist.service;
 
-import com.frota.checklist.dto.AdminMotoristaRequest;
-import com.frota.checklist.dto.MotoristaResponse;
-import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.dto.*;
+import com.frota.checklist.entity.*;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.MissaoRepository;
+import com.frota.checklist.security.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class AdminMotoristaService {
-
     private final MotoristaRepository motoristaRepository;
+    private final MissaoRepository missaoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AutorizacaoService autorizacao;
+    private final AuditoriaAdministrativaService auditoria;
+    private final JdbcTemplate jdbc;
+    private final EntityManager entityManager;
 
     public List<MotoristaResponse> listar(String busca) {
+        autorizacao.exigir(Permissao.MOTORISTA_GERIR);
         String filtro = busca == null ? "" : busca.trim().toLowerCase(Locale.ROOT);
-        return motoristaRepository.findAll().stream()
-                .filter(m -> filtro.isBlank() || contemBusca(m, filtro))
-                .map(this::toResponse)
-                .toList();
+        return motoristaRepository.findAll().stream().filter(m -> m.getPerfil() == Perfil.MOTORISTA)
+                .filter(m -> filtro.isBlank() || contemBusca(m, filtro)).map(this::toResponse).toList();
     }
 
+    public List<MotoristaOpcao> opcoes() {
+        autorizacao.exigir(Permissao.FROTA_CONSULTAR);
+        return motoristaRepository.findAll().stream().filter(m -> m.getPerfil() == Perfil.MOTORISTA)
+                .map(m -> new MotoristaOpcao(m.getId(), m.getNome(), m.getPerfil())).toList();
+    }
+    public record MotoristaOpcao(Long id, String nome, Perfil perfil) {}
+
+    public List<UsuarioResponse> listarUsuarios() {
+        autorizacao.exigir(Permissao.ACESSO_GERIR);
+        return motoristaRepository.findAll().stream().map(UsuarioResponse::from).toList();
+    }
+
+    @Transactional
     public MotoristaResponse criar(AdminMotoristaRequest request) {
-        validarCpf(request.cpf());
-        validarDuplicidadesParaCriacao(request.login(), request.cpf());
-        if (request.senha() == null || request.senha().isBlank()) {
-            throw new BusinessException("Senha e obrigatoria para criar motorista");
-        }
-
-        Motorista motorista = new Motorista();
-        motorista.setNome(request.nome());
-        motorista.setLogin(request.login());
-        motorista.setCpf(request.cpf());
-        motorista.setPerfil(request.perfil());
-        motorista.setSenha(passwordEncoder.encode(request.senha()));
-        return toResponse(motoristaRepository.save(motorista));
+        serializarContas();
+        Motorista autor = autorizacao.exigir(Permissao.MOTORISTA_GERIR);
+        exigirPerfilMotorista(request.perfil());
+        return toResponse(criarConta(request, autor));
     }
 
+    @Transactional
+    public UsuarioResponse criarUsuario(AdminMotoristaRequest request) {
+        serializarContas();
+        return UsuarioResponse.from(criarConta(request, autorizacao.exigir(Permissao.ACESSO_GERIR)));
+    }
+
+    @Transactional
     public MotoristaResponse editar(Long id, AdminMotoristaRequest request) {
-        validarCpf(request.cpf());
-        Motorista motorista = motoristaRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-
-        if (motoristaRepository.existsByLoginAndIdNot(request.login(), id)) {
-            throw new BusinessException("Login ja utilizado");
-        }
-        if (motoristaRepository.existsByCpfAndIdNot(request.cpf(), id)) {
-            throw new BusinessException("CPF ja utilizado");
-        }
-
-        motorista.setNome(request.nome());
-        motorista.setLogin(request.login());
-        motorista.setCpf(request.cpf());
-        motorista.setPerfil(request.perfil());
-        if (request.senha() != null && !request.senha().isBlank()) {
-            motorista.setSenha(passwordEncoder.encode(request.senha()));
-        }
-
-        return toResponse(motoristaRepository.save(motorista));
+        serializarContas();
+        Motorista autor = autorizacao.exigir(Permissao.MOTORISTA_GERIR);
+        Motorista alvo = buscar(id);
+        exigirPerfilMotorista(alvo.getPerfil());
+        exigirPerfilMotorista(request.perfil());
+        return toResponse(editarConta(alvo, request, autor));
     }
 
-    public void excluir(Long id) {
-        Motorista motorista = motoristaRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-        if ("admin".equalsIgnoreCase(motorista.getLogin())) {
-            throw new BusinessException("Nao e permitido excluir o usuario admin padrao");
+    @Transactional
+    public UsuarioResponse editarUsuario(Long id, AdminMotoristaRequest request) {
+        serializarContas();
+        Motorista autor = autorizacao.exigir(Permissao.ACESSO_GERIR);
+        return UsuarioResponse.from(editarConta(buscar(id), request, autor));
+    }
+
+    @Transactional
+    public UsuarioResponse alterarAcesso(Long id, boolean habilitado, String justificativa) {
+        serializarContas();
+        Motorista autor = autorizacao.exigir(Permissao.ACESSO_GERIR);
+        Motorista alvo = buscar(id);
+        protegerUltimoAdmin(alvo, alvo.getPerfil(), habilitado);
+        if (alvo.isAcessoHabilitado() != habilitado) {
+            auditoria.registrar(autor, "USUARIO", id, "ACESSO_ALTERADO", "acessoHabilitado",
+                    String.valueOf(alvo.isAcessoHabilitado()), String.valueOf(habilitado), justificativa.trim());
+            alvo.setAcessoHabilitado(habilitado);
+            alvo.setVersaoAcesso(alvo.getVersaoAcesso() + 1);
         }
-        motoristaRepository.delete(motorista);
+        return UsuarioResponse.from(motoristaRepository.save(alvo));
+    }
+
+    @Transactional
+    public void excluir(Long id) {
+        serializarContas();
+        Motorista autor = autorizacao.exigir(Permissao.CADASTRO_EXCLUIR);
+        Motorista alvo = buscar(id);
+        exigirPerfilMotorista(alvo.getPerfil());
+        excluirConta(alvo, autor);
+    }
+
+    @Transactional
+    public void excluirUsuario(Long id) {
+        serializarContas();
+        excluirConta(buscar(id), autorizacao.exigir(Permissao.ACESSO_GERIR));
+    }
+
+    private Motorista criarConta(AdminMotoristaRequest request, Motorista autor) {
+        validarCpf(request.cpf());
+        validarDuplicidadesParaCriacao(request.login().trim(), request.cpf());
+        if (request.senha() == null || request.senha().isBlank()) throw new BusinessException("Informe uma senha para criar o acesso");
+        Motorista alvo = new Motorista();
+        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(request.cpf());
+        alvo.setPerfil(request.perfil()); alvo.setSenha(passwordEncoder.encode(request.senha()));
+        Motorista salvo = motoristaRepository.save(alvo);
+        auditoria.registrar(autor, "USUARIO", salvo.getId(), "CONTA_CRIADA", "perfil", null, salvo.getPerfil().name(), null);
+        return salvo;
+    }
+
+    private Motorista editarConta(Motorista alvo, AdminMotoristaRequest request, Motorista autor) {
+        // Existing demonstration CPFs must not prevent changing access permissions.
+        if (!Objects.equals(alvo.getCpf(), request.cpf())) validarCpf(request.cpf());
+        if (motoristaRepository.existsByLoginAndIdNot(request.login().trim(), alvo.getId())) throw new BusinessException("Login ja utilizado");
+        if (motoristaRepository.existsByCpfAndIdNot(request.cpf(), alvo.getId())) throw new BusinessException("CPF ja utilizado");
+        protegerUltimoAdmin(alvo, request.perfil(), alvo.isAcessoHabilitado());
+        if (alvo.getPerfil() != request.perfil() && missaoRepository.existsByMotoristaIdAndStatus(alvo.getId(), StatusMissao.ATIVA))
+            throw new BusinessException("Finalize a missao ativa antes de mudar o perfil do motorista");
+        registrarCampo(autor, alvo, "nome", alvo.getNome(), request.nome().trim());
+        registrarCampo(autor, alvo, "login", alvo.getLogin(), request.login().trim());
+        registrarCampo(autor, alvo, "cpf", alvo.getCpf(), request.cpf());
+        registrarCampo(autor, alvo, "perfil", alvo.getPerfil().name(), request.perfil().name());
+        if (!Objects.equals(alvo.getLogin(), request.login().trim())) alvo.setVersaoAcesso(alvo.getVersaoAcesso()+1);
+        if (request.senha() != null && !request.senha().isBlank()) {
+            auditoria.registrar(autor, "USUARIO", alvo.getId(), "SENHA_REDEFINIDA", null, null, null, null);
+            alvo.setSenha(passwordEncoder.encode(request.senha()));
+            alvo.setVersaoAcesso(alvo.getVersaoAcesso()+1);
+        }
+        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(request.cpf()); alvo.setPerfil(request.perfil());
+        return motoristaRepository.save(alvo);
+    }
+
+    private void excluirConta(Motorista alvo, Motorista autor) {
+        protegerUltimoAdmin(alvo, alvo.getPerfil(), false);
+        if (Objects.equals(autor.getId(), alvo.getId())) throw new BusinessException("Voce nao pode excluir seu proprio acesso");
+        if (missaoRepository.existsByMotoristaIdAndStatus(alvo.getId(), StatusMissao.ATIVA)) throw new BusinessException("Este motorista possui uma missao ativa");
+        auditoria.registrar(autor, "USUARIO", alvo.getId(), "CONTA_EXCLUIDA", "login", alvo.getLogin(), null, null);
+        motoristaRepository.delete(alvo);
+        motoristaRepository.flush();
+    }
+
+    private void protegerUltimoAdmin(Motorista alvo, Perfil novoPerfil, boolean habilitado) {
+        if (alvo.getPerfil() == Perfil.ADMIN && alvo.isAcessoHabilitado()
+                && (novoPerfil != Perfil.ADMIN || !habilitado)
+                && motoristaRepository.countByPerfilAndAcessoHabilitadoTrue(Perfil.ADMIN) <= 1)
+            throw new BusinessException("Mantenha pelo menos um Administrador com acesso habilitado");
+    }
+
+    private void serializarContas() {
+        // All account writes share a transaction lock, including concurrent last-admin changes.
+        jdbc.execute("SELECT pg_advisory_xact_lock(724901)");
+        entityManager.clear();
+    }
+    private Motorista buscar(Long id) { return motoristaRepository.findById(id).orElseThrow(() -> new NotFoundException("Usuario nao encontrado")); }
+    private void exigirPerfilMotorista(Perfil perfil) {
+        if (perfil != Perfil.MOTORISTA) throw new AccessDeniedException("Use a gestao de acessos para alterar esta conta");
+    }
+    private void registrarCampo(Motorista autor, Motorista alvo, String campo, String anterior, String novo) {
+        if (!Objects.equals(anterior, novo)) auditoria.registrar(autor, "USUARIO", alvo.getId(), "CONTA_EDITADA", campo, anterior, novo, null);
     }
 
     private boolean contemBusca(Motorista motorista, String filtro) {
@@ -130,7 +226,8 @@ public class AdminMotoristaService {
                 motorista.getNome(),
                 motorista.getLogin(),
                 motorista.getCpf(),
-                motorista.getPerfil()
+                motorista.getPerfil(),
+                motorista.isAcessoHabilitado()
         );
     }
 }

@@ -53,7 +53,6 @@ export class AdminLoginComponent implements OnInit {
 
     this.form.patchValue({
       login: savedAccess.login,
-      senha: savedAccess.senha,
       lembrarAcesso: true
     });
   }
@@ -70,17 +69,17 @@ export class AdminLoginComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (res) => {
-          if (res.perfil !== 'ADMIN') {
+          if (!this.authService.isAdministrative()) {
             this.authService.logout();
-            this.snackBar.open('Acesso restrito para administradores.', 'Fechar', { duration: 3200 });
+            this.snackBar.open('Acesso restrito à equipe administrativa.', 'Fechar', { duration: 3200 });
             return;
           }
-          this.authService.saveRememberedAccess('admin', { login: normalizedLogin, senha }, lembrarAcesso);
+          this.authService.saveRememberedAccess('admin', { login: normalizedLogin }, lembrarAcesso);
           this.router.navigate(['/admin']);
         },
         error: (err: HttpErrorResponse) => {
           if (err.status === 401) {
-            this.authService.saveRememberedAccess('admin', { login: '', senha: '' }, false);
+            this.authService.saveRememberedAccess('admin', { login: '' }, false);
             this.form.patchValue({ lembrarAcesso: false });
           }
           const message = err.error?.message || 'Falha no login administrativo.';

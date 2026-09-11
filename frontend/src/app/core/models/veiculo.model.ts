@@ -63,5 +63,7 @@ export interface HistoricoStatusVeiculo {
   statusNovo: StatusVeiculo;
   administradorId: number;
   administradorNome: string;
+  administradorPerfil?: string | null;
+  justificativa?: string | null;
   dataHora: string;
 }
