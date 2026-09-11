@@ -1,0 +1,107 @@
+:host { display: block; }
+.fleet-page { animation: page-in .25s ease-out; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.eyebrow { margin: 0 0 8px; font-size: 10px; letter-spacing: 1.7px; color: var(--admin-blue); font-weight: 600; }
+h1 { font-size: clamp(26px, 2.5vw, 34px); font-weight: 600; letter-spacing: -1px; margin: 0; line-height: 1.2; }
+.page-description { font-size: 14px; color: var(--admin-muted); margin: 10px 0 0; }
+.refresh-area { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; flex-shrink: 0; }
+.button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 500 13px 'Barlow', sans-serif; padding: 10px 16px; border-radius: 8px; cursor: pointer; }
+.button-secondary { border: 1px solid #d9e1ed; color: #38516f; background: #fff; box-shadow: 0 1px 2px #142b4510; }
+.button:hover { background: #edf2f9; }
+button:disabled { cursor: wait; opacity: .6; }
+.updated-at { display: flex; align-items: center; gap: 6px; color: var(--admin-muted); font-size: 11px; }
+.connection-dot { width: 5px; height: 5px; border-radius: 50%; background: #238b62; }
+.connection-dot.stale { background: #b87515; }
+.fleet-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff; border: 1px solid var(--admin-line); border-radius: 12px; padding: 22px 0; margin-bottom: 32px; box-shadow: 0 2px 4px #172b4303; }
+.fleet-summary article { padding: 0 22px; border-right: 1px solid #e9edf3; }
+.fleet-summary article:last-child { border: 0; }
+.fleet-summary article > span { font-size: 12px; color: #52627a; display: flex; align-items: center; gap: 7px; min-height: 30px; }
+.fleet-summary strong { display: block; font-size: 32px; font-weight: 600; letter-spacing: -1px; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.fleet-summary small { font-size: 11px; color: #758297; }
+.summary-dot, .column-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.blue { background: #3374c9; }.green { background: #299568; }.amber { background: #c58b2e; }
+.board-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+h2 { font-size: 17px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; }
+.total-count { color: #61738c; font-size: 11px; font-weight: 500; background: #e9eef5; border-radius: 5px; padding: 3px 6px; }
+.board-toolbar p { margin: 6px 0 0; font-size: 12px; color: var(--admin-muted); }
+.search-field { min-height: 42px; width: 290px; display: flex; align-items: center; gap: 10px; border: 1px solid #dce3ed; border-radius: 8px; background: #fff; color: #75859a; padding: 0 12px; flex-shrink: 0; }
+.search-field:focus-within { outline: 2px solid #8aafe3; outline-offset: 2px; }
+.search-field input { width: 100%; min-width: 0; height: 40px; font: 13px 'Barlow', sans-serif; border: 0; outline: none; background: transparent; color: var(--admin-ink); }
+.search-field input::placeholder { color: #7a8799; }
+.clear-search { display: grid; place-items: center; border: 0; background: transparent; cursor: pointer; width: 28px; height: 32px; color: #5e718a; }
+.search-result { font-size: 13px; color: var(--admin-muted); }
+.fleet-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.fleet-column { --category-color: #64748b; display: flex; flex-direction: column; min-width: 0; min-height: 220px; border: 1px solid #e0e6ee; border-radius: 10px; background: #edf1f6; padding: 14px 10px 10px; }
+.fleet-column[data-category='DISPONIVEL'] { --category-color: #3374c9; }
+.fleet-column[data-category='MISSAO'] { --category-color: #21845d; }
+.fleet-column[data-category='VIAGEM'] { --category-color: #157c8f; }
+.fleet-column[data-category='REALOCACAO'] { --category-color: #b77d19; }
+.fleet-column[data-category='USO_EXTERNO'] { --category-color: #99632b; }
+.fleet-column[data-category='BLOQUEADO'] { --category-color: #c34e58; }
+.column-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 4px; }
+.column-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.column-dot { background: var(--category-color); }
+h3 { font-size: 13px; font-weight: 600; margin: 0; line-height: 1.4; }
+.column-count { font-size: 11px; color: #5f7087; background: #e2e8f0; border-radius: 5px; padding: 2px 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.add-button { border: 1px solid #d7dfea; display: grid; place-items: center; color: #596c85; background: #ffffffb3; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+.add-button app-icon { width: 16px; height: 16px; }
+.add-button:hover { color: var(--admin-blue); border-color: #7f9fc9; background: #fff; }
+.column-description { margin: 5px 4px 12px; font-size: 11px; line-height: 1.4; color: #768399; }
+.column-dropzone { flex: 1; min-height: 138px; display: flex; flex-direction: column; gap: 9px; border-radius: 7px; transition: background .15s; }
+.column-dropzone.cdk-drop-list-receiving { background: #e2ebfa; outline: 1px dashed #8babd8; outline-offset: 3px; }
+.fleet-vehicle { background: #fff; border: 1px solid #dfe5ee; border-radius: 8px; padding: 12px 13px 8px; box-shadow: 0 2px 3px #192c4505; cursor: grab; min-width: 0; }
+.fleet-vehicle.cdk-drag-disabled { cursor: default; }
+.fleet-vehicle:hover { border-color: #b8c8dd; }
+.vehicle-topline { display: flex; align-items: center; justify-content: space-between; }
+.plate { font-size: 16px; letter-spacing: .4px; font-weight: 600; }
+.drag-hint { width: 14px; height: 14px; color: #a6b3c4; }
+.model { font-size: 12px; color: #6b7b91; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.vehicle-status { display: inline-block; padding: 3px 6px; border-radius: 4px; background: #f0f3f7; color: #596981; font-size: 9px; font-weight: 600; letter-spacing: .35px; line-height: 1.5; overflow-wrap: anywhere; max-width: 100%; }
+.vehicle-status[data-status='BASE_JOAO_GOULART'] { background: #edf3ff; color: #3467a9; }
+.vehicle-status[data-status='CIRCULANDO'] { background: #eaf7ef; color: #23774e; }
+.vehicle-status[data-status='EM_VIAGEM'] { background: #e6f5f7; color: #16697a; }
+.vehicle-status[data-status='OFICINA'], .vehicle-status[data-status='AGUARDANDO_REALOCACAO'] { background: #fcf3e0; color: #8f621b; }
+.vehicle-status[data-status='MANUTENCAO'] { background: #fff0e4; color: #a15323; }
+.vehicle-status[data-status='BLOQUEADO'] { background: #fcecef; color: #a33743; }
+.driver { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; font-size: 12px; overflow-wrap: anywhere; }
+.driver app-icon { width: 13px; height: 13px; color: #7d8ba1; }
+.mission-timing { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 10px; color: #6a7b91; margin: 8px 0; }
+.mission-timing span:last-child { display: inline-flex; align-items: center; gap: 4px; }
+.mission-timing strong { font-weight: 500; color: #4b5f79; }
+.mission-timing app-icon { width: 12px; height: 12px; }
+.vehicle-details { margin: 10px 0; padding-top: 8px; border-top: 1px solid #edf0f5; display: grid; gap: 5px; font-size: 11px; }
+.vehicle-details > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px; }
+.vehicle-details dt { color: #738198; }.vehicle-details dd { margin: 0; color: #40546f; overflow-wrap: anywhere; }.vehicle-details .pending { color: #956b2b; }
+.manual-note { display: inline-block; font-size: 10px; color: #896123; margin-bottom: 5px; }
+.vehicle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; border-top: 1px solid #f0f3f7; padding-top: 4px; gap: 8px; }
+.history-button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 0; background: transparent; font: 11px 'Barlow', sans-serif; color: #5d708b; padding: 4px 0; cursor: pointer; }
+.history-button:hover { color: #2459a9; }.history-button app-icon { width: 13px; height: 13px; }
+.automatic-label { font-size: 9px; color: #7d8a9c; }
+.empty-column { display: flex; flex: 1; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #6d7c91; font-size: 11px; min-height: 100px; pointer-events: none; }
+.empty-symbol { display: grid; place-items: center; width: 38px; height: 38px; border: 1px dashed #cfd9e5; border-radius: 9px; color: #9aa9bb; }
+.board-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; color: #77869a; font-size: 11px; }
+.board-footer button { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--admin-blue); cursor: pointer; font: 12px 'Barlow', sans-serif; min-height: 36px; }
+.board-footer app-icon { width: 13px; height: 13px; }
+.feedback { padding: 12px 16px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #dce5f0; font-size: 13px; background: #fff; }
+.feedback-error { color: #9b3340; background: #fff4f5; border-color: #edc9d0; }.feedback-warning { color: #896021; background: #fff8e9; border-color: #ead8ae; }
+.fleet-vehicle.cdk-drag-preview { box-shadow: 0 14px 28px #142c4530; font-family: 'Barlow', sans-serif; color: #192b43; }
+.fleet-vehicle.cdk-drag-placeholder { opacity: .35; border: 1px dashed #6c9bd5; }
+button:focus-visible { outline: 3px solid #4386dc; outline-offset: 3px; }
+.spinning { animation: spin 1.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes page-in { from { opacity: .5; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@media (min-width: 1800px) { .fleet-board { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 851px) and (max-width: 1150px) { .fleet-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fleet-summary article { padding-inline: 14px; } }
+@media (max-width: 700px) {
+  .page-heading { flex-direction: column; align-items: flex-start; gap: 18px; }
+  .refresh-area { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; gap: 10px; }
+  .fleet-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; margin-bottom: 24px; }
+  .fleet-summary article { padding: 16px; border-bottom: 1px solid #e9edf3; }.fleet-summary article:nth-child(2) { border-right: 0; }.fleet-summary article:nth-child(3) { border-bottom: 0; }
+  .fleet-summary strong { font-size: 28px; }.fleet-summary small { line-height: 1.5; display: block; }
+  .board-toolbar { flex-direction: column; align-items: stretch; }.search-field { width: 100%; }.search-field input { font-size: 16px; }
+  .fleet-board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .add-button { width: 40px; height: 40px; }.history-button { min-height: 40px; font-size: 12px; }
+  .board-footer { align-items: flex-start; }.board-footer > span { max-width: 155px; line-height: 1.5; }
+}
+@media (max-width: 540px) { .fleet-board { grid-template-columns: 1fr; }.plate { font-size: 17px; }.model, .driver { font-size: 13px; }.vehicle-details { font-size: 12px; }.column-heading h3 { font-size: 14px; } }
+@media (prefers-reduced-motion: reduce) { .fleet-page, .spinning { animation: none; }.column-dropzone { transition: none; } }

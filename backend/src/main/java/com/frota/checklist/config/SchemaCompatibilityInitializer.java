@@ -226,6 +226,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 check (origem_abertura in (
                     'CHECKLIST',
                     'SEM_CHECKLIST',
+                    'REGISTRO_ADMINISTRATIVO',
                     'CONTINGENCIA_ADMIN'
                 ))
                 """);
@@ -284,10 +285,12 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 check (acao in (
                     'ABERTURA_CHECKLIST',
                     'ABERTURA_SEM_CHECKLIST',
+                    'ABERTURA_REGISTRO_ADMINISTRATIVO',
                     'ABERTURA_CONTINGENCIA_ADMIN',
                     'ABERTURA_LEGADO_RECONSTRUIDA',
                     'ENCERRAMENTO_CHECKLIST',
                     'ENCERRAMENTO_SEM_CHECKLIST',
+                    'ENCERRAMENTO_REGISTRO_ADMINISTRATIVO',
                     'ENCERRAMENTO_PENDENTE_ADMIN',
                     'ENCERRAMENTO_ADMINISTRATIVO',
                     'ATUALIZACAO_DADOS_ADMINISTRATIVOS'

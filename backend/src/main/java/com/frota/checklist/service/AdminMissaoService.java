@@ -55,6 +55,7 @@ public class AdminMissaoService {
     private final VeiculoRepository veiculoRepository;
     private final MissaoService missaoService;
     private final MissaoAuditoriaService missaoAuditoriaService;
+    private final AdminVeiculoService adminVeiculoService;
 
     public List<MissaoResponse> listar(
             Long motoristaId,
@@ -260,7 +261,8 @@ public class AdminMissaoService {
         if (administrador.getPerfil() != Perfil.ADMIN) {
             throw new BusinessException("Usuario sem permissao administrativa");
         }
-        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN
+                && missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
             throw new BusinessException("Somente missoes registradas manualmente podem ter horario ajustado por este fluxo");
         }
 
@@ -336,7 +338,8 @@ public class AdminMissaoService {
         if (administrador.getPerfil() != Perfil.ADMIN) {
             throw new BusinessException("Usuario sem permissao administrativa");
         }
-        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN
+                && missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
             throw new BusinessException("Somente missoes registradas manualmente podem ser editadas por este fluxo");
         }
 
@@ -567,6 +570,108 @@ public class AdminMissaoService {
                 solicitanteNome
         );
         return toResponse(missao);
+    }
+
+    @Transactional
+    public MissaoResponse criarRegistroAdministrativo(
+            Long administradorId,
+            Long motoristaId,
+            Long veiculoId,
+            LocalDateTime dataHoraInicio,
+            TipoDeslocamentoMissao tipoDeslocamento,
+            String localDestino,
+            String setorSolicitante,
+            String solicitanteNome
+    ) {
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+
+        Motorista motorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+        if (motorista.getPerfil() != Perfil.MOTORISTA) {
+            throw new BusinessException("Selecione um motorista valido para a missao");
+        }
+        Veiculo veiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        if (Boolean.TRUE.equals(veiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode receber registro operacional");
+        }
+
+        TipoDeslocamentoMissao tipoNormalizado = tipoDeslocamento == null
+                ? TipoDeslocamentoMissao.NA_CIDADE
+                : tipoDeslocamento;
+        String destinoNormalizado = trimToNull(localDestino);
+        String setorNormalizado = trimToNull(setorSolicitante);
+        String solicitanteNormalizado = trimToNull(solicitanteNome);
+        if (destinoNormalizado == null) {
+            throw new BusinessException("Informe o destino da missao");
+        }
+        if (tipoNormalizado == TipoDeslocamentoMissao.NA_CIDADE
+                && (setorNormalizado == null || solicitanteNormalizado == null)) {
+            throw new BusinessException("Informe setor solicitante e quem solicitou a missao");
+        }
+
+        StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
+        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoAdministrativa()) {
+            throw new BusinessException("Veiculo indisponivel para nova missao. Status atual: " + statusAdministrativo);
+        }
+
+        Missao missao = missaoService.abrirRegistroAdministrativo(
+                administrador,
+                motorista,
+                veiculo,
+                dataHoraInicio,
+                tipoNormalizado,
+                destinoNormalizado,
+                setorNormalizado,
+                solicitanteNormalizado
+        );
+        return toResponse(missao);
+    }
+
+    @Transactional
+    public MissaoResponse registrarRetornoAdministrativo(
+            Long missaoId,
+            Long administradorId,
+            LocalDateTime dataHoraFim,
+            StatusVeiculo statusAdministrativoDestino
+    ) {
+        Missao missao = missaoRepository.findById(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        if (administrador.getPerfil() != Perfil.ADMIN) {
+            throw new BusinessException("Usuario sem permissao administrativa");
+        }
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
+            throw new BusinessException("Use o encerramento correspondente a origem desta missao");
+        }
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            throw new BusinessException("Esta missao ja foi finalizada");
+        }
+        if (dataHoraFim == null || !dataHoraFim.isAfter(missao.getDataHoraInicio())) {
+            throw new BusinessException("Data/hora de retorno deve ser posterior a saida");
+        }
+
+        StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(statusAdministrativoDestino);
+        if (statusAdministrativoDestino != null
+                && destinoNormalizado != StatusVeiculo.NO_PATIO
+                && destinoNormalizado != StatusVeiculo.AGUARDANDO_REALOCACAO
+                && destinoNormalizado != StatusVeiculo.BLOQUEADO) {
+            throw new BusinessException("Destino administrativo invalido para o retorno da missao");
+        }
+
+        Missao finalizada = missaoService.encerrarRegistroAdministrativo(missao, administrador, dataHoraFim);
+        if (destinoNormalizado == StatusVeiculo.NO_PATIO) {
+            // O retorno encerra a missao antes de registrar o novo local do veiculo no historico.
+            adminVeiculoService.atualizarStatusAdministrativo(finalizada.getVeiculo().getId(), StatusVeiculo.NO_PATIO, administradorId);
+        }
+
+        return toResponse(finalizada);
     }
 
     @Transactional

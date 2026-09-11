@@ -1,138 +1,18 @@
-<section class="page-wrap">
-  <mat-card class="card-shell admin-shell">
-    <header class="admin-header">
-      <div>
-        <p class="eyebrow">Administracao</p>
-        <h2>Painel de Frota</h2>
-      </div>
-      <button mat-stroked-button color="primary" type="button" *ngIf="activeMenu === 'operacao'" (click)="logout()">Sair</button>
-    </header>
-
-    <nav class="admin-menu">
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'operacao'" (click)="setMenu('operacao')">Operacao frota</button>
-      <button mat-stroked-button type="button" [class.active]="isControleAtivo()" (click)="abrirControle()">Controle</button>
-      <button mat-stroked-button type="button" [class.active]="isCadastrosAtivo()" (click)="abrirCadastros()">Cadastros</button>
-      <button mat-stroked-button type="button" (click)="abrirTelaEstatisticas()">Estatisticas</button>
-    </nav>
-
-    <nav class="admin-submenu" *ngIf="isCadastrosAtivo()">
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'veiculos'" (click)="setCadastroMenu('veiculos')">Veiculos</button>
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'motoristas'" (click)="setCadastroMenu('motoristas')">Motoristas</button>
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'rotulos-status'" (click)="setCadastroMenu('rotulos-status')">Rotulos e sugestoes</button>
-    </nav>
-
-    <nav class="admin-submenu" *ngIf="isControleAtivo()">
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'missoes'" (click)="setControleMenu('missoes')">Missoes</button>
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'checklists'" (click)="setControleMenu('checklists')">Checklists</button>
-      <button mat-stroked-button type="button" [class.active]="activeMenu === 'vistorias-completas'" (click)="setControleMenu('vistorias-completas')">Vistorias completas</button>
-    </nav>
-
-    <section class="content" *ngIf="activeMenu === 'operacao'">
-      <mat-card class="panel-card operacao-card-shell">
-        <div class="checklist-topline">
-          <div>
-            <h3>Painel operacional de veiculos</h3>
-            <p class="panel-helper">Visualize rapidamente a frota. Viagens administrativas sao abertas e fechadas em Controle &gt; Missoes.</p>
-          </div>
-          <button mat-stroked-button type="button" (click)="atualizarPainelOperacional()">Atualizar</button>
-        </div>
-
-        <div class="kpi-grid operacao-kpis">
-          <article class="kpi"><h3>{{ totalVeiculosDisponiveis() }}</h3><p>Disponiveis</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosEmMissao() }}</h3><p>Em missao</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosNoPatio() }}</h3><p>No patio</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosEmViagem() }}</h3><p>Em viagem</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosAguardandoRealocacao() }}</h3><p>Aguardando realocacao</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosEmUsoExterno() }}</h3><p>Em uso externo</p></article>
-          <article class="kpi"><h3>{{ totalVeiculosBloqueados() }}</h3><p>Bloqueados</p></article>
-          <article class="kpi kpi-desativado"><h3>{{ totalVeiculosDesativados() }}</h3><p>Baixados/Desativados</p></article>
-        </div>
-
-        <div class="operacao-board">
-          <section class="status-column" *ngFor="let categoria of categoriasPainel">
-            <header class="status-column-header">
-              <div>
-                <h4>{{ categoria.titulo }}</h4>
-                <p>{{ categoria.descricao }}</p>
-              </div>
-              <div class="status-column-header-right">
-                <span class="status-column-count">{{ contarCategoria(categoria.id) }}</span>
-                <button
-                  mat-icon-button
-                  type="button"
-                  class="add-vehicle-btn"
-                  *ngIf="categoriaPermiteInclusao(categoria.id)"
-                  (click)="abrirInclusaoCategoria(categoria.id)"
-                  [attr.aria-label]="'Adicionar veiculo em ' + categoria.titulo"
-                >
-                  <span class="plus-sign" aria-hidden="true">+</span>
-                </button>
-              </div>
-            </header>
-
-            <div
-              class="status-column-content"
-              cdkDropList
-              [id]="categoria.id"
-              [cdkDropListData]="veiculosDaCategoria(categoria.id)"
-              [cdkDropListConnectedTo]="categoriasPainelIds"
-              (cdkDropListDropped)="onDropCategoria($event, categoria.id)"
-            >
-              <article
-                class="vehicle-card operacao-vehicle-card"
-                *ngFor="let v of veiculosDaCategoria(categoria.id)"
-                cdkDrag
-                [cdkDragData]="v"
-              >
-                <header class="vehicle-header">
-                  <strong>{{ v.placa }}</strong>
-                  <span class="status-pill" [ngClass]="statusClass(v.statusAtual)">{{ statusLabel(v.statusAtual) }}</span>
-                </header>
-
-                <p class="vehicle-model">{{ v.marca }} {{ v.modelo }}</p>
-                <ng-container *ngIf="categoria.id === 'MISSAO'; else dadosPadraoStatus">
-                  <p class="vehicle-driver"><strong>Motorista:</strong> {{ motoristaEmMissao(v) }}</p>
-                  <p class="vehicle-missao-meta"><strong>Inicio:</strong> {{ inicioMissaoPainelLabel(v.id) }} | <strong>Em andamento ha:</strong> {{ duracaoMissaoPainelLabel(v.id) }}</p>
-                  <p class="vehicle-missao-meta">{{ resumoDadosAdministrativosPainel(v.id) }}</p>
-                  <div class="row-badges" *ngIf="missaoAtivaContingencia(v.id)">
-                    <span class="status-pill status-bloqueado">REGISTRO MANUAL</span>
-                  </div>
-                </ng-container>
-                <ng-template #dadosPadraoStatus>
-                  <p class="vehicle-driver" *ngIf="v.statusAtual !== 'EM_USO_EXTERNO'"><strong>Motorista:</strong> {{ v.motoristaAtualNome || '-' }}</p>
-                  <ng-container *ngIf="v.statusAtual === 'EM_VIAGEM'">
-                    <ng-container *ngIf="v.viagemId; else viagemPorMissao">
-                      <p class="vehicle-missao-meta"><strong>Motorista da viagem:</strong> {{ motoristaViagemLabel(v) }}</p>
-                      <p class="vehicle-missao-meta"><strong>Destino:</strong> {{ destinoViagemLabel(v) }}</p>
-                      <p class="vehicle-missao-meta" *ngIf="v.viagemDataHoraSaida"><strong>Saida:</strong> {{ v.viagemDataHoraSaida | date:'dd/MM/yyyy HH:mm' }}</p>
-                    </ng-container>
-                    <ng-template #viagemPorMissao>
-                      <p class="vehicle-missao-meta"><strong>Inicio:</strong> {{ inicioMissaoPainelLabel(v.id) }} | <strong>Em andamento ha:</strong> {{ duracaoMissaoPainelLabel(v.id) }}</p>
-                      <p class="vehicle-missao-meta">{{ resumoDadosAdministrativosPainel(v.id) }}</p>
-                    </ng-template>
-                  </ng-container>
-                  <ng-container *ngIf="v.statusAtual === 'EM_USO_EXTERNO'">
-                    <p class="vehicle-missao-meta"><strong>Entregue para:</strong> {{ contraparteUsoExternoLabel(v) }}</p>
-                    <p class="vehicle-missao-meta"><strong>Tipo:</strong> {{ tipoUsoExternoLabel(v.usoExternoTipo) }}</p>
-                    <p class="vehicle-missao-meta" *ngIf="v.usoExternoDataHoraSaida"><strong>Saida:</strong> {{ v.usoExternoDataHoraSaida | date:'dd/MM/yyyy HH:mm' }}</p>
-                  </ng-container>
-                  <p class="vehicle-admin-state">
-                    <strong>Status administrativo:</strong>
-                    {{ v.statusAdministrativo ? statusLabel(v.statusAdministrativo) : 'AUTOMATICO' }}
-                  </p>
-                </ng-template>
-
-                <div class="inline-buttons">
-                  <button mat-stroked-button type="button" class="historico-btn" (click)="abrirHistoricoVeiculo(v)">Historico</button>
-                </div>
-              </article>
-              <p class="empty-column" *ngIf="veiculosDaCategoria(categoria.id).length === 0">Sem veiculos nesta categoria.</p>
-            </div>
-          </section>
-        </div>
-      </mat-card>
-    </section>
-
+<div class="admin-pages">
+  <app-fleet-board
+    *ngIf="activeMenu === 'operacao'"
+    [columns]="colunasOperacao"
+    [loading]="loadingVeiculos || loadingTempoReal"
+    [updatedAt]="ultimaAtualizacaoFrota"
+    [vehicleError]="erroAtualizacaoFrota"
+    [missionError]="erroAtualizacaoMissoes"
+    (refresh)="atualizarPainelOperacional()"
+    (history)="abrirHistoricoVeiculo($event)"
+    (include)="abrirInclusaoCategoria($event)"
+    (move)="onDropCategoria($event.event, $event.category)"
+    (dragging)="arrastandoVeiculo = $event"
+    (missions)="setMenu('missoes')"
+  />
     <section class="content" *ngIf="activeMenu === 'veiculos'">
       <mat-card class="panel-card">
         <h3>Cadastro de veiculos</h3>
@@ -323,7 +203,7 @@
           <h3>Missoes</h3>
           <div class="checklist-actions">
             <button mat-flat-button color="primary" type="button" (click)="abrirNovaMissao()">
-              + Registrar missao
+              + Registrar saída
             </button>
             <mat-form-field appearance="outline" class="report-date-field">
               <mat-label>Data</mat-label>
@@ -363,6 +243,7 @@
                 <mat-option value="">Todos</mat-option>
                 <mat-option value="CHECKLIST">INICIO: COM CHECKLIST</mat-option>
                 <mat-option value="SEM_CHECKLIST">INICIO: SEM CHECKLIST</mat-option>
+                <mat-option value="REGISTRO_ADMINISTRATIVO">INICIO: REGISTRADO PELO ADMIN</mat-option>
                 <mat-option value="CONTINGENCIA_ADMIN">INICIO: PELO ADMIN</mat-option>
               </mat-select>
             </mat-form-field>
@@ -439,7 +320,8 @@
               <button mat-flat-button color="primary" type="button" *ngIf="!podeEditarMissaoManual(m)" (click)="abrirEdicaoDadosMissao(m)">Completar dados</button>
               <button mat-flat-button color="primary" type="button" *ngIf="podeEditarMissaoManual(m)" (click)="abrirEdicaoManualMissao(m)">Editar missao manual</button>
               <button mat-stroked-button type="button" *ngIf="!podeEditarMissaoManual(m) && podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horario</button>
-              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA'" (click)="abrirEncerramentoPendente(m.id)">Finalizar em aberto</button>
+              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="abrirRetornoAdministrativo(m.id)">Registrar retorno</button>
+              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO'" (click)="abrirEncerramentoPendente(m.id)">Finalizar em aberto</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Historico</button>
             </div>
           </article>
@@ -638,7 +520,35 @@
         </div>
       </mat-card>
     </section>
-  </mat-card>
+</div>
+
+<section class="detail-overlay" *ngIf="showDecisaoPatio && veiculoDecisaoPatio">
+  <article class="detail-card inclusion-card movement-decision-card">
+    <header>
+      <div>
+        <h3>{{ tituloDecisaoPatio() }}</h3>
+        <p class="history-card-subtitle">{{ veiculoDecisaoPatio.placa }} - {{ veiculoDecisaoPatio.marca }} {{ veiculoDecisaoPatio.modelo }}</p>
+      </div>
+      <button mat-stroked-button type="button" (click)="fecharDecisaoPatio()">Fechar</button>
+    </header>
+
+    <p class="inclusion-helper">Você está movendo o veículo de <strong>{{ descricaoDecisaoPatio() }}</strong>. Escolha como essa ação deve ser registrada.</p>
+
+    <div class="movement-decision-options">
+      <button type="button" class="movement-decision-option primary" (click)="registrarDeslocamentoEntreBaseEPatio()">
+        <strong>Registrar deslocamento</strong>
+        <span>Abre uma missão administrativa para informar motorista e horário. Use quando alguém realmente levou o veículo.</span>
+      </button>
+      <button type="button" class="movement-decision-option" (click)="atualizarSomenteSituacaoEntreBaseEPatio()">
+        <strong>Atualizar somente a situação</strong>
+        <span>Não cria missão. Use para corrigir ou organizar a posição atual do veículo no painel.</span>
+      </button>
+    </div>
+
+    <div class="row-actions">
+      <button mat-stroked-button type="button" (click)="fecharDecisaoPatio()">Cancelar</button>
+    </div>
+  </article>
 </section>
 
 <section class="detail-overlay" *ngIf="selectedCategoriaInclusao as categoriaSelecionada">
@@ -695,18 +605,18 @@
 <section class="detail-overlay" *ngIf="showNovaMissaoModal">
   <article class="detail-card history-card nova-missao-card">
     <header>
-      <h3>{{ novaMissaoModo === 'VIAGEM' ? 'Registrar viagem' : 'Registrar missao' }}</h3>
+      <h3>{{ novaMissaoModo === 'VIAGEM' ? 'Registrar saída para viagem' : novaMissaoModo === 'RETORNO' ? 'Registrar retorno' : novaMissaoModo === 'PENDENTE' ? 'Finalizar missão em aberto' : 'Registrar saída' }}</h3>
       <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Fechar</button>
     </header>
 
-    <div class="nova-missao-modos">
+    <div class="nova-missao-modos" *ngIf="!novaMissaoModoFixado">
       <button
         mat-stroked-button
         type="button"
-        [class.active]="novaMissaoModo === 'CONTINGENCIA'"
-        (click)="setNovaMissaoModo('CONTINGENCIA')"
+        [class.active]="novaMissaoModo === 'OPERACAO'"
+        (click)="setNovaMissaoModo('OPERACAO')"
       >
-        Registrar missao na cidade
+        Registrar saída
       </button>
       <button
         mat-stroked-button
@@ -719,6 +629,14 @@
       <button
         mat-stroked-button
         type="button"
+        [class.active]="novaMissaoModo === 'RETORNO'"
+        (click)="setNovaMissaoModo('RETORNO')"
+      >
+        Registrar retorno
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
         [class.active]="novaMissaoModo === 'PENDENTE'"
         (click)="setNovaMissaoModo('PENDENTE')"
       >
@@ -726,7 +644,11 @@
       </button>
     </div>
 
-    <form class="form-grid" *ngIf="novaMissaoModo !== 'PENDENTE'" [formGroup]="missaoContingenciaForm">
+    <p class="panel-helper" *ngIf="novaMissaoModo === 'OPERACAO' || novaMissaoModo === 'VIAGEM'">
+      Registre a saída para atualizar a operação da frota. O checklist do motorista continua sendo um registro complementar.
+    </p>
+
+    <form class="form-grid" *ngIf="novaMissaoModo === 'OPERACAO' || novaMissaoModo === 'VIAGEM'" [formGroup]="missaoContingenciaForm">
       <mat-form-field appearance="outline">
         <mat-label>Motorista</mat-label>
         <mat-select formControlName="motoristaId">
@@ -778,27 +700,49 @@
         </mat-option>
       </mat-autocomplete>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Justificativa do registro manual</mat-label>
-        <textarea matInput rows="4" maxlength="700" formControlName="justificativaAbertura" [matAutocomplete]="autoJustificativaContingencia"></textarea>
-        <mat-hint align="end">{{ missaoContingenciaForm.getRawValue().justificativaAbertura.length }}/700</mat-hint>
-      </mat-form-field>
-      <mat-autocomplete #autoJustificativaContingencia="matAutocomplete">
-        <mat-option *ngFor="let sugestao of sugestoesFiltradasMissao('justificativasRegistroManual', missaoContingenciaForm.getRawValue().justificativaAbertura)" [value]="sugestao">
-          {{ sugestao }}
-        </mat-option>
-      </mat-autocomplete>
-
       <div class="row-actions">
         <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Cancelar</button>
         <button
           mat-flat-button
           color="primary"
           type="button"
-          [disabled]="salvandoNovaMissaoContingencia"
-          (click)="salvarMissaoContingencia()"
+          [disabled]="salvandoRegistroAdministrativo"
+          (click)="salvarRegistroAdministrativo()"
         >
-          {{ salvandoNovaMissaoContingencia ? 'Salvando...' : (novaMissaoEhViagem() ? 'Registrar viagem' : 'Registrar missao manual') }}
+          {{ salvandoRegistroAdministrativo ? 'Salvando...' : (novaMissaoEhViagem() ? 'Registrar saída para viagem' : 'Registrar saída') }}
+        </button>
+      </div>
+    </form>
+
+    <form class="form-grid" *ngIf="novaMissaoModo === 'RETORNO'" [formGroup]="missaoRetornoAdministrativoForm">
+      <p class="panel-helper full-width">O retorno encerra a missão e devolve o veículo à situação operacional correspondente.</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Missão em andamento</mat-label>
+        <mat-select formControlName="missaoId">
+          <mat-option [value]="0">Selecione</mat-option>
+          <mat-option *ngFor="let m of missoesComRegistroAdministrativoAtivas()" [value]="m.id">
+            #{{ m.id }} - {{ m.veiculoPlaca }} - {{ m.motoristaNome }} - saída {{ formatarDataHora(m.dataHoraInicio) }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+      <p class="empty-column" *ngIf="missoesComRegistroAdministrativoAtivas().length === 0">Nenhuma missão registrada pelo administrativo está em andamento.</p>
+      <mat-form-field appearance="outline">
+        <mat-label>Data/hora de retorno</mat-label>
+        <input matInput type="datetime-local" formControlName="dataHoraFim">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Após o retorno, veículo ficará</mat-label>
+        <mat-select formControlName="destinoPosRetorno">
+          <mat-option value="DISPONIVEL">Disponível</mat-option>
+          <mat-option value="PATIO">No pátio</mat-option>
+          <mat-option value="REALOCACAO">Aguardando realocação</mat-option>
+          <mat-option value="BLOQUEADO">Bloqueado</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div class="row-actions">
+        <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Cancelar</button>
+        <button mat-flat-button color="primary" type="button" [disabled]="salvandoRetornoAdministrativo || missoesComRegistroAdministrativoAtivas().length === 0" (click)="registrarRetornoAdministrativo()">
+          {{ salvandoRetornoAdministrativo ? 'Salvando...' : 'Registrar retorno' }}
         </button>
       </div>
     </form>

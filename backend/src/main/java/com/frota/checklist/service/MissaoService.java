@@ -120,6 +120,46 @@ public class MissaoService {
     }
 
     @Transactional
+    public Missao abrirRegistroAdministrativo(
+            Motorista administrador,
+            Motorista motorista,
+            Veiculo veiculo,
+            LocalDateTime dataHoraInicio,
+            TipoDeslocamentoMissao tipoDeslocamento,
+            String localDestino,
+            String setorSolicitante,
+            String solicitanteNome
+    ) {
+        validarMotoristaSemMissaoAtiva(motorista.getId());
+        validarVeiculoSemMissaoAtiva(veiculo.getId());
+
+        Missao missao = new Missao();
+        missao.setMotorista(motorista);
+        missao.setVeiculo(veiculo);
+        liberarVeiculoParaMissao(veiculo);
+        missao.setStatus(StatusMissao.ATIVA);
+        missao.setDataHoraInicio(dataHoraInicio == null ? LocalDateTime.now() : dataHoraInicio);
+        missao.setOrigemAbertura(OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO);
+        missao.setTipoDeslocamento(tipoDeslocamento == null ? TipoDeslocamentoMissao.NA_CIDADE : tipoDeslocamento);
+        missao.setAdministradorAbertura(administrador);
+        missao.setLocalDestino(trimToNull(localDestino));
+        missao.setSetorSolicitante(missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM ? null : trimToNull(setorSolicitante));
+        missao.setSolicitanteNome(missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM ? null : trimToNull(solicitanteNome));
+        missao.atualizarStatusDocumental();
+
+        Missao saved = missaoRepository.save(missao);
+        missaoAuditoriaService.registrar(
+                saved,
+                AcaoAuditoriaMissao.ABERTURA_REGISTRO_ADMINISTRATIVO,
+                null,
+                StatusMissao.ATIVA,
+                administrador,
+                "Saida registrada pela administracao."
+        );
+        return saved;
+    }
+
+    @Transactional
     public Missao abrirContingenciaAdministrativa(
             Motorista administrador,
             Motorista motoristaMissao,
@@ -359,6 +399,31 @@ public class MissaoService {
                 administrador,
                 "Missao em aberto finalizada pela administracao. Justificativa: %s"
                         .formatted(justificativaNormalizada == null ? "-" : justificativaNormalizada)
+        );
+        return saved;
+    }
+
+    @Transactional
+    public Missao encerrarRegistroAdministrativo(
+            Missao missao,
+            Motorista administrador,
+            LocalDateTime dataHoraFim
+    ) {
+        LocalDateTime dataHoraFimEfetiva = dataHoraFim == null ? LocalDateTime.now() : dataHoraFim;
+        missao.setStatus(StatusMissao.FINALIZADA);
+        missao.setDataHoraFim(dataHoraFimEfetiva);
+        missao.setOrigemEncerramento(OrigemEncerramentoMissao.ADMINISTRATIVO);
+        missao.setAdministradorEncerramento(administrador);
+        Missao saved = missaoRepository.save(missao);
+        moverVeiculoParaAguardandoRealocacaoSeViagem(saved);
+        registrarEncerramentoSemChecklistNoVeiculo(missao.getVeiculo(), missao.getMotorista(), dataHoraFimEfetiva);
+        missaoAuditoriaService.registrar(
+                saved,
+                AcaoAuditoriaMissao.ENCERRAMENTO_REGISTRO_ADMINISTRATIVO,
+                StatusMissao.ATIVA,
+                StatusMissao.FINALIZADA,
+                administrador,
+                "Retorno registrado pela administracao."
         );
         return saved;
     }

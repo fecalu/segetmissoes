@@ -10,6 +10,8 @@ import { AdminReportComponent } from './features/admin-report/admin-report.compo
 import { AdminMissionStatsComponent } from './features/admin-mission-stats/admin-mission-stats.component';
 import { MissaoExcecaoComponent } from './features/missao-excecao/missao-excecao.component';
 import { VistoriaCompletaComponent } from './features/vistoria-completa/vistoria-completa.component';
+import { AdminLayoutComponent } from './features/admin-layout/admin-layout.component';
+import { AdminReportsComponent } from './features/admin-reports/admin-reports.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -18,9 +20,12 @@ export const routes: Routes = [
   { path: 'checklist', component: ChecklistComponent, canActivate: [motoristaGuard] },
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },
   { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
-  { path: 'admin/checklists/relatorio', component: AdminReportComponent, canActivate: [adminGuard] },
-  { path: 'admin/estatisticas/missoes', component: AdminMissionStatsComponent, canActivate: [adminGuard] },
-  { path: 'admin', component: AdminDashboardComponent, canActivate: [adminGuard] },
+  { path: 'admin', component: AdminLayoutComponent, canActivate: [adminGuard], canActivateChild: [adminGuard], children: [
+    { path: 'checklists/relatorio', component: AdminReportComponent },
+    { path: 'estatisticas/missoes', component: AdminMissionStatsComponent },
+    { path: 'relatorios', component: AdminReportsComponent },
+    { path: '', component: AdminDashboardComponent }
+  ] },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: '**', redirectTo: 'login' }
 ];

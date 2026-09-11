@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -19,6 +20,7 @@ import { AuthService } from '../../core/services/auth.service';
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatIconModule,
     MatButtonModule,
     MatCheckboxModule,
     MatSnackBarModule

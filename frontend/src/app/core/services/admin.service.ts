@@ -99,6 +99,21 @@ export interface CriarMissaoContingenciaPayload {
   solicitanteNome: string | null;
 }
 
+export interface CriarRegistroAdministrativoMissaoPayload {
+  motoristaId: number;
+  veiculoId: number;
+  dataHoraInicio: string;
+  tipoDeslocamento: TipoDeslocamentoMissao;
+  localDestino: string;
+  setorSolicitante: string | null;
+  solicitanteNome: string | null;
+}
+
+export interface RegistrarRetornoAdministrativoMissaoPayload {
+  dataHoraFim: string;
+  statusAdministrativoDestino: StatusAdministrativoVeiculo | null;
+}
+
 export interface EncerrarMissaoPendentePayload {
   dataHoraFim: string;
   justificativaEncerramento: string;
@@ -208,6 +223,17 @@ export class AdminService {
 
   criarMissaoContingencia(payload: CriarMissaoContingenciaPayload): Observable<MissaoResponse> {
     return this.http.post<MissaoResponse>(`${this.missaoUrl}/contingencias`, payload);
+  }
+
+  criarRegistroAdministrativoMissao(payload: CriarRegistroAdministrativoMissaoPayload): Observable<MissaoResponse> {
+    return this.http.post<MissaoResponse>(`${this.missaoUrl}/registros-administrativos`, payload);
+  }
+
+  registrarRetornoAdministrativoMissao(
+    missaoId: number,
+    payload: RegistrarRetornoAdministrativoMissaoPayload
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/registrar-retorno`, payload);
   }
 
   encerrarMissaoPendente(

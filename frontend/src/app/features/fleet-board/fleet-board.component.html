@@ -1,0 +1,50 @@
+<section class="fleet-page">
+  <header class="page-heading">
+    <div><p class="eyebrow">ACOMPANHAMENTO DIÁRIO</p><h1>Operação da frota</h1><p class="page-description">Acompanhe os veículos e as missões em andamento.</p></div>
+    <div class="refresh-area">
+      <button type="button" class="button button-secondary" [disabled]="loading" (click)="refresh.emit()"><app-icon name="refresh" [class.spinning]="loading" />{{ loading ? 'Atualizando…' : 'Atualizar' }}</button>
+      <span class="updated-at"><span class="connection-dot" [class.stale]="vehicleError || missionError || !updatedAt"></span>{{ updatedAt ? 'Frota atualizada às ' + (updatedAt | date:'HH:mm:ss') : 'Aguardando atualização' }}</span>
+    </div>
+  </header>
+
+  <div class="feedback feedback-error" role="status" *ngIf="vehicleError">Não foi possível atualizar os veículos. {{ updatedAt ? 'Exibindo a última consulta recebida.' : 'Tente atualizar novamente.' }}</div>
+  <div class="feedback feedback-warning" role="status" *ngIf="missionError">Os detalhes das missões não puderam ser atualizados. As informações anteriores foram mantidas.</div>
+
+  <section class="fleet-summary" aria-label="Resumo da frota">
+    <article><span>Veículos ativos</span><strong>{{ updatedAt ? total : '—' }}</strong><small>Frota cadastrada em operação</small></article>
+    <article><span><i class="summary-dot blue"></i>Disponíveis</span><strong>{{ updatedAt ? count('DISPONIVEL') : '—' }}</strong><small>Na base para nova missão</small></article>
+    <article><span><i class="summary-dot green"></i>Em missão ou viagem</span><strong>{{ updatedAt ? count('MISSAO', 'VIAGEM') : '—' }}</strong><small>Deslocamentos em andamento</small></article>
+    <article><span><i class="summary-dot amber"></i>Aguardando realocação</span><strong>{{ updatedAt ? count('REALOCACAO') : '—' }}</strong><small>Aguardam definição de situação</small></article>
+  </section>
+
+  <div class="board-toolbar">
+    <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>Arraste um veículo para registrar a movimentação. Deslocamentos em andamento exigem o registro de retorno antes de uma nova saída.</p></div>
+    <label class="search-field"><app-icon name="search" /><input type="search" aria-label="Buscar veículo por placa, modelo ou motorista" placeholder="Placa, modelo ou motorista" [(ngModel)]="search"><button type="button" class="clear-search" *ngIf="search" aria-label="Limpar busca" (click)="search = ''"><app-icon name="close" /></button></label>
+  </div>
+  <p class="search-result" *ngIf="search" role="status">{{ matches }} {{ matches === 1 ? 'veículo encontrado' : 'veículos encontrados' }}. Os totais acima consideram toda a frota.</p>
+  <p class="feedback" *ngIf="loading && !updatedAt" role="status">Carregando a situação dos veículos…</p>
+
+  <div class="fleet-board" [attr.aria-busy]="loading" *ngIf="updatedAt">
+    <section class="fleet-column" *ngFor="let column of columns; trackBy: trackColumn" [attr.data-category]="column.id" [attr.aria-label]="column.title">
+      <header class="column-header">
+        <div class="column-heading"><span class="column-dot" aria-hidden="true"></span><h3>{{ column.title }}</h3><span class="column-count">{{ search ? visibleCards(column).length + '/' : '' }}{{ column.cards.length }}</span></div>
+        <button *ngIf="column.allowsInclusion" type="button" class="add-button" [disabled]="vehicleError || loading" [attr.aria-label]="'Adicionar veículo em ' + column.title" [title]="'Adicionar veículo em ' + column.title" (click)="include.emit(column.id)"><app-icon name="plus" /></button>
+      </header>
+      <p class="column-description">{{ column.description }}</p>
+      <div class="column-dropzone" cdkDropList [id]="column.id" [cdkDropListData]="visibleCards(column)" [cdkDropListConnectedTo]="ids" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="move.emit({ event: $event, category: column.id })">
+        <article class="fleet-vehicle" *ngFor="let card of visibleCards(column); trackBy: trackCard" cdkDrag [cdkDragData]="card.vehicle" [cdkDragDisabled]="loading || vehicleError" [cdkDragStartDelay]="{touch: 300, mouse: 0}" (cdkDragStarted)="dragging.emit(true)" (cdkDragEnded)="dragging.emit(false)">
+          <div class="vehicle-topline"><strong class="plate">{{ card.vehicle.placa }}</strong><app-icon *ngIf="!card.moving" name="drag" class="drag-hint" /></div>
+          <p class="model">{{ card.vehicle.marca }} {{ card.vehicle.modelo }}</p>
+          <span class="vehicle-status" [attr.data-status]="card.vehicle.statusAtual">{{ card.statusLabel }}</span>
+          <p class="driver" *ngIf="card.driver"><app-icon name="user" /><span>{{ card.driver }}</span></p>
+          <div class="mission-timing" *ngIf="card.departure"><span>Saída <strong>{{ card.departure }}</strong></span><span *ngIf="card.duration"><app-icon name="clock" />{{ card.duration }}</span></div>
+          <dl class="vehicle-details" *ngIf="card.details.length"><div *ngFor="let detail of card.details"><dt>{{ detail.label }}</dt><dd [class.pending]="!detail.value">{{ detail.value || 'Pendente' }}</dd></div></dl>
+          <span class="manual-note" *ngIf="card.manual">Registro administrativo</span>
+          <footer class="vehicle-footer"><button type="button" class="history-button" [attr.aria-label]="'Ver histórico de ' + card.vehicle.placa" (click)="history.emit(card.vehicle)"><app-icon name="history" />Histórico</button><span *ngIf="card.moving" class="automatic-label">Em andamento</span></footer>
+        </article>
+        <div class="empty-column" *ngIf="visibleCards(column).length === 0"><span class="empty-symbol"><app-icon name="fleet" /></span><span>{{ search ? 'Nenhum resultado nesta situação' : 'Nenhum veículo aqui' }}</span></div>
+      </div>
+    </section>
+  </div>
+  <footer class="board-footer"><span>Atualização automática a cada 15 segundos.</span><button type="button" (click)="missions.emit()">Consultar missões <app-icon name="arrow" /></button></footer>
+</section>

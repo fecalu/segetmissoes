@@ -1,67 +1,4 @@
-.card-shell.admin-shell {
-  max-width: min(98vw, 1760px);
-}
-
-.admin-shell {
-  padding: 14px;
-  background: linear-gradient(165deg, #ffffff, #eef3ff);
-}
-
-.admin-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #d7e0f8;
-  border-radius: 14px;
-  padding: 12px;
-  background: #fff;
-}
-
-.eyebrow {
-  margin: 0;
-  color: #254fbc;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.admin-header h2 {
-  margin: 2px 0 0;
-}
-
-.admin-menu {
-  margin: 10px 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.admin-menu button {
-  min-height: 42px;
-}
-
-.admin-menu button.active {
-  border-color: #2d5ac8;
-  background: #eaf0ff;
-}
-
-.admin-submenu {
-  margin: -2px 0 10px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.admin-submenu button {
-  min-height: 38px;
-  font-size: 0.86rem;
-}
-
-.admin-submenu button.active {
-  border-color: #2d5ac8;
-  background: #eef3ff;
-}
+:host { display: block; min-width: 0; }
 
 .content {
   margin-top: 8px;
@@ -553,245 +490,7 @@
   color: #41557f;
 }
 
-.operacao-card-shell {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-}
-
-.operacao-kpis .kpi {
-  background: #fdfefe;
-}
-
-.operacao-board {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.status-column {
-  border: 1px solid #d8e2fb;
-  border-radius: 12px;
-  background: #fff;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 280px;
-}
-
-.status-column-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid #e7edfe;
-  background: #f7f9ff;
-}
-
-.status-column-header h4 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.status-column-header p {
-  margin: 3px 0 0;
-  color: #5a678a;
-  font-size: 0.77rem;
-}
-
-.status-column-header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-column-count {
-  min-width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: #e2ebff;
-  color: #224aa3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.add-vehicle-btn {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  min-width: 28px;
-  padding: 0 !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid #c9d8fb;
-  background: #f3f7ff;
-  color: #21459d;
-}
-
-:host ::ng-deep .add-vehicle-btn .mdc-button__label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-:host ::ng-deep .add-vehicle-btn .mat-mdc-button-touch-target {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
-.plus-sign {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1;
-  transform: translateY(-0.5px);
-}
-
-.status-column-content {
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 220px;
-  flex: 1;
-  transition: background-color 0.15s ease;
-}
-
-.status-column-content.cdk-drop-list-receiving,
-.status-column-content.cdk-drop-list-dragging {
-  background: #f3f7ff;
-}
-
-.empty-column {
-  margin: 4px 0;
-  font-size: 0.82rem;
-  color: #667498;
-  text-align: center;
-}
-
-.vehicle-card {
-  border: 1px solid #dce5fb;
-  border-radius: 9px;
-  background: #fbfdff;
-  padding: 7px;
-}
-
-.operacao-vehicle-card {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  cursor: grab;
-}
-
-.operacao-vehicle-card.cdk-drag-dragging {
-  cursor: grabbing;
-}
-
-.operacao-vehicle-card.cdk-drag-preview {
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(30, 64, 175, 0.24);
-}
-
-.operacao-vehicle-card.cdk-drag-placeholder {
-  opacity: 0.38;
-  border-style: dashed;
-  border-color: #98afe8;
-  background: #f3f7ff;
-}
-
-.vehicle-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.operacao-vehicle-card .vehicle-header {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.operacao-vehicle-card .vehicle-header strong {
-  font-size: 0.8rem;
-  line-height: 1.1;
-}
-
-.status-pill {
-  display: inline-flex;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  width: fit-content;
-  border: 1px solid transparent;
-}
-
-.vehicle-model {
-  margin: 0;
-  color: #3f4f73;
-  font-size: 0.86rem;
-}
-
-.operacao-vehicle-card .vehicle-model {
-  font-size: 0.74rem;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.vehicle-driver {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #4d5f83;
-}
-
-.operacao-vehicle-card .vehicle-driver {
-  font-size: 0.7rem;
-  line-height: 1.2;
-}
-
-.vehicle-admin-state {
-  margin: 0;
-  font-size: 0.78rem;
-  color: #5b698b;
-}
-
-.operacao-vehicle-card .vehicle-admin-state {
-  font-size: 0.68rem;
-  line-height: 1.2;
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.vehicle-missao-meta {
-  margin: 0;
-  font-size: 0.68rem;
-  line-height: 1.2;
-  color: #546487;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.empty-column { margin: 8px 0; font-size: .82rem; color: #64748b; text-align: center; }
 
 .inline-buttons {
   display: flex;
@@ -801,33 +500,6 @@
 
 .inline-buttons button {
   flex: 1 1 auto;
-}
-
-.historico-btn {
-  min-height: 30px;
-  height: 30px;
-  line-height: 28px;
-  padding-inline: 8px;
-  font-size: 0.74rem;
-  border-radius: 8px;
-}
-
-.operacao-vehicle-card .inline-buttons {
-  justify-content: flex-end;
-}
-
-.operacao-vehicle-card .inline-buttons .historico-btn {
-  flex: 0 0 auto;
-  min-height: 22px;
-  height: 22px;
-  line-height: 20px;
-  padding-inline: 5px;
-  font-size: 0.64rem;
-}
-
-.operacao-vehicle-card .status-pill {
-  padding: 1px 5px;
-  font-size: 0.62rem;
 }
 
 .inline-buttons .status-pill {
@@ -959,6 +631,50 @@
   margin: 2px 0 10px;
   font-size: 0.84rem;
   color: #4f5d82;
+}
+
+.movement-decision-card {
+  max-width: 680px;
+}
+
+.movement-decision-options {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.movement-decision-option {
+  width: 100%;
+  border: 1px solid #c9d6cc;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  cursor: pointer;
+  padding: 16px;
+  text-align: left;
+}
+
+.movement-decision-option:hover,
+.movement-decision-option:focus-visible {
+  border-color: #1d7a43;
+  box-shadow: 0 0 0 3px rgba(29, 122, 67, .14);
+  outline: 0;
+}
+
+.movement-decision-option.primary {
+  background: #eff9f1;
+}
+
+.movement-decision-option strong,
+.movement-decision-option span {
+  display: block;
+}
+
+.movement-decision-option span {
+  color: #4a5a4d;
+  font-size: .9rem;
+  line-height: 1.35;
+  margin-top: 4px;
 }
 
 .inclusion-list {
@@ -1196,13 +912,6 @@
 }
 
 @media (min-width: 900px) {
-  .admin-menu {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .admin-submenu {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 
   .kpi-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1252,45 +961,15 @@
     align-items: start;
   }
 
-  .operacao-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   .nova-missao-modos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .status-column {
-    min-height: 340px;
-  }
 
-  .status-column-content {
-    min-height: 280px;
-  }
 }
 
 @media (min-width: 1280px) {
-  .admin-shell {
-    padding: 18px 20px;
-  }
-
-  .admin-header {
-    padding: 14px 16px;
-  }
-
-  .admin-menu {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .admin-menu button {
-    min-height: 44px;
-  }
-
-  .admin-submenu {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 10px;
-  }
 
   .content {
     margin-top: 10px;
@@ -1308,9 +987,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .operacao-kpis {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
 
   .sugestoes-missao-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1332,15 +1008,10 @@
     padding: 10px 12px;
   }
 
-  .operacao-board {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 1640px) {
-  .admin-shell {
-    padding: 20px 22px;
-  }
+
 
   .panel-card {
     padding: 16px;
@@ -1354,7 +1025,4 @@
     grid-column: span 4;
   }
 
-  .operacao-board {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }

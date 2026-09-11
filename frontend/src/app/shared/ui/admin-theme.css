@@ -1,0 +1,29 @@
+.admin-workspace .page-wrap { min-height: auto; padding: 0; }
+.admin-workspace .card-shell { max-width: none; box-shadow: none; border-radius: 12px; background: transparent; }
+.admin-workspace .report-shell, .admin-workspace .stats-shell { padding: 0; }
+.admin-workspace .panel-card { box-shadow: none; border-color: var(--admin-line); border-radius: 12px; padding: 22px; }
+.admin-workspace .mat-mdc-button-base { font-family: 'Barlow', sans-serif; letter-spacing: 0; }
+.admin-workspace .mat-mdc-unelevated-button.mat-primary { --mdc-filled-button-container-color: var(--admin-blue); --mdc-filled-button-label-text-color: #fff; }
+.admin-workspace .mat-mdc-outlined-button { --mdc-outlined-button-outline-color: #d0dbe8; --mdc-outlined-button-label-text-color: #3d5775; }
+.admin-workspace .mat-mdc-form-field { --mat-form-field-container-height: 48px; --mat-form-field-container-vertical-padding: 12px; --mat-form-field-container-text-font: 'Barlow', sans-serif; }
+.admin-workspace .report-date-field { --mat-form-field-container-height: 38px; --mat-form-field-container-vertical-padding: 8px; }
+.admin-workspace .detail-card { color: var(--admin-ink); font-family: 'Barlow', sans-serif; }
+.admin-confirm-dialog {
+  --mdc-filled-button-container-color: #2459a9;
+  --mdc-filled-button-label-text-color: #fff;
+  --mdc-outlined-button-outline-color: #d0dbe8;
+  --mdc-outlined-button-label-text-color: #3d5775;
+  --mdc-dialog-subhead-font: 'Barlow', sans-serif;
+  --mdc-dialog-subhead-size: 20px;
+  --mdc-dialog-subhead-weight: 600;
+  --mdc-dialog-supporting-text-font: 'Barlow', sans-serif;
+}
+.admin-confirm-dialog .mat-mdc-dialog-surface { border-radius: 14px; background: #fff; box-shadow: 0 20px 60px #14243f33; }
+.admin-confirm-dialog .mat-mdc-dialog-title { font: 600 20px 'Barlow', sans-serif; color: #192b43; padding: 24px 24px 12px; }
+.admin-confirm-dialog .mat-mdc-dialog-content { font: 15px/1.7 'Barlow', sans-serif; }
+.admin-confirm-dialog .mat-mdc-dialog-actions { padding: 16px 24px 24px; gap: 8px; }
+.admin-confirm-dialog .mat-mdc-button-base { font: 500 14px 'Barlow', sans-serif; letter-spacing: 0; min-height: 42px; border-radius: 7px; }
+.admin-confirm-dialog .mat-mdc-dialog-container .mat-mdc-outlined-button:not(:disabled) { border: 1px solid #d0dbe8; color: #3d5775; }
+.admin-confirm-dialog .mat-mdc-dialog-container .mat-mdc-unelevated-button:not(:disabled) { background: #2459a9; color: #fff; }
+.admin-confirm-dialog .mat-mdc-dialog-container .mat-mdc-unelevated-button.mat-warn:not(:disabled) { background: #ad3545; }
+@media (max-width: 700px) { .admin-workspace .panel-card { padding: 16px; } }
