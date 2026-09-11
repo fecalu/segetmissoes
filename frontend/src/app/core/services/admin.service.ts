@@ -117,6 +117,7 @@ export interface RegistrarRetornoAdministrativoMissaoPayload {
 export interface EncerrarMissaoPendentePayload {
   dataHoraFim: string;
   justificativaEncerramento: string;
+  statusAdministrativoDestino: StatusAdministrativoVeiculo | null;
 }
 
 export interface AjustarHorarioMissaoPayload {

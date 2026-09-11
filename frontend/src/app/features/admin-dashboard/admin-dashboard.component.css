@@ -75,6 +75,14 @@
   font-weight: 700;
 }
 
+.mission-report-actions { position: relative; }
+.mission-report-actions summary { min-height: 40px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid #c9d4e5; border-radius: 6px; color: #36506e; background: #fff; font-weight: 700; cursor: pointer; list-style: none; }
+.mission-report-actions summary::-webkit-details-marker { display: none; }
+.mission-report-actions summary::after { content: '▾'; margin-left: 8px; font-size: 12px; }
+.mission-report-actions[open] summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: #f6f9fe; }
+.mission-report-actions-content { position: absolute; z-index: 4; top: 100%; right: 0; display: grid; gap: 8px; min-width: 255px; padding: 10px; border: 1px solid #c9d4e5; border-radius: 8px 0 8px 8px; background: #fff; box-shadow: 0 10px 24px rgba(36, 61, 99, .16); }
+.mission-report-actions-content .report-date-field { width: 100% !important; min-width: 100% !important; max-width: 100% !important; }
+
 .report-date-field {
   width: 122px !important;
   min-width: 122px !important;

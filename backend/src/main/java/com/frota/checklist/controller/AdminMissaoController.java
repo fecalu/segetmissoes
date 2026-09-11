@@ -144,7 +144,8 @@ public class AdminMissaoController {
                 id,
                 userDetails.getMotoristaId(),
                 request.dataHoraFim(),
-                request.justificativaEncerramento()
+                request.justificativaEncerramento(),
+                request.statusAdministrativoDestino()
         );
         return ResponseEntity.ok(response);
     }

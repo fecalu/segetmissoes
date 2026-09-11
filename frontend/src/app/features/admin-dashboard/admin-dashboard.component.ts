@@ -467,7 +467,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.missaoPendenteForm = this.fb.nonNullable.group({
       missaoId: [0, [Validators.min(1)]],
       dataHoraFim: [this.agoraDateTimeLocal(), [Validators.required]],
-      justificativaEncerramento: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
+      justificativaEncerramento: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]],
+      destinoPosRetorno: ['DISPONIVEL' as 'DISPONIVEL' | 'PATIO' | 'REALOCACAO' | 'BLOQUEADO']
     });
 
     this.viagemForm = this.fb.nonNullable.group({
@@ -674,11 +675,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  abrirEncerramentoPendente(missaoId?: number, fixarModo = false): void {
+  abrirEncerramentoPendente(
+    missaoId?: number,
+    fixarModo = false,
+    destinoPosRetorno: 'DISPONIVEL' | 'PATIO' | 'REALOCACAO' | 'BLOQUEADO' = 'DISPONIVEL'
+  ): void {
     this.abrirNovaMissao('PENDENTE', fixarModo);
     this.missaoPendenteForm.patchValue({
       missaoId: missaoId && missaoId > 0 ? missaoId : 0,
-      dataHoraFim: this.agoraDateTimeLocal()
+      dataHoraFim: this.agoraDateTimeLocal(),
+      destinoPosRetorno
     });
   }
 
@@ -702,7 +708,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.missaoPendenteForm.reset({
       missaoId: 0,
       dataHoraFim: this.agoraDateTimeLocal(),
-      justificativaEncerramento: ''
+      justificativaEncerramento: '',
+      destinoPosRetorno: 'DISPONIVEL'
     });
   }
 
@@ -793,7 +800,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const payload: EncerrarMissaoPendentePayload = {
       dataHoraFim: raw.dataHoraFim,
-      justificativaEncerramento: raw.justificativaEncerramento.trim()
+      justificativaEncerramento: raw.justificativaEncerramento.trim(),
+      statusAdministrativoDestino: this.statusAdministrativoPorDestinoPosRetorno(raw.destinoPosRetorno)
     };
 
     this.encerrandoMissaoPendente = true;
@@ -1114,6 +1122,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ? event.previousContainer.id
       : this.categoriaDoVeiculo(veiculo);
 
+    this.moverVeiculoParaCategoria(veiculo, categoriaDestino, categoriaOrigem);
+  }
+
+  moverVeiculoParaCategoria(
+    veiculo: Veiculo,
+    categoriaDestino: PainelCategoria,
+    categoriaOrigem = this.categoriaDoVeiculo(veiculo)
+  ): void {
+
     if (categoriaOrigem === categoriaDestino) {
       return;
     }
@@ -1134,11 +1151,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       if (missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO') {
         this.abrirRetornoAdministrativo(missao.id, destinoPosRetorno);
       } else {
-        if (destinoPosRetorno !== 'DISPONIVEL') {
-          this.snackBar.open('Esta missão deve ser encerrada pelo fluxo correspondente antes de definir o destino do veículo.', 'Fechar', { duration: 3600 });
-          return;
-        }
-        this.abrirEncerramentoPendente(missao.id, true);
+        this.abrirEncerramentoPendente(missao.id, true, destinoPosRetorno);
       }
       return;
     }

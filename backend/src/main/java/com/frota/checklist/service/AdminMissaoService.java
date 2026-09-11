@@ -657,19 +657,10 @@ public class AdminMissaoService {
             throw new BusinessException("Data/hora de retorno deve ser posterior a saida");
         }
 
-        StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(statusAdministrativoDestino);
-        if (statusAdministrativoDestino != null
-                && destinoNormalizado != StatusVeiculo.NO_PATIO
-                && destinoNormalizado != StatusVeiculo.AGUARDANDO_REALOCACAO
-                && destinoNormalizado != StatusVeiculo.BLOQUEADO) {
-            throw new BusinessException("Destino administrativo invalido para o retorno da missao");
-        }
+        StatusVeiculo destinoNormalizado = validarDestinoAdministrativoDeRetorno(statusAdministrativoDestino);
 
         Missao finalizada = missaoService.encerrarRegistroAdministrativo(missao, administrador, dataHoraFim);
-        if (destinoNormalizado == StatusVeiculo.NO_PATIO) {
-            // O retorno encerra a missao antes de registrar o novo local do veiculo no historico.
-            adminVeiculoService.atualizarStatusAdministrativo(finalizada.getVeiculo().getId(), StatusVeiculo.NO_PATIO, administradorId);
-        }
+        aplicarDestinoAdministrativoDeRetorno(finalizada, destinoNormalizado, administradorId);
 
         return toResponse(finalizada);
     }
@@ -679,7 +670,8 @@ public class AdminMissaoService {
             Long missaoId,
             Long administradorId,
             LocalDateTime dataHoraFim,
-            String justificativaEncerramento
+            String justificativaEncerramento,
+            StatusVeiculo statusAdministrativoDestino
     ) {
         Missao missao = missaoRepository.findById(missaoId)
                 .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
@@ -703,13 +695,33 @@ public class AdminMissaoService {
             throw new BusinessException("Informe a justificativa do encerramento manual com pelo menos 10 caracteres");
         }
 
+        StatusVeiculo destinoNormalizado = validarDestinoAdministrativoDeRetorno(statusAdministrativoDestino);
+
         Missao encerrada = missaoService.encerrarPendenteAdministrativamente(
                 missao,
                 administrador,
                 dataFimNormalizada,
                 justificativaNormalizada
         );
+        aplicarDestinoAdministrativoDeRetorno(encerrada, destinoNormalizado, administradorId);
         return toResponse(encerrada);
+    }
+
+    private StatusVeiculo validarDestinoAdministrativoDeRetorno(StatusVeiculo statusAdministrativoDestino) {
+        StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(statusAdministrativoDestino);
+        if (statusAdministrativoDestino != null
+                && destinoNormalizado != StatusVeiculo.NO_PATIO
+                && destinoNormalizado != StatusVeiculo.AGUARDANDO_REALOCACAO
+                && destinoNormalizado != StatusVeiculo.BLOQUEADO) {
+            throw new BusinessException("Destino administrativo inválido para o retorno da missão");
+        }
+        return destinoNormalizado;
+    }
+
+    private void aplicarDestinoAdministrativoDeRetorno(Missao missao, StatusVeiculo destino, Long administradorId) {
+        if (destino != null) {
+            adminVeiculoService.atualizarStatusAdministrativo(missao.getVeiculo().getId(), destino, administradorId);
+        }
     }
 
     private void registrarAlteracaoTexto(
