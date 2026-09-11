@@ -22,6 +22,7 @@ export class AdminLayoutComponent {
   activeId = 'operacao';
   pageLabel = 'Operação da frota';
   currentMenu = 'operacao';
+  currentPath = '/admin';
   expandedGroup = '';
   @ViewChild('mobileMenu') mobileMenu?: ElementRef<HTMLDialogElement>;
   @ViewChild('content') content?: ElementRef<HTMLElement>;
@@ -33,7 +34,7 @@ export class AdminLayoutComponent {
   }
 
   isCurrent(link: AdminNavLink): boolean {
-    return link.menu ? this.currentMenu === link.menu : this.activeId === 'relatorios';
+    return link.menu ? this.currentMenu === link.menu : link.path === this.currentPath;
   }
 
   isExpanded(item: AdminNavItem): boolean { return this.expandedGroup === item.id; }
@@ -50,14 +51,16 @@ export class AdminLayoutComponent {
   private syncNavigation(): void {
     const url = this.router.parseUrl(this.router.url);
     const path = '/' + (url.root.children['primary']?.segments.map(segment => segment.path).join('/') || 'admin');
+    this.currentPath = path;
     const requestedMenu = url.queryParams['menu'] || 'operacao';
     this.currentMenu = requestedMenu === 'dashboard' ? 'operacao' : requestedMenu === 'tempo-real' ? 'missoes' : requestedMenu === 'excecoes' ? 'checklists' : requestedMenu;
     const reportPage = path !== '/admin';
-    const item = reportPage ? this.navigation.find(item => item.id === 'relatorios')! :
+    const item = reportPage ? (this.navigation.find(item => item.path === path || item.children?.some(child => child.path === path))
+      ?? this.navigation.find(item => item.id === 'relatorios')!) :
       this.navigation.find(item => item.menu === this.currentMenu || item.children?.some(child => child.menu === this.currentMenu)) || this.navigation[0];
     this.activeId = item.id;
     this.expandedGroup = item.children ? item.id : '';
-    this.pageLabel = reportPage ? (path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
+    this.pageLabel = reportPage ? (path.includes('alocacoes') ? 'Controle de alocações' : path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
       item.children?.find(child => child.menu === this.currentMenu)?.label || item.label;
   }
 }

@@ -17,6 +17,12 @@ import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../models/veiculo.model';
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../models/vistoria-completa.model';
+import {
+  AlocacaoVeiculo,
+  AtualizarDadosAlocacaoVeiculoPayload,
+  CriarAlocacaoVeiculoPayload,
+  HistoricoAlocacaoVeiculo
+} from '../models/alocacao-veiculo.model';
 import { environment } from '../../../environments/environment';
 
 export interface ChecklistFiltro {
@@ -151,6 +157,7 @@ export class AdminService {
   private readonly relatorioMissaoUrl = `${environment.apiBaseUrl}/admin/relatorios/missoes/pdf`;
   private readonly estatisticasMissoesUrl = `${environment.apiBaseUrl}/admin/estatisticas/missoes`;
   private readonly vistoriaCompletaUrl = `${environment.apiBaseUrl}/admin/vistorias-completas`;
+  private readonly alocacaoUrl = `${environment.apiBaseUrl}/admin/alocacoes`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -361,5 +368,38 @@ export class AdminService {
 
   salvarSugestoesCamposMissao(payload: SalvarSugestoesCamposMissaoRequest): Observable<SugestoesCamposMissaoResponse> {
     return this.http.put<SugestoesCamposMissaoResponse>(this.configuracaoSugestoesMissaoUrl, payload);
+  }
+
+  listarAlocacoes(busca?: string, incluirEncerradas = false): Observable<AlocacaoVeiculo[]> {
+    let params = new HttpParams().set('_ts', Date.now().toString());
+    if (busca?.trim()) params = params.set('busca', busca.trim());
+    if (incluirEncerradas) params = params.set('incluirEncerradas', 'true');
+    return this.http.get<AlocacaoVeiculo[]>(this.alocacaoUrl, { params });
+  }
+
+  criarAlocacao(payload: CriarAlocacaoVeiculoPayload): Observable<AlocacaoVeiculo> {
+    return this.http.post<AlocacaoVeiculo>(this.alocacaoUrl, payload);
+  }
+
+  atualizarDadosAlocacao(id: number, payload: AtualizarDadosAlocacaoVeiculoPayload): Observable<AlocacaoVeiculo> {
+    return this.http.put<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/dados`, payload);
+  }
+
+  trocarVeiculoAlocacao(id: number, placa: string, modelo: string, marca: string | null, motivo: string): Observable<AlocacaoVeiculo> {
+    return this.http.patch<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/veiculo`, { placa, modelo, marca, motivo });
+  }
+
+  trocarResponsavelAlocacao(id: number, responsavelNome: string, motivo: string): Observable<AlocacaoVeiculo> {
+    return this.http.patch<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/responsavel`, { responsavelNome, motivo });
+  }
+
+  encerrarAlocacao(id: number, motivo: string): Observable<AlocacaoVeiculo> {
+    return this.http.patch<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/encerrar`, null, {
+      params: new HttpParams().set('motivo', motivo)
+    });
+  }
+
+  listarHistoricoAlocacao(id: number): Observable<HistoricoAlocacaoVeiculo[]> {
+    return this.http.get<HistoricoAlocacaoVeiculo[]>(`${this.alocacaoUrl}/${id}/historico`);
   }
 }

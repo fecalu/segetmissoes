@@ -12,6 +12,7 @@ import { MissaoExcecaoComponent } from './features/missao-excecao/missao-excecao
 import { VistoriaCompletaComponent } from './features/vistoria-completa/vistoria-completa.component';
 import { AdminLayoutComponent } from './features/admin-layout/admin-layout.component';
 import { AdminReportsComponent } from './features/admin-reports/admin-reports.component';
+import { AdminAllocationComponent } from './features/admin-allocation/admin-allocation.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -24,6 +25,7 @@ export const routes: Routes = [
     { path: 'checklists/relatorio', component: AdminReportComponent },
     { path: 'estatisticas/missoes', component: AdminMissionStatsComponent },
     { path: 'relatorios', component: AdminReportsComponent },
+    { path: 'alocacoes', component: AdminAllocationComponent },
     { path: '', component: AdminDashboardComponent }
   ] },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
