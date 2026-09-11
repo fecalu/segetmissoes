@@ -220,10 +220,13 @@ public class AdminAlocacaoVeiculoService {
     private String validarLinkConsulta(String valor) {
         String link = opcional(valor);
         if (link == null) return null;
+        if (!link.matches("(?i)^https?://.*")) {
+            link = "https://" + link;
+        }
         try {
             URI uri = URI.create(link);
-            if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
-                throw new BusinessException("O link de consulta deve começar com http:// ou https://");
+            if ((!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null) {
+                throw new BusinessException("Informe um link de consulta válido");
             }
             return link;
         } catch (IllegalArgumentException exception) {

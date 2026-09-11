@@ -51,7 +51,7 @@ export class AdminAllocationComponent implements OnInit {
     setor: ['', [Validators.required, Validators.maxLength(160)]],
     limiteAutorizado: ['', [Validators.required, Validators.maxLength(60)]],
     documentoReferencia: ['', Validators.maxLength(180)],
-    linkConsulta: ['', [Validators.maxLength(500), Validators.pattern(/^https?:\/\/.+/i)]],
+    linkConsulta: ['', Validators.maxLength(500)],
     observacao: ['', Validators.maxLength(500)]
   });
   readonly veiculoForm = this.fb.group({
@@ -168,7 +168,7 @@ export class AdminAllocationComponent implements OnInit {
     if (this.editorMode === 'CRIAR') {
       const payload: CriarAlocacaoVeiculoPayload = {
         placa: value.placa!, modelo: value.modelo!, marca: this.nulo(value.marca), responsavelNome: value.responsavelNome!, secretariaOrgao: value.secretariaOrgao!,
-        setor: value.setor!, limiteAutorizado: value.limiteAutorizado!, documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.nulo(value.linkConsulta),
+        setor: value.setor!, limiteAutorizado: value.limiteAutorizado!, documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.linkConsulta(value.linkConsulta),
         observacao: this.nulo(value.observacao)
       };
       this.adminService.criarAlocacao(payload).pipe(finalize(() => this.salvando = false)).subscribe({
@@ -180,7 +180,7 @@ export class AdminAllocationComponent implements OnInit {
 
     const payload: AtualizarDadosAlocacaoVeiculoPayload = {
       secretariaOrgao: value.secretariaOrgao!, setor: value.setor!, limiteAutorizado: value.limiteAutorizado!,
-      documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.nulo(value.linkConsulta), observacao: this.nulo(value.observacao)
+      documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.linkConsulta(value.linkConsulta), observacao: this.nulo(value.observacao)
     };
     this.adminService.atualizarDadosAlocacao(this.selected!.id, payload).pipe(finalize(() => this.salvando = false)).subscribe({
       next: () => { this.mensagem('Dados da alocação atualizados.'); this.fecharEditor(); this.carregar(); },
@@ -206,6 +206,11 @@ export class AdminAllocationComponent implements OnInit {
   }
 
   fecharEditor(): void { this.editorMode = null; this.selected = null; }
+
+  private linkConsulta(valor: string | null | undefined): string | null {
+    const link = this.nulo(valor);
+    return link && !/^https?:\/\//i.test(link) ? `https://${link}` : link;
+  }
   labelEvento(tipo: TipoEventoAlocacaoVeiculo): string {
     return { IMPORTACAO_INICIAL: 'Importação inicial', CRIACAO: 'Alocação criada', TROCA_VEICULO: 'Veículo trocado', TROCA_RESPONSAVEL: 'Responsável trocado', ATUALIZACAO_DADOS: 'Dados atualizados', ENCERRAMENTO: 'Alocação encerrada' }[tipo];
   }

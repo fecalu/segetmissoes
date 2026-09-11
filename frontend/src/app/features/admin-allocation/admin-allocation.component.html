@@ -57,7 +57,7 @@
         <label>Setor <input formControlName="setor" /></label>
         <label>Limite autorizado <input formControlName="limiteAutorizado" placeholder="Ex.: R$ 1.000,00 ou Não Renova" /></label>
         <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
-        <label class="full">Link de consulta da placa <input type="url" formControlName="linkConsulta" placeholder="https://..." /><small>Opcional. Quando informado, a placa abrirá este endereço em uma nova aba.</small></label>
+        <label class="full">Link de consulta da placa <input type="text" inputmode="url" formControlName="linkConsulta" placeholder="https://... ou www.exemplo.com" /><small>Opcional. Quando informado, a placa abrirá este endereço em uma nova aba. Se necessário, o sistema adiciona https:// automaticamente.</small></label>
         <label class="full">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional"></textarea></label>
         <button mat-flat-button class="primary-action full" [disabled]="salvando" type="submit">{{ salvando ? 'Salvando...' : (editorMode === 'CRIAR' ? 'Criar alocação' : 'Salvar dados') }}</button>
       </form>
