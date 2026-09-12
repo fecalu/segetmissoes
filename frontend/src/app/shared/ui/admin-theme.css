@@ -84,8 +84,6 @@
   font-family: 'Barlow', sans-serif;
 }
 
-.admin-workspace .report-date-field { --mat-form-field-container-height: 38px; --mat-form-field-container-vertical-padding: 8px; }
-
 .admin-workspace button:not(.nav-item):not(.logout-button):not(.icon-button):not(.vehicle-settings-button):not(.clear-search):not(.history-button):not(.details-button) {
   border-radius: var(--admin-radius);
   font-family: 'Barlow', sans-serif;

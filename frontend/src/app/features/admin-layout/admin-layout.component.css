@@ -23,6 +23,16 @@
 .side-navigation { display: grid; gap: 18px; }
 .nav-section { display: grid; gap: 5px; }
 .nav-section + .nav-section { padding-top: 16px; border-top: 1px solid #edf1f5; }
+.nav-section-feature {
+  margin: 4px 0;
+  padding: 12px 10px;
+  border: 1px solid #dce7f8;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+}
+.nav-section-feature + .nav-section { border-top: 0; }
+.nav-section-feature .nav-caption { margin-inline: 4px; color: #436b9d; }
+.nav-section-feature .nav-item { background: #fff; box-shadow: 0 6px 14px rgba(26, 64, 111, .06); }
 .nav-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 12px 14px; background: transparent; color: #516179; text-decoration: none; border: 0; border-radius: 8px; cursor: pointer; text-align: left; font: 500 14px 'Barlow', sans-serif; }
 .nav-item:hover { background: #f3f6fa; color: var(--admin-ink); }
 .nav-item.active { background: var(--admin-blue-soft); color: var(--admin-blue); font-weight: 600; }

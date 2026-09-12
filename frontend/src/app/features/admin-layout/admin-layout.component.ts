@@ -19,11 +19,22 @@ export class AdminLayoutComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly navigation = ADMIN_NAVIGATION;
   get navigationGroups() { return [
-    { label: 'OPERAÇÃO DIÁRIA', items: ADMIN_NAVIGATION.filter(item => item.section === 'OPERACAO') },
-    { label: 'CONTROLE ADMINISTRATIVO', items: ADMIN_NAVIGATION.filter(item => item.section === 'CONTROLE') },
-    { label: 'ALOCAÇÕES', items: ADMIN_NAVIGATION.filter(item => item.section === 'ALOCACOES') },
-    { label: 'SISTEMA', items: ADMIN_NAVIGATION.filter(item => item.section === 'SISTEMA') }
-  ].map(group => ({ ...group, items: group.items.filter(item => !item.permission || this.auth.can(item.permission)) }))
+    { id: 'OPERACAO', label: 'OPERAÇÃO DIÁRIA', items: ADMIN_NAVIGATION.filter(item => item.section === 'OPERACAO') },
+    { id: 'CONTROLE', label: 'CONTROLE ADMINISTRATIVO', items: ADMIN_NAVIGATION.filter(item => item.section === 'CONTROLE') },
+    { id: 'ALOCACOES', label: 'ALOCAÇÕES', items: ADMIN_NAVIGATION.filter(item => item.section === 'ALOCACOES') },
+    { id: 'CADASTROS', label: 'CADASTROS', items: ADMIN_NAVIGATION.filter(item => item.section === 'CADASTROS') },
+    { id: 'ANALISE', label: 'ANÁLISE E RELATÓRIOS', items: ADMIN_NAVIGATION.filter(item => item.section === 'ANALISE') },
+    { id: 'SISTEMA', label: 'SISTEMA', items: ADMIN_NAVIGATION.filter(item => item.section === 'SISTEMA') }
+  ].map(group => ({
+    ...group,
+    items: group.items
+      .filter(item => !item.permission || this.auth.can(item.permission))
+      .map(item => ({
+        ...item,
+        children: item.children?.filter(child => !child.permission || this.auth.can(child.permission))
+      }))
+      .filter(item => !item.children || item.children.length > 0)
+  }))
     .filter(group => group.items.length > 0); }
   readonly today = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   activeId = 'operacao';
@@ -78,7 +89,7 @@ export class AdminLayoutComponent {
     const path = '/' + (url.root.children['primary']?.segments.map(segment => segment.path).join('/') || 'admin');
     this.currentPath = path;
     const requestedMenu = url.queryParams['menu'] || 'operacao';
-    this.currentMenu = requestedMenu === 'dashboard' ? 'operacao' : requestedMenu === 'tempo-real' ? 'missoes' : requestedMenu === 'excecoes' ? 'checklists' : requestedMenu;
+    this.currentMenu = requestedMenu === 'dashboard' ? 'operacao' : requestedMenu;
     const reportPage = path !== '/admin';
     const item = reportPage ? (this.navigation.find(item => item.path === path || item.children?.some(child => child.path === path))
       ?? this.navigation.find(item => item.id === 'relatorios')!) :

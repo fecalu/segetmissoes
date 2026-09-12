@@ -27,7 +27,7 @@
     <span><strong>SEGET<span class="brand-dot">.</span></strong><small>Gestão de frota</small></span>
   </a>
   <nav class="side-navigation" aria-label="Navegação administrativa">
-    <section class="nav-section" *ngFor="let section of navigationGroups">
+    <section class="nav-section" [class.nav-section-feature]="section.id === 'ALOCACOES'" *ngFor="let section of navigationGroups">
       <p class="nav-caption">{{ section.label }}</p>
       <div class="nav-group" *ngFor="let item of section.items">
         <a *ngIf="!item.children" class="nav-item" [class.active]="activeId === item.id" [routerLink]="item.path" [queryParams]="item.menu ? {menu: item.menu} : {}" [attr.aria-current]="activeId === item.id ? 'page' : null" (click)="closeMenu()">

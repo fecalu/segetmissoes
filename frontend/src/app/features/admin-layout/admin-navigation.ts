@@ -11,24 +11,25 @@ export interface AdminNavLink {
 export interface AdminNavItem extends AdminNavLink {
   id: string;
   icon: AppIconName;
-  section: 'OPERACAO' | 'ALOCACOES' | 'CONTROLE' | 'SISTEMA';
+  section: 'OPERACAO' | 'CONTROLE' | 'ALOCACOES' | 'CADASTROS' | 'ANALISE' | 'SISTEMA';
   children?: AdminNavLink[];
 }
 
 export const ADMIN_NAVIGATION: AdminNavItem[] = [
   { id: 'operacao', label: 'Operação da frota', icon: 'fleet', path: '/admin', menu: 'operacao', section: 'OPERACAO' },
   { id: 'missoes', label: 'Missões', icon: 'mission', path: '/admin', menu: 'missoes', section: 'OPERACAO' },
-  { id: 'vistorias', label: 'Vistorias', icon: 'inspection', path: '/admin', menu: 'checklists', section: 'OPERACAO', children: [
+  { id: 'vistorias', label: 'Vistorias', icon: 'inspection', path: '/admin', menu: 'checklists', section: 'CONTROLE', permission: 'VISTORIA_CONSULTAR', children: [
     { label: 'Checklists de missão', path: '/admin', menu: 'checklists' },
-    { label: 'Vistorias completas', path: '/admin', menu: 'vistorias-completas' }
+    { label: 'Entrega / recebimento', path: '/admin', menu: 'vistorias-completas' }
   ] },
-  { id: 'alocacoes', label: 'Alocações administrativas', icon: 'register', path: '/admin/alocacoes', section: 'ALOCACOES' },
-  { id: 'cadastros', permission: 'VEICULO_GERIR', label: 'Cadastros', icon: 'register', path: '/admin', menu: 'veiculos', section: 'CONTROLE', children: [
-    { label: 'Veículos', path: '/admin', menu: 'veiculos' },
-    { label: 'Motoristas', path: '/admin', menu: 'motoristas' }
+  { id: 'alocacoes', permission: 'ALOCACAO_CONSULTAR', label: 'Controle de alocações', icon: 'register', path: '/admin/alocacoes', section: 'ALOCACOES' },
+  { id: 'cadastros', label: 'Cadastros', icon: 'register', path: '/admin', menu: 'veiculos', section: 'CADASTROS', children: [
+    { permission: 'VEICULO_GERIR', label: 'Veículos', path: '/admin', menu: 'veiculos' },
+    { permission: 'MOTORISTA_GERIR', label: 'Motoristas', path: '/admin', menu: 'motoristas' }
   ] },
-  { id: 'relatorios', label: 'Relatórios', icon: 'report', path: '/admin/relatorios', section: 'CONTROLE' },
-  { id: 'configuracoes', permission: 'CONFIGURACAO_GERIR', label: 'Configurações', icon: 'settings', path: '/admin', menu: 'rotulos-status', section: 'SISTEMA' },
+  { id: 'relatorios', permission: 'RELATORIO_EXPORTAR', label: 'Relatórios', icon: 'report', path: '/admin/relatorios', section: 'ANALISE' },
+  { id: 'estatisticas', permission: 'ESTATISTICA_CONSULTAR', label: 'Estatísticas', icon: 'report', path: '/admin/estatisticas/missoes', section: 'ANALISE' },
+  { id: 'configuracoes', permission: 'CONFIGURACAO_GERIR', label: 'Configurações operacionais', icon: 'settings', path: '/admin', menu: 'rotulos-status', section: 'SISTEMA' },
   { id: 'usuarios', label: 'Usuários e acessos', icon: 'register', path: '/admin/usuarios', section: 'SISTEMA', permission: 'ACESSO_GERIR' },
   { id: 'auditoria-acessos', label: 'Auditoria de acessos', icon: 'report', path: '/admin/auditoria-acessos', section: 'SISTEMA', permission: 'ACESSO_GERIR' }
 ];

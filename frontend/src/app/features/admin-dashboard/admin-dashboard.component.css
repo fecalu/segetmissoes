@@ -75,48 +75,6 @@
   font-weight: 700;
 }
 
-.mission-report-actions { position: relative; }
-.mission-report-actions summary { min-height: 40px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid #c9d4e5; border-radius: 6px; color: #36506e; background: #fff; font-weight: 700; cursor: pointer; list-style: none; }
-.mission-report-actions summary::-webkit-details-marker { display: none; }
-.mission-report-actions summary::after { content: '▾'; margin-left: 8px; font-size: 12px; }
-.mission-report-actions[open] summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: #f6f9fe; }
-.mission-report-actions-content { position: absolute; z-index: 4; top: 100%; right: 0; display: grid; gap: 8px; min-width: 255px; padding: 10px; border: 1px solid #c9d4e5; border-radius: 8px 0 8px 8px; background: #fff; box-shadow: 0 10px 24px rgba(36, 61, 99, .16); }
-.mission-report-actions-content .report-date-field { width: 100% !important; min-width: 100% !important; max-width: 100% !important; }
-
-.report-date-field {
-  width: 122px !important;
-  min-width: 122px !important;
-  max-width: 122px !important;
-  margin-bottom: -0.25rem;
-  --mat-form-field-container-height: 38px;
-  --mat-form-field-container-vertical-padding: 8px;
-}
-
-:host ::ng-deep .report-date-field .mat-mdc-text-field-wrapper {
-  height: 38px !important;
-}
-
-:host ::ng-deep .report-date-field .mat-mdc-form-field-infix {
-  min-height: 0 !important;
-  padding-top: 7px !important;
-  padding-bottom: 7px !important;
-  width: auto !important;
-}
-
-:host ::ng-deep .report-date-field .mat-mdc-form-field-flex {
-  height: 38px !important;
-}
-
-:host ::ng-deep .report-date-field .mat-mdc-icon-button {
-  width: 30px;
-  height: 30px;
-  padding: 3px;
-}
-
-:host ::ng-deep .report-date-field .mat-mdc-form-field-subscript-wrapper {
-  display: none !important;
-}
-
 .filters-panel {
   border: 1px solid #dce5fb;
   border-radius: 12px;
@@ -149,6 +107,27 @@
   margin: -2px 0 4px;
   color: #61708d;
   font-size: 0.84rem;
+}
+
+.danger-details {
+  position: relative;
+}
+
+.danger-details summary {
+  cursor: pointer;
+  color: #9f1d1d;
+  font-size: 0.82rem;
+  font-weight: 800;
+  list-style: none;
+}
+
+.danger-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.danger-details[open] {
+  display: grid;
+  gap: 6px;
 }
 
 .row-actions {

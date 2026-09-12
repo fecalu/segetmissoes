@@ -71,7 +71,12 @@ export class AuthService {
 
   canAccessMenu(menu: string): boolean {
     const permission: Partial<Record<string, Permissao>> = {
-      veiculos: 'VEICULO_GERIR', motoristas: 'MOTORISTA_GERIR', 'rotulos-status': 'CONFIGURACAO_GERIR'
+      veiculos: 'VEICULO_GERIR',
+      motoristas: 'MOTORISTA_GERIR',
+      'rotulos-status': 'CONFIGURACAO_GERIR',
+      checklists: 'VISTORIA_CONSULTAR',
+      'vistorias-completas': 'VISTORIA_CONSULTAR',
+      missoes: 'MISSAO_COMPLEMENTAR'
     };
     return this.can(permission[menu] || 'FROTA_CONSULTAR');
   }

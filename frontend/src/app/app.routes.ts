@@ -23,10 +23,10 @@ export const routes: Routes = [
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },
   { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
   { path: 'admin', component: AdminLayoutComponent, canActivate: [adminGuard], canActivateChild: [adminGuard], children: [
-    { path: 'checklists/relatorio', component: AdminReportComponent },
+    { path: 'checklists/relatorio', component: AdminReportComponent, data: { permission: 'RELATORIO_EXPORTAR' } },
     { path: 'estatisticas/missoes', component: AdminMissionStatsComponent, data: { permission: 'ESTATISTICA_CONSULTAR' } },
-    { path: 'relatorios', component: AdminReportsComponent },
-    { path: 'alocacoes', component: AdminAllocationComponent },
+    { path: 'relatorios', component: AdminReportsComponent, data: { permission: 'RELATORIO_EXPORTAR' } },
+    { path: 'alocacoes', component: AdminAllocationComponent, data: { permission: 'ALOCACAO_CONSULTAR' } },
     { path: 'usuarios', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR' } },
     { path: 'auditoria-acessos', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR', auditOnly: true } },
     { path: '', component: AdminDashboardComponent, runGuardsAndResolvers: 'paramsOrQueryParamsChange' }

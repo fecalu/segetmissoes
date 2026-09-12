@@ -61,7 +61,7 @@ import {
   AdminCredentialConfirmDialogResult
 } from '../../shared/dialogs/admin-credential-confirm-dialog.component';
 
-type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'tempo-real' | 'checklists' | 'vistorias-completas' | 'excecoes';
+type AdminMenu = 'operacao' | 'veiculos' | 'motoristas' | 'rotulos-status' | 'missoes' | 'checklists' | 'vistorias-completas';
 type OrigemConsultaChecklist = 'CHECKLIST' | 'SEM_CHECKLIST';
 type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
@@ -160,7 +160,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   selectedMissaoAuditoria: MissaoResponse | null = null;
   selectedMissaoDadosAdmin: MissaoResponse | null = null;
   selectedMissaoEdicaoManual: MissaoResponse | null = null;
-  selectedMissaoHorario: MissaoResponse | null = null;
   selectedVeiculoHistorico: Veiculo | null = null;
   selectedCategoriaInclusao: PainelCategoria | null = null;
   showDecisaoPatio = false;
@@ -368,7 +367,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   readonly vistoriaCompletaFiltroForm;
   readonly missaoDadosForm;
   readonly missaoEdicaoManualForm;
-  readonly missaoHorarioForm;
   readonly missaoContingenciaForm;
   readonly missaoRetornoAdministrativoForm;
   readonly missaoPendenteForm;
@@ -455,12 +453,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       justificativaEdicao: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
     });
 
-    this.missaoHorarioForm = this.fb.nonNullable.group({
-      dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
-      dataHoraFim: [this.agoraDateTimeLocal()],
-      justificativa: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(700)]]
-    });
-
     this.missaoContingenciaForm = this.fb.nonNullable.group({
       motoristaId: [0, [Validators.min(1)]],
       veiculoId: [0, [Validators.min(1)]],
@@ -517,7 +509,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.iniciarRelogioTempoReal();
     this.menuSub = this.route.queryParamMap.pipe(
       map(params => ({
-        menu: this.isAdminMenu(params.get('menu')) ? this.normalizarMenu(params.get('menu') as AdminMenu) : 'operacao' as AdminMenu,
+        menu: this.isAdminMenu(params.get('menu')) ? params.get('menu') as AdminMenu : 'operacao' as AdminMenu,
         buscaPlaca: params.get('buscaPlaca') || ''
       })),
       distinctUntilChanged((anterior, atual) => anterior.menu === atual.menu && anterior.buscaPlaca === atual.buscaPlaca)
@@ -534,7 +526,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   setMenu(menu: AdminMenu): void {
-    menu = this.normalizarMenu(menu);
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { menu },
@@ -559,7 +550,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.filtrosMissoesAbertos = false;
       this.fecharEdicaoDadosMissao();
       this.fecharEdicaoManualMissao();
-      this.fecharAjusteHorarioMissao();
       if (this.showNovaMissaoModal) {
         this.fecharNovaMissao();
       }
@@ -576,11 +566,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (menu === 'veiculos' && !this.loadingVeiculos) {
       this.carregarVeiculos(this.veiculoBusca);
     }
-    if (menu !== 'tempo-real' && menu !== 'operacao') {
+    if (menu !== 'operacao') {
       this.carregarDadosDoMenu(menu, true);
     }
 
-    if (menu === 'tempo-real' || menu === 'operacao') {
+    if (menu === 'operacao') {
       this.iniciarAtualizacaoTempoReal();
     } else {
       this.pararAtualizacaoTempoReal();
@@ -2788,62 +2778,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return missao.status === 'FINALIZADA' && missao.origemEncerramento === 'ADMINISTRATIVO';
   }
 
-  abrirAjusteHorarioMissao(missao: MissaoResponse): void {
-    this.selectedMissaoHorario = missao;
-    this.missaoHorarioForm.reset({
-      dataHoraInicio: this.toDateTimeLocalValue(missao.dataHoraInicio),
-      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal(),
-      justificativa: ''
-    });
-  }
-
-  fecharAjusteHorarioMissao(): void {
-    this.selectedMissaoHorario = null;
-    this.missaoHorarioForm.reset({
-      dataHoraInicio: this.agoraDateTimeLocal(),
-      dataHoraFim: this.agoraDateTimeLocal(),
-      justificativa: ''
-    });
-  }
-
-  salvarAjusteHorarioMissao(): void {
-    const missao = this.selectedMissaoHorario;
-    if (!missao) {
-      return;
-    }
-    if (this.missaoHorarioForm.invalid) {
-      this.missaoHorarioForm.markAllAsTouched();
-      return;
-    }
-
-    const raw = this.missaoHorarioForm.getRawValue();
-    const dataHoraFim = this.podeEditarFimMissao(missao) ? this.toNullIfBlank(raw.dataHoraFim) : null;
-    if (this.podeEditarFimMissao(missao) && !dataHoraFim) {
-      this.snackBar.open('Informe a data/hora de fim para concluir o ajuste.', 'Fechar', { duration: 2600 });
-      return;
-    }
-    const payload: AjustarHorarioMissaoPayload = {
-      dataHoraInicio: raw.dataHoraInicio,
-      dataHoraFim
-    };
-
-    this.salvandoHorarioMissao = true;
-    this.adminService.ajustarHorarioMissao(missao.id, payload)
-      .pipe(finalize(() => (this.salvandoHorarioMissao = false)))
-      .subscribe({
-        next: updated => {
-          this.aplicarMissaoAtualizada(updated);
-          if (this.selectedVeiculoHistorico?.id === updated.veiculoId) {
-            const veiculoHistorico = this.selectedVeiculoHistorico;
-            this.abrirHistoricoVeiculo(veiculoHistorico);
-          }
-          this.snackBar.open('Horario da missao ajustado.', 'Fechar', { duration: 2200 });
-          this.fecharAjusteHorarioMissao();
-        },
-        error: err => this.snackBar.open(err.error?.message || 'Falha ao ajustar o horario da missao.', 'Fechar', { duration: 3200 })
-      });
-  }
-
   acaoAuditoriaMissaoLabel(acao: AcaoAuditoriaMissao): string {
     const labels: Record<AcaoAuditoriaMissao, string> = {
       ABERTURA_CHECKLIST: 'INICIO: COM CHECKLIST',
@@ -3117,10 +3051,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       || value === 'motoristas'
       || value === 'rotulos-status'
       || value === 'missoes'
-      || value === 'tempo-real'
       || value === 'checklists'
-      || value === 'vistorias-completas'
-      || value === 'excecoes';
+      || value === 'vistorias-completas';
   }
 
   private isPainelCategoria(value: string | null): value is PainelCategoria {
@@ -3171,19 +3103,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.carregarMissoesTempoReal(false);
       return;
     }
-    if (menu === 'tempo-real' && (force || this.missoesTempoReal.length === 0) && !this.loadingTempoReal) {
-      this.carregarMissoesTempoReal();
-    }
-  }
-
-  private normalizarMenu(menu: AdminMenu): AdminMenu {
-    if (menu === 'tempo-real') {
-      return 'missoes';
-    }
-    if (menu === 'excecoes') {
-      return 'checklists';
-    }
-    return menu;
   }
 
   private aplicarSugestoesMissao(sugestoes: SugestoesCamposMissaoResponse): void {
