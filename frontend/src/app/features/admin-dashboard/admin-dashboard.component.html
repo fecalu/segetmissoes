@@ -6,12 +6,21 @@
     [updatedAt]="ultimaAtualizacaoFrota"
     [vehicleError]="erroAtualizacaoFrota"
     [missionError]="erroAtualizacaoMissoes"
+    [dailyMissions]="missoesMapaDiario"
+    [dailyMapDate]="dataMapaDiario"
+    [loadingDailyMap]="loadingMapaDiario"
+    [dailyMapError]="erroMapaDiario"
     (refresh)="atualizarPainelOperacional()"
     (history)="abrirHistoricoVeiculo($event)"
     (move)="onDropCategoria($event.event, $event.category)"
     (moveVehicle)="moverVeiculoParaCategoria($event.vehicle, $event.category)"
     (dragging)="arrastandoVeiculo = $event"
     (missions)="setMenu('missoes')"
+    (viewChange)="alterarVisaoOperacao($event)"
+    (editMission)="abrirEdicaoMissao($event)"
+    (finishMission)="abrirRetornoAdministrativo($event.id)"
+    (createMission)="abrirNovaMissao()"
+    (exportDailyReport)="exportarRelatorioMapaDiario()"
   />
     <section class="content" *ngIf="activeMenu === 'veiculos'">
       <mat-card class="panel-card">
@@ -104,6 +113,7 @@
         </section>
 
         <div class="list-header"><strong>Motoristas cadastrados</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
+        <p class="panel-helper">Esta área mantém o cadastro operacional do motorista. Bloqueio de acesso, perfis e exclusão de conta ficam em Usuários e Acessos.</p>
         <div class="table">
           <article class="table-row" *ngFor="let m of motoristas">
             <div>
@@ -117,7 +127,6 @@
             </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="editarMotorista(m)">Editar</button>
-              <button *ngIf="auth.can('CADASTRO_EXCLUIR')" mat-stroked-button type="button" (click)="excluirMotorista(m.id)">Excluir</button>
             </div>
           </article>
         </div>
@@ -325,11 +334,9 @@
               </div>
             </div>
             <div class="inline-buttons">
-              <button mat-flat-button color="primary" type="button" *ngIf="!podeEditarMissaoManual(m)" (click)="abrirEdicaoDadosMissao(m)">Completar dados</button>
-              <button mat-flat-button color="primary" type="button" *ngIf="podeEditarMissaoManual(m)" (click)="abrirEdicaoManualMissao(m)">Editar missao manual</button>
-              <button mat-stroked-button type="button" *ngIf="!podeEditarMissaoManual(m) && podeAjustarHorarioMissao(m)" (click)="abrirAjusteHorarioMissao(m)">Ajustar horário</button>
+              <button mat-flat-button color="primary" type="button" (click)="abrirEdicaoMissao(m)">Editar missão</button>
               <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="abrirRetornoAdministrativo(m.id)">Registrar retorno</button>
-              <button mat-stroked-button type="button" *ngIf="(m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO') && auth.can('MISSAO_ENCERRAR_EXCECAO')" (click)="abrirEncerramentoPendente(m.id)">Registrar chegada sem checklist</button>
+              <button mat-stroked-button type="button" *ngIf="(m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO') && auth.can('MISSAO_ENCERRAR_EXCECAO')" (click)="abrirEncerramentoPendente(m.id)">Encerrar pendência</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Histórico</button>
             </div>
           </article>
@@ -613,7 +620,7 @@
 <section class="detail-overlay" *ngIf="showNovaMissaoModal">
   <article class="detail-card history-card nova-missao-card">
     <header>
-      <h3>{{ novaMissaoModo === 'VIAGEM' ? 'Registrar saída para viagem' : novaMissaoModo === 'RETORNO' ? 'Registrar retorno' : novaMissaoModo === 'PENDENTE' ? 'Finalizar missão em aberto' : 'Registrar saída' }}</h3>
+      <h3>{{ novaMissaoModo === 'VIAGEM' ? 'Registrar saída para viagem' : novaMissaoModo === 'RETORNO' ? 'Registrar retorno' : novaMissaoModo === 'PENDENTE' ? 'Encerrar pendência da missão' : 'Registrar saída' }}</h3>
       <button mat-stroked-button type="button" (click)="fecharNovaMissao()">Fechar</button>
     </header>
 
@@ -648,7 +655,7 @@
         [class.active]="novaMissaoModo === 'PENDENTE'"
         (click)="setNovaMissaoModo('PENDENTE')"
       >
-        Finalizar missao em aberto
+        Encerrar pendência
       </button>
     </div>
 
@@ -805,7 +812,7 @@
           [disabled]="encerrandoMissaoPendente || missoesPendentesEncerramento().length === 0"
           (click)="encerrarMissaoPendente()"
         >
-          {{ encerrandoMissaoPendente ? 'Finalizando...' : 'Finalizar missao em aberto' }}
+          {{ encerrandoMissaoPendente ? 'Encerrando...' : 'Encerrar pendência' }}
         </button>
       </div>
     </form>
@@ -815,7 +822,7 @@
 <section class="detail-overlay" *ngIf="selectedMissaoDadosAdmin">
   <article class="detail-card history-card">
     <header>
-      <h3>{{ selectedMissaoDadosAdmin.tipoDeslocamento === 'VIAGEM' ? 'Dados da viagem' : 'Dados da missao' }} #{{ selectedMissaoDadosAdmin.id }}</h3>
+      <h3>Editar {{ selectedMissaoDadosAdmin.tipoDeslocamento === 'VIAGEM' ? 'viagem' : 'missão' }} #{{ selectedMissaoDadosAdmin.id }}</h3>
       <button mat-stroked-button type="button" (click)="fecharEdicaoDadosMissao()">Fechar</button>
     </header>
 
@@ -824,6 +831,7 @@
     <p><strong>{{ selectedMissaoDadosAdmin.tipoDeslocamento === 'VIAGEM' ? 'Status da viagem:' : 'Status dos dados:' }}</strong> {{ labelStatusDocumentalMissao(selectedMissaoDadosAdmin) }}</p>
 
     <form [formGroup]="missaoDadosForm" class="form-grid">
+      <h4 class="form-section-title">Dados administrativos</h4>
       <mat-form-field appearance="outline">
         <mat-label>{{ labelCampoContextoMissao(selectedMissaoDadosAdmin) }}</mat-label>
         <input matInput formControlName="localDestino" maxlength="180" [matAutocomplete]="autoDestinoDados">
@@ -851,11 +859,26 @@
           {{ sugestao }}
         </mat-option>
       </mat-autocomplete>
+
+      <ng-container *ngIf="podeAjustarHorarioMissao(selectedMissaoDadosAdmin)">
+        <h4 class="form-section-title">Horários</h4>
+        <p class="form-section-helper">
+          Permitido apenas para missões do dia atual. A alteração fica registrada automaticamente na auditoria.
+        </p>
+        <mat-form-field appearance="outline">
+          <mat-label>Data/hora de início</mat-label>
+          <input matInput type="datetime-local" formControlName="dataHoraInicio">
+        </mat-form-field>
+        <mat-form-field appearance="outline" *ngIf="podeEditarFimMissao(selectedMissaoDadosAdmin)">
+          <mat-label>Data/hora de fim</mat-label>
+          <input matInput type="datetime-local" formControlName="dataHoraFim">
+        </mat-form-field>
+      </ng-container>
     </form>
 
     <div class="row-actions">
       <button mat-stroked-button type="button" (click)="fecharEdicaoDadosMissao()">Cancelar</button>
-      <button mat-flat-button color="primary" type="button" (click)="salvarDadosAdministrativosMissao()">Salvar dados</button>
+      <button mat-flat-button color="primary" type="button" [disabled]="salvandoHorarioMissao" (click)="salvarDadosAdministrativosMissao()">Salvar missão</button>
     </div>
   </article>
 </section>

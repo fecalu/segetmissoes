@@ -1,13 +1,95 @@
+.admin-workspace {
+  --admin-radius: 8px;
+  --admin-radius-panel: 12px;
+  --admin-control-height: 42px;
+  --admin-control-border: #cad8e3;
+  --admin-control-text: #24465f;
+  --admin-control-bg: #fff;
+  --admin-primary: #1c5c7a;
+  --admin-primary-hover: #174f69;
+  --admin-danger: #9e3c38;
+  --admin-danger-border: #e6b7b4;
+}
+
 .admin-workspace .page-wrap { min-height: auto; padding: 0; }
-.admin-workspace .card-shell { max-width: none; box-shadow: none; border-radius: 12px; background: transparent; }
+.admin-workspace .card-shell { max-width: none; box-shadow: none; border-radius: var(--admin-radius-panel); background: transparent; }
 .admin-workspace .report-shell, .admin-workspace .stats-shell { padding: 0; }
-.admin-workspace .panel-card { box-shadow: none; border-color: var(--admin-line); border-radius: 12px; padding: 22px; }
-.admin-workspace .mat-mdc-button-base { font-family: 'Barlow', sans-serif; letter-spacing: 0; }
-.admin-workspace .mat-mdc-unelevated-button.mat-primary { --mdc-filled-button-container-color: var(--admin-blue); --mdc-filled-button-label-text-color: #fff; }
-.admin-workspace .mat-mdc-outlined-button { --mdc-outlined-button-outline-color: #d0dbe8; --mdc-outlined-button-label-text-color: #3d5775; }
-.admin-workspace .mat-mdc-form-field { --mat-form-field-container-height: 48px; --mat-form-field-container-vertical-padding: 12px; --mat-form-field-container-text-font: 'Barlow', sans-serif; }
+.admin-workspace .panel-card { box-shadow: none; border: 1px solid var(--admin-line); border-radius: var(--admin-radius-panel); padding: 22px; background: #fff; }
+.admin-workspace .detail-card { color: var(--admin-ink); font-family: 'Barlow', sans-serif; border-radius: var(--admin-radius-panel); }
+
+.admin-workspace .mat-mdc-button-base {
+  min-height: var(--admin-control-height);
+  border-radius: var(--admin-radius) !important;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.admin-workspace .mat-mdc-button-base .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-workspace .mat-mdc-unelevated-button.mat-primary,
+.admin-workspace .mat-mdc-raised-button.mat-primary,
+.admin-workspace .mat-mdc-fab.mat-primary {
+  --mdc-filled-button-container-color: var(--admin-primary);
+  --mdc-filled-button-label-text-color: #fff;
+  --mdc-protected-button-container-color: var(--admin-primary);
+  --mdc-protected-button-label-text-color: #fff;
+}
+
+.admin-workspace .mat-mdc-unelevated-button.mat-primary:hover:not(:disabled),
+.admin-workspace .mat-mdc-raised-button.mat-primary:hover:not(:disabled) {
+  filter: brightness(.96);
+}
+
+.admin-workspace .mat-mdc-outlined-button {
+  --mdc-outlined-button-container-shape: var(--admin-radius);
+  --mdc-outlined-button-outline-color: var(--admin-control-border);
+  --mdc-outlined-button-label-text-color: var(--admin-control-text);
+  background: #fff;
+}
+
+.admin-workspace .mat-mdc-outlined-button.mat-warn {
+  --mdc-outlined-button-outline-color: var(--admin-danger-border);
+  --mdc-outlined-button-label-text-color: var(--admin-danger);
+}
+
+.admin-workspace .mat-mdc-form-field {
+  --mat-form-field-container-height: 48px;
+  --mat-form-field-container-vertical-padding: 12px;
+  --mat-form-field-container-text-font: 'Barlow', sans-serif;
+  --mdc-outlined-text-field-container-shape: var(--admin-radius);
+  --mdc-outlined-text-field-outline-color: var(--admin-control-border);
+  --mdc-outlined-text-field-hover-outline-color: #9eb2c8;
+  --mdc-outlined-text-field-focus-outline-color: var(--admin-primary);
+  --mdc-outlined-text-field-label-text-color: #5f7087;
+  --mdc-outlined-text-field-input-text-color: #21384b;
+}
+
+.admin-workspace .mat-mdc-text-field-wrapper {
+  background: #fff;
+}
+
+.admin-workspace .mat-mdc-form-field-infix {
+  min-height: 44px;
+}
+
+.admin-workspace input,
+.admin-workspace select,
+.admin-workspace textarea {
+  font-family: 'Barlow', sans-serif;
+}
+
 .admin-workspace .report-date-field { --mat-form-field-container-height: 38px; --mat-form-field-container-vertical-padding: 8px; }
-.admin-workspace .detail-card { color: var(--admin-ink); font-family: 'Barlow', sans-serif; }
+
+.admin-workspace button:not(.nav-item):not(.logout-button):not(.icon-button):not(.vehicle-settings-button):not(.clear-search):not(.history-button):not(.details-button) {
+  border-radius: var(--admin-radius);
+  font-family: 'Barlow', sans-serif;
+}
 .admin-confirm-dialog {
   --mdc-filled-button-container-color: #2459a9;
   --mdc-filled-button-label-text-color: #fff;

@@ -132,6 +132,25 @@
   gap: 8px;
 }
 
+.form-section-title,
+.form-section-helper,
+.span-all {
+  grid-column: 1 / -1;
+}
+
+.form-section-title {
+  margin: 6px 0 0;
+  color: #17345f;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.form-section-helper {
+  margin: -2px 0 4px;
+  color: #61708d;
+  font-size: 0.84rem;
+}
+
 .row-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

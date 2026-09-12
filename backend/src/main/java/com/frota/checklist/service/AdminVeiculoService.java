@@ -469,6 +469,14 @@ public class AdminVeiculoService {
 
         long totalChecklists = checklistRepository.countByVeiculoId(id);
         long totalExcecoes = missaoExcecaoRepository.countByVeiculoId(id);
+        long totalMissoes = missaoRepository.countByVeiculoId(id);
+        long totalVistorias = vistoriaCompletaRepository.countByVeiculoId(id);
+        if (totalChecklists > 0 || totalExcecoes > 0 || totalMissoes > 0 || totalVistorias > 0) {
+            throw new BusinessException(
+                    "Este veiculo possui historico operacional vinculado. Use Desativar/Baixar para manter a auditoria e remover da operacao."
+            );
+        }
+
         Optional<Checklist> primeiroChecklist = checklistRepository.findTopByVeiculoIdOrderByDataHoraAscIdAsc(id);
         Optional<Checklist> ultimoChecklist = checklistRepository.findTopByVeiculoIdOrderByDataHoraDescIdDesc(id);
 

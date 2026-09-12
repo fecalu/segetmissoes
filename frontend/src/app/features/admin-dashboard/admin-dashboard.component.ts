@@ -67,6 +67,7 @@ type SituacaoConsultaChecklist = '' | 'REGULARIZADA' | 'PENDENTE' | 'ATRASADA';
 type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitantes' | 'justificativasRegistroManual';
 type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'USO_EXTERNO' | 'VISTORIAS' | 'STATUS';
 type ModoHistoricoVeiculo = 'OPERACIONAL' | 'AUDITORIA';
+type ModoOperacaoFrota = 'PAINEL' | 'MAPA';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -137,6 +138,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadingMissoes = false;
   loadingVistoriasCompletas = false;
   loadingTempoReal = false;
+  loadingMapaDiario = false;
   loadingAuditoriaMissao = false;
   loadingHistoricoVeiculo = false;
   loadingRotulosStatus = false;
@@ -170,6 +172,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   processandoInclusao = false;
   agoraEpochMs = Date.now();
   missoesTempoReal: MissaoResponse[] = [];
+  missoesMapaDiario: MissaoResponse[] = [];
   auditoriaMissao: AuditoriaMissaoResponse[] = [];
   historicoVeiculo: HistoricoVeiculoResponse | null = null;
   eventoHistoricoSelecionado: EventoHistoricoVeiculo | null = null;
@@ -187,6 +190,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     justificativasRegistroManual: ''
   };
   dataRelatorioMissoes = this.hojeIso();
+  dataMapaDiario = this.hojeIso();
   showNovaMissaoModal = false;
   novaMissaoModo: 'OPERACAO' | 'VIAGEM' | 'RETORNO' | 'PENDENTE' = 'OPERACAO';
   novaMissaoModoFixado = false;
@@ -221,6 +225,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   ultimaAtualizacaoFrota: Date | null = null;
   erroAtualizacaoFrota = false;
   erroAtualizacaoMissoes = false;
+  erroMapaDiario = false;
   arrastandoVeiculo = false;
 
   readonly categoriasPainel: Array<{ id: PainelCategoria; titulo: string; descricao: string }> = [
@@ -432,7 +437,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.missaoDadosForm = this.fb.nonNullable.group({
       localDestino: [''],
       setorSolicitante: [''],
-      solicitanteNome: ['']
+      solicitanteNome: [''],
+      dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
+      dataHoraFim: [this.agoraDateTimeLocal()]
     });
 
     this.missaoEdicaoManualForm = this.fb.nonNullable.group({
@@ -604,6 +611,35 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (this.loadingVeiculos || this.loadingTempoReal || this.arrastandoVeiculo || this.selectedCategoriaInclusao) return;
     this.carregarVeiculos();
     this.carregarMissoesTempoReal(false);
+    if (this.missoesMapaDiario.length > 0) this.carregarMapaDiario(false);
+  }
+
+  alterarVisaoOperacao(view: ModoOperacaoFrota): void {
+    if (view === 'MAPA') this.carregarMapaDiario(false);
+  }
+
+  carregarMapaDiario(showError = true): void {
+    this.loadingMapaDiario = true;
+    this.adminService.listarMissoes({
+      dataInicio: this.dataMapaDiario,
+      dataFim: this.dataMapaDiario
+    })
+      .pipe(finalize(() => (this.loadingMapaDiario = false)))
+      .subscribe({
+        next: data => {
+          this.missoesMapaDiario = data;
+          this.erroMapaDiario = false;
+        },
+        error: () => {
+          this.erroMapaDiario = true;
+          if (showError) this.snackBar.open('Falha ao carregar mapa diario.', 'Fechar', { duration: 2800 });
+        }
+      });
+  }
+
+  exportarRelatorioMapaDiario(): void {
+    this.dataRelatorioMissoes = this.dataMapaDiario;
+    this.exportarRelatorioMissoesPdf();
   }
 
   get colunasOperacao(): FleetColumn[] {
@@ -814,7 +850,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const raw = this.missaoPendenteForm.getRawValue();
     if (raw.missaoId <= 0) {
-      this.snackBar.open('Selecione a missao em aberto para finalizar.', 'Fechar', { duration: 2400 });
+      this.snackBar.open('Selecione a missão pendente para encerrar.', 'Fechar', { duration: 2400 });
       return;
     }
 
@@ -835,7 +871,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.carregarMissoesTempoReal(false);
           this.carregarVeiculos(this.veiculoBusca);
         },
-        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao finalizar a missao em aberto.', 'Fechar', { duration: 3200 })
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao encerrar a pendência da missão.', 'Fechar', { duration: 3200 })
       });
   }
 
@@ -1005,23 +1041,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       cpf: '',
       senha: '',
       perfil: 'MOTORISTA'
-    });
-  }
-
-  excluirMotorista(id: number): void {
-    this.abrirConfirmacao({
-      title: 'Excluir motorista',
-      message: 'Deseja excluir este motorista?',
-      confirmText: 'Excluir',
-      confirmColor: 'warn'
-    }, () => {
-      this.adminService.excluirMotorista(id).subscribe({
-        next: () => {
-          this.snackBar.open('Motorista excluido.', 'Fechar', { duration: 2000 });
-          this.carregarMotoristas(this.motoristaBusca);
-        },
-        error: (err) => this.snackBar.open(err.error?.message || 'Erro ao excluir motorista.', 'Fechar', { duration: 2800 })
-      });
     });
   }
 
@@ -1958,7 +1977,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         width: 'min(92vw, 560px)',
         data: {
           title: `Exclusao definitiva de ${veiculo.placa}`,
-          message: 'Esta acao remove o veiculo e seus vinculos da base operacional.\nConfirme com sua senha e justificativa.',
+          message: 'Use somente para cadastro criado por engano e sem historico operacional. Veiculos com missoes, checklists ou vistorias devem ser desativados/baixados para preservar a auditoria.\nConfirme com sua senha e justificativa.',
           passwordLabel: 'Senha de administrador',
           justificationLabel: 'Justificativa da exclusao',
           justificationMinLength: 10,
@@ -2490,6 +2509,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.auditoriaMissao = [];
   }
 
+  abrirEdicaoMissao(missao: MissaoResponse): void {
+    if (this.podeEditarMissaoManual(missao)) {
+      this.abrirEdicaoManualMissao(missao);
+      return;
+    }
+    this.abrirEdicaoDadosMissao(missao);
+  }
+
   abrirEdicaoDadosMissao(missao: MissaoResponse): void {
     const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     for (const control of Object.values(this.missaoDadosForm.controls)) control.enable();
@@ -2497,12 +2524,25 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.missaoDadosForm.reset({
       localDestino: missao.localDestino || '',
       setorSolicitante: missao.setorSolicitante || '',
-      solicitanteNome: missao.solicitanteNome || ''
+      solicitanteNome: missao.solicitanteNome || '',
+      dataHoraInicio: this.toDateTimeLocalValue(missao.dataHoraInicio),
+      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal()
     });
     if (!this.auth.can('MISSAO_CORRIGIR') && missao.status !== 'ATIVA') {
       for (const campo of ['localDestino', 'setorSolicitante', 'solicitanteNome'] as const) {
         if (missao[campo]?.trim()) this.missaoDadosForm.controls[campo].disable();
       }
+    }
+    if (!this.podeAjustarHorarioMissao(missao)) {
+      this.missaoDadosForm.controls.dataHoraInicio.disable({ emitEvent: false });
+      this.missaoDadosForm.controls.dataHoraFim.disable({ emitEvent: false });
+      return;
+    }
+    this.missaoDadosForm.controls.dataHoraInicio.enable({ emitEvent: false });
+    if (this.podeEditarFimMissao(missao)) {
+      this.missaoDadosForm.controls.dataHoraFim.enable({ emitEvent: false });
+    } else {
+      this.missaoDadosForm.controls.dataHoraFim.disable({ emitEvent: false });
     }
   }
 
@@ -2511,8 +2551,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.missaoDadosForm.reset({
       localDestino: '',
       setorSolicitante: '',
-      solicitanteNome: ''
+      solicitanteNome: '',
+      dataHoraInicio: this.agoraDateTimeLocal(),
+      dataHoraFim: this.agoraDateTimeLocal()
     });
+    for (const control of Object.values(this.missaoDadosForm.controls)) control.enable({ emitEvent: false });
   }
 
   salvarDadosAdministrativosMissao(justificativa?: string): void {
@@ -2523,6 +2566,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     const raw = this.missaoDadosForm.getRawValue();
     const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
+    const deveAjustarHorario = this.horarioMissaoAlterado(missao, raw);
+    if (deveAjustarHorario) {
+      if (!raw.dataHoraInicio) {
+        this.snackBar.open('Informe a data/hora de inicio.', 'Fechar', { duration: 2600 });
+        return;
+      }
+      if (this.podeEditarFimMissao(missao) && !this.toNullIfBlank(raw.dataHoraFim)) {
+        this.snackBar.open('Informe a data/hora de fim para concluir o ajuste.', 'Fechar', { duration: 2600 });
+        return;
+      }
+    }
     const corrige = missao.status !== 'ATIVA' && (['localDestino', 'setorSolicitante', 'solicitanteNome'] as const)
       .some(campo => !!missao[campo]?.trim() && missao[campo]?.trim() !== raw[campo].trim());
     if (corrige && !justificativa) {
@@ -2535,22 +2589,59 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
     }).subscribe({
       next: (updated) => {
-        this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
-        const idxTempoReal = this.missoesTempoReal.findIndex(item => item.id === updated.id);
-        if (idxTempoReal >= 0) {
-          this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
-        } else if (updated.status === 'ATIVA') {
-          this.missoesTempoReal = [updated, ...this.missoesTempoReal];
+        if (deveAjustarHorario) {
+          const payload: AjustarHorarioMissaoPayload = {
+            dataHoraInicio: raw.dataHoraInicio,
+            dataHoraFim: this.podeEditarFimMissao(missao) ? this.toNullIfBlank(raw.dataHoraFim) : null
+          };
+          this.salvandoHorarioMissao = true;
+          this.adminService.ajustarHorarioMissao(updated.id, payload)
+            .pipe(finalize(() => (this.salvandoHorarioMissao = false)))
+            .subscribe({
+              next: missaoComHorario => {
+                this.aplicarMissaoAtualizada(missaoComHorario);
+                this.snackBar.open('Missao atualizada.', 'Fechar', { duration: 2200 });
+                this.fecharEdicaoDadosMissao();
+              },
+              error: err => this.snackBar.open(err.error?.message || 'Dados salvos, mas falha ao ajustar o horario.', 'Fechar', { duration: 3600 })
+            });
+          return;
         }
-        if (this.selectedMissaoAuditoria?.id === updated.id) {
-          this.selectedMissaoAuditoria = updated;
-          this.abrirAuditoriaMissao(updated);
-        }
-        this.snackBar.open('Dados da missao atualizados.', 'Fechar', { duration: 2200 });
+        this.aplicarMissaoAtualizada(updated);
+        this.snackBar.open('Missao atualizada.', 'Fechar', { duration: 2200 });
         this.fecharEdicaoDadosMissao();
       },
       error: (err) => this.snackBar.open(err.error?.message || 'Falha ao atualizar os dados da missao.', 'Fechar', { duration: 3000 })
     });
+  }
+
+  private horarioMissaoAlterado(
+    missao: MissaoResponse,
+    raw: { dataHoraInicio: string; dataHoraFim: string }
+  ): boolean {
+    if (!this.podeAjustarHorarioMissao(missao)) {
+      return false;
+    }
+    const inicioAtual = this.toDateTimeLocalValue(missao.dataHoraInicio);
+    const fimAtual = missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : '';
+    const inicioNovo = raw.dataHoraInicio || '';
+    const fimNovo = this.podeEditarFimMissao(missao) ? (raw.dataHoraFim || '') : fimAtual;
+    return inicioAtual !== inicioNovo || fimAtual !== fimNovo;
+  }
+
+  private aplicarMissaoAtualizada(updated: MissaoResponse): void {
+    this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
+    const idxTempoReal = this.missoesTempoReal.findIndex(item => item.id === updated.id);
+    if (idxTempoReal >= 0) {
+      this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
+    } else if (updated.status === 'ATIVA') {
+      this.missoesTempoReal = [updated, ...this.missoesTempoReal];
+    }
+    this.missoesMapaDiario = this.missoesMapaDiario.map(item => item.id === updated.id ? updated : item);
+    if (this.selectedMissaoAuditoria?.id === updated.id) {
+      this.selectedMissaoAuditoria = updated;
+      this.abrirAuditoriaMissao(updated);
+    }
   }
 
   podeEditarMissaoManual(missao: MissaoResponse): boolean {
@@ -2689,6 +2780,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   podeAjustarHorarioMissao(missao: MissaoResponse): boolean {
     if (!this.auth.can('MISSAO_CORRIGIR')) return false;
+    if (!missao.dataHoraInicio?.startsWith(this.hojeIso())) return false;
     return missao.origemAbertura === 'CONTINGENCIA_ADMIN' || missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO';
   }
 
@@ -2732,8 +2824,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     const payload: AjustarHorarioMissaoPayload = {
       dataHoraInicio: raw.dataHoraInicio,
-      dataHoraFim,
-      justificativa: raw.justificativa.trim()
+      dataHoraFim
     };
 
     this.salvandoHorarioMissao = true;
@@ -2741,12 +2832,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => (this.salvandoHorarioMissao = false)))
       .subscribe({
         next: updated => {
-          this.missoes = this.missoes.map(item => item.id === updated.id ? updated : item);
-          this.missoesTempoReal = this.missoesTempoReal.map(item => item.id === updated.id ? updated : item);
-          if (this.selectedMissaoAuditoria?.id === updated.id) {
-            this.selectedMissaoAuditoria = updated;
-            this.abrirAuditoriaMissao(updated);
-          }
+          this.aplicarMissaoAtualizada(updated);
           if (this.selectedVeiculoHistorico?.id === updated.veiculoId) {
             const veiculoHistorico = this.selectedVeiculoHistorico;
             this.abrirHistoricoVeiculo(veiculoHistorico);

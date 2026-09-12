@@ -161,8 +161,7 @@ public class AdminMissaoController {
                 id,
                 userDetails.getMotoristaId(),
                 request.dataHoraInicio(),
-                request.dataHoraFim(),
-                request.justificativa()
+                request.dataHoraFim()
         );
         return ResponseEntity.ok(response);
     }

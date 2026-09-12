@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,6 +46,7 @@ public class AdminMissaoService {
     private final AutorizacaoService autorizacao;
 
     private static final DateTimeFormatter AUDITORIA_DATA_HORA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final ZoneId ZONA_OPERACIONAL = ZoneId.of("America/Sao_Paulo");
 
     private static final EnumSet<MotivoExcecaoMissao> MOTIVOS_CONTINGENCIA_ADMIN = EnumSet.of(
             MotivoExcecaoMissao.SEM_INTERNET,
@@ -265,8 +267,7 @@ public class AdminMissaoService {
             Long missaoId,
             Long administradorId,
             LocalDateTime dataHoraInicio,
-            LocalDateTime dataHoraFim,
-            String justificativa
+            LocalDateTime dataHoraFim
     ) {
         Missao missao = missaoRepository.findById(missaoId)
                 .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
@@ -279,9 +280,12 @@ public class AdminMissaoService {
             throw new BusinessException("Somente missoes registradas manualmente podem ter horario ajustado por este fluxo");
         }
 
-        String justificativaNormalizada = trimToNull(justificativa);
-        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
-            throw new BusinessException("Informe a justificativa do ajuste com pelo menos 10 caracteres");
+        LocalDate hojeOperacional = LocalDate.now(ZONA_OPERACIONAL);
+        if (!missao.getDataHoraInicio().toLocalDate().equals(hojeOperacional)) {
+            throw new BusinessException("Horario de missoes de dias anteriores nao pode ser alterado");
+        }
+        if (!dataHoraInicio.toLocalDate().equals(hojeOperacional)) {
+            throw new BusinessException("Horario de inicio deve permanecer no dia atual");
         }
 
         LocalDateTime novoInicio = dataHoraInicio;
@@ -308,7 +312,7 @@ public class AdminMissaoService {
                 "dataHoraInicio",
                 missao.getDataHoraInicio(),
                 novoInicio,
-                justificativaNormalizada
+                null
         );
         missao.setDataHoraInicio(novoInicio);
 
@@ -319,7 +323,7 @@ public class AdminMissaoService {
                     "dataHoraFim",
                     missao.getDataHoraFim(),
                     novoFim,
-                    justificativaNormalizada
+                    null
             );
             missao.setDataHoraFim(novoFim);
         }
@@ -815,7 +819,9 @@ public class AdminMissaoService {
             return;
         }
 
-        String detalhe = "Horario ajustado pela administracao. Justificativa: %s".formatted(justificativa);
+        String detalhe = justificativa == null || justificativa.isBlank()
+                ? "Horario ajustado pela administracao."
+                : "Horario ajustado pela administracao. Justificativa: %s".formatted(justificativa);
         missaoAuditoriaService.registrarAlteracaoCampo(
                 missao,
                 administrador,

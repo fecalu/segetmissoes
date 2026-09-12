@@ -15,7 +15,8 @@
       <td>{{ usuario.login }}</td><td><span class="role-label">{{ labels[usuario.perfil] }}</span></td>
       <td><span [class.suspended]="!usuario.acessoHabilitado">{{ usuario.acessoHabilitado ? 'Habilitado' : 'Suspenso' }}</span></td>
       <td><div class="actions"><button type="button" (click)="abrir(usuario)">Editar</button>
-        <button type="button" (click)="abrirAcesso(usuario)">{{ usuario.acessoHabilitado ? 'Suspender acesso' : 'Habilitar acesso' }}</button></div></td>
+        <button type="button" (click)="abrirAcesso(usuario)">{{ usuario.acessoHabilitado ? 'Suspender acesso' : 'Habilitar acesso' }}</button>
+        <button class="danger" type="button" [disabled]="usuario.id === auth.loggedMotoristaId()" (click)="excluir(usuario)">Excluir conta</button></div></td>
     </tr></tbody></table></div>
   <p *ngIf="!loading && !filtrados.length" class="helper">Nenhum usuário encontrado.</p>
   <p *ngIf="loading" class="helper" role="status">Carregando usuários...</p>

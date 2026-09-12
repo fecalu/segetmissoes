@@ -10,13 +10,12 @@
   <div class="feedback feedback-error" role="status" *ngIf="vehicleError">Não foi possível atualizar os veículos. {{ updatedAt ? 'Exibindo a última consulta recebida.' : 'Tente atualizar novamente.' }}</div>
   <div class="feedback feedback-warning" role="status" *ngIf="missionError">Os detalhes das missões não puderam ser atualizados. As informações anteriores foram mantidas.</div>
 
-  <section class="fleet-summary" aria-label="Resumo da frota">
-    <article><span>Veículos ativos</span><strong>{{ updatedAt ? total : '—' }}</strong><small>Frota cadastrada em operação</small></article>
-    <article><span><i class="summary-dot blue"></i>Disponíveis</span><strong>{{ updatedAt ? count('DISPONIVEL') : '—' }}</strong><small>Na base para nova missão</small></article>
-    <article><span><i class="summary-dot green"></i>Em missão ou viagem</span><strong>{{ updatedAt ? count('MISSAO', 'VIAGEM') : '—' }}</strong><small>Deslocamentos em andamento</small></article>
-    <article><span><i class="summary-dot amber"></i>Aguardando realocação</span><strong>{{ updatedAt ? count('REALOCACAO') : '—' }}</strong><small>Aguardam definição de situação</small></article>
-  </section>
+  <div class="operation-view-switch" role="tablist" aria-label="Modo de visualização da operação">
+    <button type="button" role="tab" [class.active]="activeView === 'PAINEL'" [attr.aria-selected]="activeView === 'PAINEL'" (click)="setView('PAINEL')">Painel visual</button>
+    <button type="button" role="tab" [class.active]="activeView === 'MAPA'" [attr.aria-selected]="activeView === 'MAPA'" (click)="setView('MAPA')">Mapa diário</button>
+  </div>
 
+  <ng-container *ngIf="activeView === 'PAINEL'; else dailyMap">
   <div class="board-toolbar">
     <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>Use o menu do cartão para registrar uma alteração. Arrastar o cartão é apenas um atalho.</p></div>
     <label class="search-field"><app-icon name="search" /><input type="search" aria-label="Buscar veículo por placa, modelo ou motorista" placeholder="Placa, modelo ou motorista" [(ngModel)]="search"><button type="button" class="clear-search" *ngIf="search" aria-label="Limpar busca" (click)="search = ''"><app-icon name="close" /></button></label>
@@ -58,4 +57,62 @@
     </section>
   </div>
   <footer class="board-footer"><span>Atualização automática a cada 15 segundos.</span><button type="button" (click)="missions.emit()">Consultar missões <app-icon name="arrow" /></button></footer>
+  </ng-container>
+
+  <ng-template #dailyMap>
+    <section class="daily-map-panel" aria-label="Mapa diário de missões">
+      <header class="daily-map-header">
+        <div>
+          <h2>Mapa diário <span class="total-count">{{ dailyMissions.length }}</span></h2>
+          <p>Visão em linhas, parecida com o mapa manual do setor.</p>
+        </div>
+        <div class="daily-map-actions">
+          <span>{{ dailyMapDateLabel() }}</span>
+          <button type="button" class="button button-primary" [disabled]="loadingDailyMap" (click)="createMission.emit()">Registrar saída</button>
+          <button type="button" class="button button-secondary" [disabled]="loadingDailyMap" (click)="viewChange.emit('MAPA')">Atualizar</button>
+          <button type="button" class="button button-secondary" [disabled]="loadingDailyMap || !dailyMissions.length" (click)="exportDailyReport.emit()">Exportar PDF</button>
+        </div>
+      </header>
+
+      <div class="feedback feedback-warning" role="status" *ngIf="dailyMapError">Não foi possível carregar o mapa diário. Tente atualizar novamente.</div>
+      <p class="feedback" *ngIf="loadingDailyMap" role="status">Carregando mapa diário...</p>
+
+      <div class="daily-map-table-wrap" *ngIf="!loadingDailyMap">
+        <table class="daily-map-table">
+          <thead>
+            <tr>
+              <th>Veículo</th>
+              <th>Motorista</th>
+              <th>Destino</th>
+              <th>Setor</th>
+              <th>Solicitante</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mission of dailyMissionsSorted; trackBy: trackMission" [class.pending-row]="mission.statusDocumental === 'PENDENTE_DADOS_ADMIN'">
+              <td><strong>{{ missionVehicle(mission) }}</strong></td>
+              <td>{{ mission.motoristaNome }}</td>
+              <td [class.pending]="!mission.localDestino">{{ missionContext(mission.localDestino) }}</td>
+              <td [class.pending]="!mission.setorSolicitante">{{ missionContext(mission.setorSolicitante) }}</td>
+              <td [class.pending]="!mission.solicitanteNome">{{ missionContext(mission.solicitanteNome) }}</td>
+              <td>{{ missionTime(mission.dataHoraInicio) }}</td>
+              <td [class.pending]="!mission.dataHoraFim">{{ missionTime(mission.dataHoraFim, mission.dataHoraInicio) }}</td>
+              <td><span class="map-status" [class.active]="mission.status === 'ATIVA'">{{ mission.status === 'ATIVA' ? 'Em andamento' : 'Finalizada' }}</span></td>
+              <td>
+                <div class="map-row-actions">
+                  <button type="button" (click)="editMission.emit(mission)">Editar missão</button>
+                  <button type="button" *ngIf="mission.status === 'ATIVA' && mission.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="finishMission.emit(mission)">Registrar chegada</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="empty-column" *ngIf="dailyMissions.length === 0">Nenhuma missão registrada neste dia.</p>
+      </div>
+    </section>
+  </ng-template>
 </section>

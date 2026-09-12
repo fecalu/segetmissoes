@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
 import { Veiculo } from '../../core/models/veiculo.model';
+import { MissaoResponse } from '../../core/models/missao.model';
 import { FleetCard, FleetColumn, PainelCategoria } from './fleet-board.model';
+
+type OperacaoView = 'PAINEL' | 'MAPA';
 
 @Component({
   selector: 'app-fleet-board',
@@ -18,22 +21,39 @@ export class FleetBoardComponent {
   @Input() updatedAt: Date | null = null;
   @Input() vehicleError = false;
   @Input() missionError = false;
+  @Input() dailyMissions: MissaoResponse[] = [];
+  @Input() dailyMapDate = '';
+  @Input() loadingDailyMap = false;
+  @Input() dailyMapError = false;
   @Output() refresh = new EventEmitter<void>();
   @Output() history = new EventEmitter<Veiculo>();
   @Output() move = new EventEmitter<{ event: CdkDragDrop<FleetCard[]>; category: PainelCategoria }>();
   @Output() moveVehicle = new EventEmitter<{ vehicle: Veiculo; category: PainelCategoria }>();
   @Output() dragging = new EventEmitter<boolean>();
   @Output() missions = new EventEmitter<void>();
+  @Output() viewChange = new EventEmitter<OperacaoView>();
+  @Output() editMission = new EventEmitter<MissaoResponse>();
+  @Output() finishMission = new EventEmitter<MissaoResponse>();
+  @Output() createMission = new EventEmitter<void>();
+  @Output() exportDailyReport = new EventEmitter<void>();
   search = '';
   movingVehicleId: number | null = null;
   hiddenDetailsVehicleIds = new Set<number>();
+  activeView: OperacaoView = 'PAINEL';
 
   get ids(): string[] { return this.columns.map(column => column.id); }
   get total(): number { return this.columns.reduce((total, column) => total + column.cards.length, 0); }
   get matches(): number { return this.columns.reduce((total, column) => total + this.visibleCards(column).length, 0); }
-  count(...ids: PainelCategoria[]): number { return this.columns.filter(column => ids.includes(column.id)).reduce((total, column) => total + column.cards.length, 0); }
+  get dailyMissionsSorted(): MissaoResponse[] { return [...this.dailyMissions].sort((a, b) => a.dataHoraInicio.localeCompare(b.dataHoraInicio)); }
   trackColumn(_: number, column: FleetColumn): string { return column.id; }
   trackCard(_: number, card: FleetCard): number { return card.vehicle.id; }
+  trackMission(_: number, mission: MissaoResponse): number { return mission.id; }
+
+  setView(view: OperacaoView): void {
+    if (this.activeView === view) return;
+    this.activeView = view;
+    this.viewChange.emit(view);
+  }
 
   toggleMove(vehicleId: number): void {
     this.movingVehicleId = this.movingVehicleId === vehicleId ? null : vehicleId;
@@ -61,6 +81,29 @@ export class FleetBoardComponent {
   visibleCards(column: FleetColumn): FleetCard[] {
     const query = this.normalize(this.search);
     return !query ? column.cards : column.cards.filter(card => this.normalize(`${card.vehicle.placa} ${card.vehicle.marca} ${card.vehicle.modelo} ${card.driver || ''}`).includes(query));
+  }
+
+  missionVehicle(mission: MissaoResponse): string {
+    return `${mission.veiculoPlaca} - ${mission.veiculoMarca} ${mission.veiculoModelo}`.trim();
+  }
+
+  missionContext(value: string | null): string {
+    return value?.trim() || 'Pendente';
+  }
+
+  dailyMapDateLabel(): string {
+    const [year, month, day] = this.dailyMapDate.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : 'Hoje';
+  }
+
+  missionTime(value: string | null, reference?: string): string {
+    if (!value) return 'Em andamento';
+    const date = new Date(value);
+    const base = reference ? new Date(reference) : date;
+    const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date);
+    if (date.toDateString() === base.toDateString()) return time;
+    const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+    return `${day} ${time}`;
   }
 
   private normalize(value: string): string { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase(); }

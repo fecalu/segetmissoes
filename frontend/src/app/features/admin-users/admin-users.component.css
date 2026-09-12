@@ -12,6 +12,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #2b6b8c; outline-
 small, .helper { color: #62788b; font-size: 12px; font-weight: 400; } small { display: block; margin-top: 3px; line-height: 1.5; }
 button { cursor: pointer; border: 1px solid #cad8e3; background: #fff; color: #24465f; border-radius: 8px; padding: 9px 13px; font: inherit; font-size: 13px; font-weight: 600; }
 button.primary { color: white; background: #1c5c7a; border-color: #1c5c7a; } button:disabled { cursor: default; opacity: .6; }
+button.danger { color: #9e3c38; border-color: #e6b7b4; }
 button:hover:not(:disabled) { filter: brightness(.96); } .table-scroll { overflow-x: auto; }
 table { width: 100%; min-width: 720px; border-collapse: collapse; text-align: left; font-size: 13px; }
 th { padding: 13px 12px; color: #617487; font-weight: 600; background: #f4f7fa; }

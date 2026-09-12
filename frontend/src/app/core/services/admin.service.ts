@@ -130,7 +130,6 @@ export interface EncerrarMissaoPendentePayload {
 export interface AjustarHorarioMissaoPayload {
   dataHoraInicio: string;
   dataHoraFim: string | null;
-  justificativa: string;
 }
 
 export interface EditarMissaoManualPayload {
@@ -182,10 +181,6 @@ export class AdminService {
 
   editarMotorista(id: number, payload: MotoristaAdminPayload): Observable<Motorista> {
     return this.http.put<Motorista>(`${this.motoristaUrl}/${id}`, payload);
-  }
-
-  excluirMotorista(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.motoristaUrl}/${id}`);
   }
 
   listarChecklists(filtro: ChecklistFiltro): Observable<ChecklistResponse[]> {

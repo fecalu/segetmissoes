@@ -29,6 +29,8 @@ public interface MissaoRepository extends JpaRepository<Missao, Long>, JpaSpecif
 
     List<Missao> findByVeiculoIdOrderByDataHoraInicioDescIdDesc(Long veiculoId);
 
+    long countByVeiculoId(Long veiculoId);
+
     boolean existsByMotoristaIdAndStatus(Long motoristaId, StatusMissao status);
 
     boolean existsByVeiculoIdAndStatus(Long veiculoId, StatusMissao status);

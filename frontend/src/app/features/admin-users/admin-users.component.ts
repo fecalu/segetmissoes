@@ -119,6 +119,20 @@ export class AdminUsersComponent {
     });
   }
 
+  excluir(usuario: Usuario): void {
+    if (usuario.id === this.auth.loggedMotoristaId()) return;
+    const confirmado = window.confirm(`Excluir definitivamente a conta de ${usuario.nome}? Use "Suspender acesso" quando quiser manter a pessoa no histórico.`);
+    if (!confirmado) return;
+    this.saving = true; this.error = ''; this.success = '';
+    this.http.delete<void>(this.url + '/' + usuario.id).pipe(finalize(() => this.saving = false)).subscribe({
+      next: () => {
+        this.success = 'Conta excluída. O evento foi registrado no histórico.';
+        this.carregar();
+      },
+      error: err => this.error = this.message(err)
+    });
+  }
+
   acaoLabel(acao: string): string {
     return ({ CONTA_CRIADA: 'Conta criada', CONTA_EDITADA: 'Conta editada', SENHA_REDEFINIDA: 'Senha redefinida',
       ACESSO_ALTERADO: 'Acesso alterado', CONTA_EXCLUIDA: 'Conta excluída' } as Record<string, string>)[acao] || acao;

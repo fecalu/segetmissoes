@@ -32,7 +32,7 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .search-field { display: flex; align-items: center; flex: 1; gap: 9px; max-width: 640px; min-width: 0; padding: 5px 5px 5px 13px; border: 1px solid #cddbe3; border-radius: 8px; background: #fff; color: #6b8292; }
 .search-field:focus-within { border-color: #7ea7bd; box-shadow: 0 0 0 3px #dfeef5; }
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--allocation-ink); background: transparent; }
-.search-field button { border: 0; border-radius: 6px; padding: 8px 12px; color: #35566b; background: #edf3f6; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.search-field button { border: 1px solid #cad8e3; border-radius: 8px; padding: 8px 12px; color: #24465f; background: #fff; font-size: .82rem; font-weight: 700; cursor: pointer; }
 .search-field button:hover { background: #e0edf3; }
 .show-closed { color: #536a7e; font-size: .88rem; white-space: nowrap; }
 
@@ -62,7 +62,7 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .plate-no-link { display: block; color: #3f6177; font-weight: 800; letter-spacing: .02em; }
 
 .allocation-table .actions { min-width: 258px; white-space: nowrap; }
-.actions button { min-height: 30px; margin: 2px; padding: 6px 7px; border: 1px solid #cfdae1; border-radius: 6px; background: #fff; color: #36566b; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.actions button { min-height: 32px; margin: 2px; padding: 6px 8px; border: 1px solid #cad8e3; border-radius: 8px; background: #fff; color: #24465f; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .actions button:hover { border-color: #a7c0ce; background: #f1f7f9; }
 .actions button:first-child { padding: 6px; vertical-align: middle; }
 .actions app-icon { width: 16px; height: 16px; }
@@ -78,8 +78,8 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .editor-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 21px; }
 .editor-form.one-column { grid-template-columns: 1fr; }
 .editor-form label { display: grid; gap: 6px; color: #365168; font-size: .8rem; font-weight: 750; }
-.editor-form input, .editor-form select, .editor-form textarea { width: 100%; border: 1px solid #cbd8e1; border-radius: 7px; padding: 10px; color: #1c3447; background: #fff; font: inherit; font-weight: 500; }
-.editor-form input:focus, .editor-form select:focus, .editor-form textarea:focus { outline: 2px solid #9bc1d3; outline-offset: 1px; border-color: #78a6bc; }
+.editor-form input, .editor-form select, .editor-form textarea { width: 100%; border: 1px solid #cad8e3; border-radius: 8px; padding: 10px 12px; color: #21384b; background: #fff; font: inherit; font-weight: 500; }
+.editor-form input:focus, .editor-form select:focus, .editor-form textarea:focus { outline: 2px solid #2b6b8c; outline-offset: 2px; border-color: #78a6bc; }
 .editor-form textarea { resize: vertical; }
 .editor-form .full { grid-column: 1 / -1; }
 .editor-form label small { color: #6f8392; font-size: .72rem; font-weight: 500; line-height: 1.35; }
