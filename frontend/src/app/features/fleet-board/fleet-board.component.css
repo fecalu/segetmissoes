@@ -66,6 +66,21 @@ h3 { font-size: 13px; font-weight: 600; margin: 0; line-height: 1.4; }
 .vehicle-status[data-status='OFICINA'], .vehicle-status[data-status='AGUARDANDO_REALOCACAO'] { background: #fcf3e0; color: #8f621b; }
 .vehicle-status[data-status='MANUTENCAO'] { background: #fff0e4; color: #a15323; }
 .vehicle-status[data-status='BLOQUEADO'] { background: #fcecef; color: #a33743; }
+.operational-location { position: relative; display: inline-flex; margin: 6px 0 0; }
+.location-pill { position: relative; min-height: 22px; max-width: 132px; border: 1px solid transparent; border-radius: 999px; color: #34445b; font: 700 10px 'Barlow', sans-serif; line-height: 1; padding: 3px 22px 3px 9px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.location-pill.empty { color: #8896a9; background: #fff; border-color: #d8e1ee; font-weight: 600; }
+.location-pill::after { content: ''; position: absolute; right: 9px; top: 50%; width: 5px; height: 5px; border-right: 1.4px solid currentColor; border-bottom: 1.4px solid currentColor; transform: translateY(-65%) rotate(45deg); opacity: .75; }
+.location-pill:focus-visible { outline: 2px solid #9fc4f0; outline-offset: 2px; }
+.location-menu { position: absolute; z-index: 8; top: calc(100% + 5px); left: 0; display: grid; grid-template-columns: 1fr; gap: 4px; width: 155px; padding: 7px; border: 1px solid #d9e2ef; border-radius: 12px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 26px rgba(22, 44, 78, .16); }
+.location-menu button { min-height: 26px; border: 0; border-radius: 8px; color: #34445b; font: 700 10px 'Barlow', sans-serif; text-align: left; padding: 5px 8px; cursor: pointer; }
+.location-menu button:hover, .location-menu button.selected { filter: saturate(1.18); box-shadow: inset 0 0 0 1px rgba(36, 89, 169, .18); }
+.location-menu .clear-location { color: #7a8798; background: #f4f6f9; }
+.location-ilha { background: #e7f5ff; }
+.location-lateral { background: #eaf7ef; }
+.location-escadaria { background: #fff4cc; }
+.location-montanharussa { background: #fdebd3; }
+.location-igrejadase { background: #f0e9ff; }
+.location-outro { background: #edf1f6; }
 .driver { display: flex; align-items: center; gap: 6px; margin: 10px 0 6px; font-size: 12px; overflow-wrap: anywhere; }
 .driver app-icon { width: 13px; height: 13px; color: #7d8ba1; }
 .mission-timing { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 10px; color: #6a7b91; margin: 8px 0; }

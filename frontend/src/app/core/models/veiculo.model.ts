@@ -31,6 +31,7 @@ export interface Veiculo {
   placa: string;
   modelo: string;
   marca: string;
+  localizacaoOperacional: string | null;
   desativado: boolean;
   statusAtual: StatusVeiculo;
   statusAutomatico: StatusVeiculo;

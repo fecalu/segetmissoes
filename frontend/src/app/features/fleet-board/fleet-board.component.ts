@@ -25,10 +25,12 @@ export class FleetBoardComponent {
   @Input() dailyMapDate = '';
   @Input() loadingDailyMap = false;
   @Input() dailyMapError = false;
+  @Input() operationalLocations: string[] = [];
   @Output() refresh = new EventEmitter<void>();
   @Output() history = new EventEmitter<Veiculo>();
   @Output() move = new EventEmitter<{ event: CdkDragDrop<FleetCard[]>; category: PainelCategoria }>();
   @Output() moveVehicle = new EventEmitter<{ vehicle: Veiculo; category: PainelCategoria }>();
+  @Output() locationChange = new EventEmitter<{ vehicle: Veiculo; location: string | null }>();
   @Output() dragging = new EventEmitter<boolean>();
   @Output() missions = new EventEmitter<void>();
   @Output() viewChange = new EventEmitter<OperacaoView>();
@@ -38,6 +40,7 @@ export class FleetBoardComponent {
   @Output() exportDailyReport = new EventEmitter<void>();
   search = '';
   movingVehicleId: number | null = null;
+  locationVehicleId: number | null = null;
   hiddenDetailsVehicleIds = new Set<number>();
   activeView: OperacaoView = 'PAINEL';
 
@@ -57,6 +60,12 @@ export class FleetBoardComponent {
 
   toggleMove(vehicleId: number): void {
     this.movingVehicleId = this.movingVehicleId === vehicleId ? null : vehicleId;
+    this.locationVehicleId = null;
+  }
+
+  toggleLocation(vehicleId: number): void {
+    this.locationVehicleId = this.locationVehicleId === vehicleId ? null : vehicleId;
+    this.movingVehicleId = null;
   }
 
   toggleDetails(vehicleId: number): void {
@@ -68,6 +77,17 @@ export class FleetBoardComponent {
   moveTo(vehicle: Veiculo, category: PainelCategoria): void {
     this.movingVehicleId = null;
     this.moveVehicle.emit({ vehicle, category });
+  }
+
+  setOperationalLocation(vehicle: Veiculo, location: string | null): void {
+    this.locationVehicleId = null;
+    this.movingVehicleId = null;
+    this.locationChange.emit({ vehicle, location });
+  }
+
+  locationColorClass(location: string | null): string {
+    const normalized = this.normalize(location || 'sem-local');
+    return `location-${normalized || 'sem-local'}`;
   }
 
   moveDestinations(source: PainelCategoria, card: FleetCard): FleetColumn[] {

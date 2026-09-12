@@ -734,9 +734,7 @@ public class AdminMissaoService {
     }
 
     private void aplicarDestinoAdministrativoDeRetorno(Missao missao, StatusVeiculo destino, Long administradorId) {
-        if (destino != null) {
-            adminVeiculoService.aplicarDestinoDeRetorno(missao, destino, administradorId);
-        }
+        adminVeiculoService.aplicarDestinoDeRetorno(missao, destino, administradorId);
     }
 
     private void registrarAlteracaoTexto(

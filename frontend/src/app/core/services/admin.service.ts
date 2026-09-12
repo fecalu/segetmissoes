@@ -70,6 +70,7 @@ export interface RegistrarRetornoViagemPayload {
   dataHoraRetorno: string;
   observacao: string | null;
   justificativaSemChecklist: string;
+  statusAdministrativoDestino?: StatusAdministrativoVeiculo | 'BASE_JOAO_GOULART';
 }
 
 export interface RegistrarVeiculoEmUsoExternoPayload {
@@ -311,6 +312,10 @@ export class AdminService {
 
   atualizarStatusAdministrativoVeiculo(id: number, statusAdministrativo: StatusAdministrativoVeiculo | null, justificativa?: string): Observable<Veiculo> {
     return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo, justificativa });
+  }
+
+  atualizarLocalizacaoOperacionalVeiculo(id: number, localizacaoOperacional: string | null): Observable<Veiculo> {
+    return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/localizacao-operacional`, { localizacaoOperacional });
   }
 
   registrarVeiculoEmViagem(id: number, payload: RegistrarVeiculoEmViagemPayload): Observable<Veiculo> {

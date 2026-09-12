@@ -9,6 +9,7 @@ public record VeiculoResponse(
         String placa,
         String modelo,
         String marca,
+        String localizacaoOperacional,
         Boolean desativado,
         StatusVeiculo statusAtual,
         StatusVeiculo statusAutomatico,

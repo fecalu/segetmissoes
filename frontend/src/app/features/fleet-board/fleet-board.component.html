@@ -38,7 +38,31 @@
             </div>
           </div>
           <p class="model">{{ card.vehicle.marca }} {{ card.vehicle.modelo }}</p>
-          <span class="vehicle-status" [attr.data-status]="card.vehicle.statusAtual">{{ card.statusLabel }}</span>
+          <span class="vehicle-status" *ngIf="column.id !== 'DISPONIVEL'" [attr.data-status]="card.vehicle.statusAtual">{{ card.statusLabel }}</span>
+          <div class="operational-location" *ngIf="column.id === 'DISPONIVEL'">
+            <button
+              type="button"
+              class="location-pill"
+              [class.empty]="!card.vehicle.localizacaoOperacional"
+              [ngClass]="locationColorClass(card.vehicle.localizacaoOperacional)"
+              [attr.aria-expanded]="locationVehicleId === card.vehicle.id"
+              aria-label="Selecionar local onde o veículo está parado"
+              title="Local onde o veículo está parado"
+              (click)="toggleLocation(card.vehicle.id)"
+            >
+              <span>{{ card.vehicle.localizacaoOperacional || 'Local' }}</span>
+            </button>
+            <div class="location-menu" *ngIf="locationVehicleId === card.vehicle.id">
+              <button
+                type="button"
+                *ngFor="let location of operationalLocations"
+                [ngClass]="locationColorClass(location)"
+                [class.selected]="card.vehicle.localizacaoOperacional === location"
+                (click)="setOperationalLocation(card.vehicle, location)"
+              >{{ location }}</button>
+              <button type="button" class="clear-location" *ngIf="card.vehicle.localizacaoOperacional" (click)="setOperationalLocation(card.vehicle, null)">Limpar</button>
+            </div>
+          </div>
           <p class="driver" *ngIf="card.driver"><app-icon name="user" /><span>{{ card.driver }}</span></p>
           <div class="mission-timing" *ngIf="card.departure"><span>Saída <strong>{{ card.departure }}</strong></span><span *ngIf="card.duration"><app-icon name="clock" />{{ card.duration }}</span></div>
           <dl class="vehicle-details" *ngIf="!hiddenDetailsVehicleIds.has(card.vehicle.id) && card.details.length"><div *ngFor="let detail of card.details"><dt>{{ detail.label }}</dt><dd [class.pending]="!detail.value">{{ detail.value || 'Pendente' }}</dd></div></dl>

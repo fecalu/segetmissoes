@@ -14,6 +14,8 @@
     (history)="abrirHistoricoVeiculo($event)"
     (move)="onDropCategoria($event.event, $event.category)"
     (moveVehicle)="moverVeiculoParaCategoria($event.vehicle, $event.category)"
+    [operationalLocations]="localizacoesOperacionais"
+    (locationChange)="atualizarLocalizacaoOperacional($event.vehicle, $event.location)"
     (dragging)="arrastandoVeiculo = $event"
     (missions)="setMenu('missoes')"
     (viewChange)="alterarVisaoOperacao($event)"

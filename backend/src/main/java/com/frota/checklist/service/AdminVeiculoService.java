@@ -119,6 +119,19 @@ public class AdminVeiculoService {
     }
 
     @Transactional
+    public VeiculoResponse atualizarLocalizacaoOperacional(Long id, String localizacaoOperacional) {
+        autorizacao.exigir(Permissao.FROTA_OPERAR);
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        String localizacaoNormalizada = normalizarTextoOpcional(localizacaoOperacional);
+        if (localizacaoNormalizada != null && localizacaoNormalizada.length() > 80) {
+            throw new BusinessException("Localizacao operacional deve ter no maximo 80 caracteres");
+        }
+        veiculo.setLocalizacaoOperacional(localizacaoNormalizada);
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
     public VeiculoResponse desativar(Long id, Long administradorId, String justificativa) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
@@ -262,6 +275,8 @@ public class AdminVeiculoService {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         Motorista administrador = validarAdministrador(administradorId);
+        StatusVeiculo destinoRetorno = validarDestinoRetornoViagem(request.statusAdministrativoDestino());
+        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         Optional<com.frota.checklist.entity.Missao> missaoViagemAtiva = missaoRepository
                 .findFirstByVeiculoIdAndStatusOrderByDataHoraInicioDesc(id, com.frota.checklist.entity.StatusMissao.ATIVA)
                 .filter(missao -> missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM);
@@ -271,7 +286,7 @@ public class AdminVeiculoService {
                 throw new BusinessException("O retorno deve ser posterior a saida");
             if (missaoViagemAtiva.get().getOrigemAbertura() == com.frota.checklist.entity.OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
                 missaoService.encerrarRegistroAdministrativo(missaoViagemAtiva.get(), administrador, request.dataHoraRetorno());
-                return toResponse(veiculoRepository.findById(id).orElseThrow());
+                return aplicarDestinoRetornoViagem(id, administrador, snapshotAntes, destinoRetorno);
             }
             missaoService.encerrarPendenteAdministrativamente(
                     missaoViagemAtiva.get(),
@@ -279,15 +294,12 @@ public class AdminVeiculoService {
                     request.dataHoraRetorno(),
                     request.justificativaSemChecklist().trim()
             );
-            Veiculo salvo = veiculoRepository.findById(id)
-                    .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-            return toResponse(salvo);
+            return aplicarDestinoRetornoViagem(id, administrador, snapshotAntes, destinoRetorno);
         }
         RegistroViagemVeiculo viagem = registroViagemVeiculoRepository
                 .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id)
                 .orElseThrow(() -> new BusinessException("Nao existe registro de viagem em aberto para este veiculo"));
 
-        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         if (administrador.getPerfil() == Perfil.OPERADOR && (Boolean.TRUE.equals(veiculo.getDesativado())
                 || snapshotAntes.statusAtual() != StatusVeiculo.EM_VIAGEM))
             throw new org.springframework.security.access.AccessDeniedException("Este retorno precisa de um Gestor ou Administrador");
@@ -299,11 +311,40 @@ public class AdminVeiculoService {
         viagem.setAdministradorEncerramento(administrador);
         registroViagemVeiculoRepository.save(viagem);
 
-        veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        veiculo.setStatusAdministrativo(destinoRetorno);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
         return toResponse(salvo);
+    }
+
+    private VeiculoResponse aplicarDestinoRetornoViagem(
+            Long veiculoId,
+            Motorista administrador,
+            VeiculoStatusSnapshot snapshotAntes,
+            StatusVeiculo destinoRetorno
+    ) {
+        Veiculo veiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        veiculo.setStatusAdministrativo(destinoRetorno);
+        Veiculo salvo = veiculoRepository.save(veiculo);
+        VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
+        return toResponse(salvo);
+    }
+
+    private StatusVeiculo validarDestinoRetornoViagem(StatusVeiculo statusAdministrativoDestino) {
+        if (statusAdministrativoDestino == null) {
+            return StatusVeiculo.AGUARDANDO_REALOCACAO;
+        }
+        StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(statusAdministrativoDestino);
+        if (destinoNormalizado != null
+                && destinoNormalizado != StatusVeiculo.NO_PATIO
+                && destinoNormalizado != StatusVeiculo.AGUARDANDO_REALOCACAO
+                && destinoNormalizado != StatusVeiculo.BLOQUEADO) {
+            throw new BusinessException("Status de retorno invalido");
+        }
+        return destinoNormalizado;
     }
 
     @Transactional
@@ -507,6 +548,13 @@ public class AdminVeiculoService {
         return placa == null ? "" : placa.replace("-", "").trim().toUpperCase(Locale.ROOT);
     }
 
+    private String normalizarTextoOpcional(String valor) {
+        if (valor == null || valor.trim().isBlank()) {
+            return null;
+        }
+        return valor.trim();
+    }
+
     private VeiculoResponse toResponse(Veiculo veiculo) {
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return toResponse(
@@ -548,6 +596,7 @@ public class AdminVeiculoService {
                 veiculo.getPlaca(),
                 veiculo.getModelo(),
                 veiculo.getMarca(),
+                veiculo.getLocalizacaoOperacional(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,

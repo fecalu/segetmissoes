@@ -37,6 +37,7 @@ import java.util.List;
 public class AdminVeiculoController {
 
     public record JustificativaRequest(@jakarta.validation.constraints.Size(max = 700) String justificativa) {}
+    public record LocalizacaoOperacionalRequest(@jakarta.validation.constraints.Size(max = 80) String localizacaoOperacional) {}
 
     private final AdminVeiculoService adminVeiculoService;
     private final AdminHistoricoVeiculoService adminHistoricoVeiculoService;
@@ -68,6 +69,14 @@ public class AdminVeiculoController {
                 userDetails.getMotoristaId(),
                 request.justificativa()
         ));
+    }
+
+    @PatchMapping("/{id}/localizacao-operacional")
+    public ResponseEntity<VeiculoResponse> atualizarLocalizacaoOperacional(
+            @PathVariable Long id,
+            @Valid @RequestBody LocalizacaoOperacionalRequest request
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.atualizarLocalizacaoOperacional(id, request.localizacaoOperacional()));
     }
 
     @PostMapping("/{id}/em-viagem")

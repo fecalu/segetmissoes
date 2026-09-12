@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/admin/veiculos/*").hasAuthority("VEICULO_GERIR")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/veiculos/*/desativar", "/api/admin/veiculos/*/reativar").hasAuthority("VEICULO_GERIR")
                         .requestMatchers(HttpMethod.POST, "/api/admin/veiculos/*/exclusao-definitiva").hasAuthority("CADASTRO_EXCLUIR")
-                        .requestMatchers(HttpMethod.PATCH, "/api/admin/veiculos/*/status-administrativo").hasAuthority("FROTA_OPERAR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/admin/veiculos/*/status-administrativo", "/api/admin/veiculos/*/localizacao-operacional").hasAuthority("FROTA_OPERAR")
                         .requestMatchers(HttpMethod.POST, "/api/admin/veiculos/*/em-viagem", "/api/admin/veiculos/*/retorno-viagem", "/api/admin/veiculos/*/em-uso-externo", "/api/admin/veiculos/*/retorno-uso-externo").hasAuthority("FROTA_OPERAR")
                         .requestMatchers("/api/admin/**", "/uploads/**").denyAll()
                         .requestMatchers(HttpMethod.POST, "/api/checklists/**").hasRole("MOTORISTA")
