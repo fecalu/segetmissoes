@@ -143,8 +143,8 @@ public class MissaoService {
         missao.setTipoDeslocamento(tipoDeslocamento == null ? TipoDeslocamentoMissao.NA_CIDADE : tipoDeslocamento);
         missao.setAdministradorAbertura(administrador);
         missao.setLocalDestino(trimToNull(localDestino));
-        missao.setSetorSolicitante(missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM ? null : trimToNull(setorSolicitante));
-        missao.setSolicitanteNome(missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM ? null : trimToNull(solicitanteNome));
+        missao.setSetorSolicitante(trimToNull(setorSolicitante));
+        missao.setSolicitanteNome(trimToNull(solicitanteNome));
         missao.atualizarStatusDocumental();
 
         Missao saved = missaoRepository.save(missao);
@@ -196,8 +196,8 @@ public class MissaoService {
         missao.setMotivoContingencia(motivoContingencia == null ? MotivoExcecaoMissao.OUTROS : motivoContingencia);
         missao.setJustificativaContingenciaAbertura(trimToNull(justificativaAbertura));
         missao.setLocalDestino(localDestinoNormalizado);
-        missao.setSetorSolicitante(tipoDeslocamentoNormalizado == TipoDeslocamentoMissao.VIAGEM ? null : setorSolicitanteNormalizado);
-        missao.setSolicitanteNome(tipoDeslocamentoNormalizado == TipoDeslocamentoMissao.VIAGEM ? null : solicitanteNomeNormalizado);
+        missao.setSetorSolicitante(setorSolicitanteNormalizado);
+        missao.setSolicitanteNome(solicitanteNomeNormalizado);
         missao.atualizarStatusDocumental();
 
         Missao saved = missaoRepository.save(missao);
@@ -506,6 +506,7 @@ public class MissaoService {
                 || veiculo.getStatusAdministrativo() == StatusVeiculo.AGUARDANDO_REALOCACAO) {
             veiculo.setStatusAdministrativo(null);
         }
+        veiculo.setLocalizacaoOperacional(null);
     }
 
     private void registrarEncerramentoSemChecklistNoVeiculo(
@@ -527,6 +528,7 @@ public class MissaoService {
             return;
         }
         veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        veiculo.setLocalizacaoOperacional(null);
         veiculoRepository.save(veiculo);
     }
 

@@ -628,6 +628,10 @@
   max-width: 1180px;
 }
 
+.vehicle-history-card {
+  max-width: 1240px;
+}
+
 .inclusion-card {
   max-width: 760px;
 }
@@ -759,18 +763,29 @@
 .history-summary {
   display: grid;
   gap: 12px;
-  margin: 14px 0 10px;
+  margin: 14px 0;
 }
 
 .history-current-status {
   border: 1px solid #dce5fb;
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: #f9fbff;
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(180deg, #f9fbff, #ffffff);
+  box-shadow: 0 8px 18px rgba(32, 56, 96, 0.06);
 }
 
 .history-current-status p {
   margin: 6px 0 0;
+}
+
+.history-section-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #6a7898;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .history-kpis {
@@ -782,11 +797,12 @@
 .history-kpis .kpi {
   border: 1px solid #dde6fb;
   border-radius: 12px;
-  padding: 10px;
-  background: #ffffff;
+  padding: 12px;
+  background: linear-gradient(180deg, #ffffff, #f9fbff);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-height: 68px;
 }
 
 .history-kpis .kpi strong {
@@ -801,7 +817,11 @@
 .history-filters {
   display: grid;
   gap: 10px;
-  margin-bottom: 12px;
+  margin: 6px 0 14px;
+  border: 1px solid #e1e8f7;
+  border-radius: 14px;
+  padding: 10px;
+  background: #fbfdff;
 }
 
 .history-mode-toggle {
@@ -835,6 +855,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: min(62vh, 640px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .history-event-card {
@@ -842,12 +865,19 @@
   border: 1px solid #dbe4fb;
   border-radius: 12px;
   background: #fff;
-  padding: 10px;
+  padding: 12px;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.history-event-card:hover {
+  border-color: #b6c7ef;
+  box-shadow: 0 10px 20px rgba(40, 64, 104, 0.08);
+  transform: translateY(-1px);
 }
 
 .history-event-card.active {
@@ -888,9 +918,12 @@
 
 .history-event-detail {
   border: 1px solid #dbe4fb;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fbfdff;
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, #fbfdff, #ffffff);
+  box-shadow: 0 12px 28px rgba(32, 56, 96, 0.08);
+  position: sticky;
+  top: 12px;
 }
 
 .history-event-detail h4 {

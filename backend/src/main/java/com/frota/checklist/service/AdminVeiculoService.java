@@ -150,6 +150,7 @@ public class AdminVeiculoService {
 
         veiculo.setDesativado(true);
         veiculo.setStatusAdministrativo(StatusVeiculo.BLOQUEADO);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), StatusVeiculo.BLOQUEADO, administrador);
 
@@ -173,6 +174,7 @@ public class AdminVeiculoService {
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         veiculo.setDesativado(false);
         veiculo.setStatusAdministrativo(null);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), administrador);
@@ -215,6 +217,7 @@ public class AdminVeiculoService {
         }
 
         veiculo.setStatusAdministrativo(novoStatusNormalizado);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
 
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
@@ -261,8 +264,8 @@ public class AdminVeiculoService {
                 request.dataHoraSaida(),
                 TipoDeslocamentoMissao.VIAGEM,
                 request.localDestino(),
-                null,
-                null
+                request.setorSolicitante(),
+                request.solicitanteNome()
         );
 
         Veiculo salvo = veiculoRepository.findById(id)
@@ -312,6 +315,7 @@ public class AdminVeiculoService {
         registroViagemVeiculoRepository.save(viagem);
 
         veiculo.setStatusAdministrativo(destinoRetorno);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
@@ -327,6 +331,7 @@ public class AdminVeiculoService {
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         veiculo.setStatusAdministrativo(destinoRetorno);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
@@ -381,6 +386,7 @@ public class AdminVeiculoService {
         registroUsoExternoVeiculoRepository.save(registro);
 
         veiculo.setStatusAdministrativo(StatusVeiculo.EM_USO_EXTERNO);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
 
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), StatusVeiculo.EM_USO_EXTERNO);
@@ -419,6 +425,7 @@ public class AdminVeiculoService {
         registroUsoExternoVeiculoRepository.save(registro);
 
         veiculo.setStatusAdministrativo(destinoNormalizado);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
@@ -636,6 +643,7 @@ public class AdminVeiculoService {
         Veiculo veiculo = missao.getVeiculo();
         VeiculoStatusSnapshot antes = veiculoStatusResolver.resolver(veiculo);
         veiculo.setStatusAdministrativo(destino);
+        limparLocalizacaoOperacional(veiculo);
         veiculoRepository.save(veiculo);
         registrarHistoricoStatus(veiculo, autor, antes.statusAtual(), veiculoStatusResolver.resolver(veiculo).statusAtual(),
                 "Destino registrado no retorno da missao " + missao.getId());
@@ -667,6 +675,10 @@ public class AdminVeiculoService {
         historico.setStatusAnterior(statusAnterior);
         historico.setStatusNovo(statusNovo);
         historicoStatusVeiculoRepository.save(historico);
+    }
+
+    private void limparLocalizacaoOperacional(Veiculo veiculo) {
+        veiculo.setLocalizacaoOperacional(null);
     }
 
     private void encerrarViagemAtivaSeNecessario(

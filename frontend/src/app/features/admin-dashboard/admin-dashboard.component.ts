@@ -280,8 +280,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     DADOS_ADMIN_COMPLETOS: 'DADOS COMPLETOS'
   };
   private readonly statusDocumentalViagemLabels: Record<StatusDocumentalMissao, string> = {
-    PENDENTE_DADOS_ADMIN: 'LOCAL PENDENTE',
-    DADOS_ADMIN_COMPLETOS: 'LOCAL INFORMADO'
+    PENDENTE_DADOS_ADMIN: 'DADOS PENDENTES',
+    DADOS_ADMIN_COMPLETOS: 'DADOS COMPLETOS'
   };
   private readonly origemAberturaMissaoLabels: Record<OrigemAberturaMissao, string> = {
     CHECKLIST: 'INICIO: COM CHECKLIST',
@@ -303,8 +303,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: this.statusMissaoLabels.FINALIZADA, descricao: 'Missao ja finalizada.', exemplo: 'Ex.: inicio 08:00 e fim 09:15 ja registrados.', classe: 'status-finalizada' },
     { termo: this.statusDocumentalMissaoLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda faltam destino, setor ou solicitante.', exemplo: 'Ex.: destino foi informado, mas setor e solicitante ainda faltam.', classe: 'status-documental-pendente' },
     { termo: this.statusDocumentalMissaoLabels.DADOS_ADMIN_COMPLETOS, descricao: 'Destino, setor e solicitante ja foram preenchidos.', exemplo: 'Ex.: destino SEGET, setor ATOS e solicitante VAL ja informados.', classe: 'status-documental-ok' },
-    { termo: this.statusDocumentalViagemLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda falta informar o local da viagem.', exemplo: 'Ex.: a viagem foi aberta, mas o local ainda nao foi preenchido.', classe: 'status-documental-pendente' },
-    { termo: this.statusDocumentalViagemLabels.DADOS_ADMIN_COMPLETOS, descricao: 'O local da viagem ja foi informado.', exemplo: 'Ex.: local da viagem Juazeiro ja registrado.', classe: 'status-documental-ok' },
+    { termo: this.statusDocumentalViagemLabels.PENDENTE_DADOS_ADMIN, descricao: 'Ainda faltam destino, setor ou solicitante da viagem.', exemplo: 'Ex.: destino informado, mas setor e solicitante ainda faltam.', classe: 'status-documental-pendente' },
+    { termo: this.statusDocumentalViagemLabels.DADOS_ADMIN_COMPLETOS, descricao: 'Destino, setor e solicitante da viagem ja foram preenchidos.', exemplo: 'Ex.: viagem registrada com local, setor e solicitante.', classe: 'status-documental-ok' },
     { termo: this.tipoMissaoLabels.MANUAL, descricao: 'Missao registrada pela administracao como parte da operacao diaria.', exemplo: 'Ex.: o administrador registrou a saida antes de o veiculo deixar o setor.', classe: 'status-base_joao_goulart' },
     { termo: this.tipoMissaoLabels.VIAGEM, descricao: 'Missao aberta como viagem, para deslocamentos fora da rotina urbana.', exemplo: 'Ex.: motorista iniciou uma viagem e o veiculo passou a aparecer em Em viagem.', classe: 'status-em_viagem' },
     { termo: this.origemAberturaMissaoLabels.CHECKLIST, descricao: 'Inicio registrado pelo checklist de saida.', exemplo: 'Ex.: a missao foi aberta logo apos o checklist de saida.', classe: 'status-base_joao_goulart' },
@@ -481,6 +481,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.viagemForm = this.fb.nonNullable.group({
       motoristaId: [0, [Validators.min(1)]],
       localDestino: ['', [Validators.required, Validators.maxLength(180)]],
+      setorSolicitante: ['', [Validators.required, Validators.maxLength(160)]],
+      solicitanteNome: ['', [Validators.required, Validators.maxLength(160)]],
       dataHoraSaida: [this.agoraDateTimeLocal(), [Validators.required]],
       observacao: ['', [Validators.maxLength(700)]]
     });
@@ -782,8 +784,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       dataHoraInicio: raw.dataHoraInicio,
       tipoDeslocamento: ehViagem ? 'VIAGEM' : 'NA_CIDADE',
       localDestino: raw.localDestino.trim(),
-      setorSolicitante: ehViagem ? null : this.toNullIfBlank(raw.setorSolicitante),
-      solicitanteNome: ehViagem ? null : this.toNullIfBlank(raw.solicitanteNome)
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome)
     };
 
     this.salvandoRegistroAdministrativo = true;
@@ -1532,6 +1534,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.viagemForm.reset({
       motoristaId: veiculo.viagemMotoristaId || veiculo.motoristaAtualId || 0,
       localDestino: veiculo.viagemLocalDestino || '',
+      setorSolicitante: '',
+      solicitanteNome: '',
       dataHoraSaida: this.agoraDateTimeLocal(),
       observacao: veiculo.viagemObservacao || ''
     });
@@ -1546,6 +1550,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.viagemForm.reset({
       motoristaId: 0,
       localDestino: '',
+      setorSolicitante: '',
+      solicitanteNome: '',
       dataHoraSaida: this.agoraDateTimeLocal(),
       observacao: ''
     });
@@ -1564,6 +1570,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const payload: RegistrarVeiculoEmViagemPayload = {
       motoristaId: raw.motoristaId,
       localDestino: raw.localDestino.trim(),
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome),
       dataHoraSaida: raw.dataHoraSaida,
       observacao: this.toNullIfBlank(raw.observacao)
     };
@@ -2280,12 +2288,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const controleSolicitante = this.missaoContingenciaForm.controls.solicitanteNome;
     if (modo === 'VIAGEM') {
       controleLocalDestino.setValidators([Validators.required, Validators.maxLength(180)]);
-      controleSetor.clearValidators();
-      controleSolicitante.clearValidators();
-      this.missaoContingenciaForm.patchValue({
-        setorSolicitante: '',
-        solicitanteNome: ''
-      });
+      controleSetor.setValidators([Validators.required, Validators.maxLength(160)]);
+      controleSolicitante.setValidators([Validators.required, Validators.maxLength(160)]);
     } else if (modo === 'OPERACAO') {
       controleLocalDestino.setValidators([Validators.required, Validators.maxLength(180)]);
       controleSetor.setValidators([Validators.required, Validators.maxLength(160)]);
@@ -2406,9 +2410,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   resumoDadosAdministrativos(missao: MissaoResponse): string {
-    if (missao.tipoDeslocamento === 'VIAGEM') {
-      return `Local da viagem: ${missao.localDestino || '-'}`;
-    }
     const destino = missao.localDestino || '-';
     const setor = missao.setorSolicitante || '-';
     const solicitante = missao.solicitanteNome || '-';
@@ -2426,11 +2427,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   labelCampoContextoMissao(missao: MissaoResponse | null | undefined): string {
-    return missao?.tipoDeslocamento === 'VIAGEM' ? 'Local da viagem' : 'Destino';
+    return missao?.tipoDeslocamento === 'VIAGEM' ? 'Destino / local da viagem' : 'Destino';
   }
 
   exibeCamposUrbanosMissao(missao: MissaoResponse | null | undefined): boolean {
-    return (missao?.tipoDeslocamento || 'NA_CIDADE') !== 'VIAGEM';
+    return true;
   }
 
   origemAberturaMissaoLabel(origem: OrigemAberturaMissao): string {
@@ -2816,7 +2817,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const raw = this.missaoEdicaoManualForm.getRawValue();
-    const exibeCamposUrbanos = this.exibeCamposUrbanosMissao(missao);
     const payload: EditarMissaoManualPayload = {
       motoristaId: raw.motoristaId,
       veiculoId: raw.veiculoId,
@@ -2827,8 +2827,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         ? this.toNullIfBlank(raw.justificativaEncerramento)
         : missao.justificativaContingenciaEncerramento,
       localDestino: this.toNullIfBlank(raw.localDestino),
-      setorSolicitante: exibeCamposUrbanos ? this.toNullIfBlank(raw.setorSolicitante) : null,
-      solicitanteNome: exibeCamposUrbanos ? this.toNullIfBlank(raw.solicitanteNome) : null,
+      setorSolicitante: this.toNullIfBlank(raw.setorSolicitante),
+      solicitanteNome: this.toNullIfBlank(raw.solicitanteNome),
       justificativaEdicao: raw.justificativaEdicao.trim()
     };
 

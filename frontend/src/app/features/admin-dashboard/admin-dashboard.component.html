@@ -61,6 +61,7 @@
               <p>{{ v.marca }} {{ v.modelo }} - {{ statusLabel(v.statusAtual) }}</p>
             </div>
             <div class="inline-buttons">
+              <button mat-stroked-button type="button" (click)="abrirHistoricoVeiculo(v)">Histórico</button>
               <button mat-stroked-button type="button" (click)="editarVeiculo(v)">Editar</button>
               <button mat-stroked-button type="button" (click)="desativarVeiculo(v)">Dar baixa</button>
             </div>
@@ -75,6 +76,7 @@
               <p>{{ v.marca }} {{ v.modelo }} - BAIXADO/DESATIVADO</p>
             </div>
             <div class="inline-buttons">
+              <button mat-stroked-button type="button" (click)="abrirHistoricoVeiculo(v)">Histórico</button>
               <button mat-flat-button color="primary" type="button" (click)="reativarVeiculo(v)">Reativar</button>
               <details *ngIf="auth.can('CADASTRO_EXCLUIR')" class="danger-details">
                 <summary>Ações avançadas</summary>
@@ -688,7 +690,7 @@
         </mat-option>
       </mat-autocomplete>
 
-      <mat-form-field appearance="outline" *ngIf="!novaMissaoEhViagem()">
+      <mat-form-field appearance="outline">
         <mat-label>Setor solicitante</mat-label>
         <input matInput maxlength="160" formControlName="setorSolicitante" [matAutocomplete]="autoSetorContingencia">
       </mat-form-field>
@@ -698,7 +700,7 @@
         </mat-option>
       </mat-autocomplete>
 
-      <mat-form-field appearance="outline" *ngIf="!novaMissaoEhViagem()">
+      <mat-form-field appearance="outline">
         <mat-label>Quem solicitou</mat-label>
         <input matInput maxlength="160" formControlName="solicitanteNome" [matAutocomplete]="autoSolicitanteContingencia">
       </mat-form-field>
@@ -1198,29 +1200,30 @@
 </section>
 
 <section class="detail-overlay" *ngIf="selectedVeiculoHistorico">
-  <article class="detail-card history-card">
+  <article class="detail-card history-card vehicle-history-card">
     <header>
       <div>
-        <h3>Historico do veiculo - {{ selectedVeiculoHistorico.placa }}</h3>
+        <h3>Histórico do veículo - {{ selectedVeiculoHistorico.placa }}</h3>
         <p class="history-card-subtitle">{{ selectedVeiculoHistorico.marca }} {{ selectedVeiculoHistorico.modelo }}</p>
       </div>
       <button mat-stroked-button type="button" (click)="fecharHistoricoVeiculo()">Fechar</button>
     </header>
 
-    <p *ngIf="loadingHistoricoVeiculo">Carregando historico...</p>
+    <p *ngIf="loadingHistoricoVeiculo">Carregando histórico...</p>
 
     <ng-container *ngIf="!loadingHistoricoVeiculo && historicoVeiculo as historico">
       <section class="history-summary">
         <div class="history-current-status">
+          <span class="history-section-label">Situação atual</span>
           <span class="status-pill" [ngClass]="statusClass(historico.statusAtual)">{{ historico.statusAtualRotulo }}</span>
           <p><strong>Motorista atual:</strong> {{ historico.motoristaAtualNome || '-' }}</p>
-          <p><strong>Ultima movimentacao:</strong> {{ historico.ultimaMovimentacaoEm ? (historico.ultimaMovimentacaoEm | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
+          <p><strong>Última movimentação:</strong> {{ historico.ultimaMovimentacaoEm ? (historico.ultimaMovimentacaoEm | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
         </div>
 
         <div class="history-kpis">
           <article class="kpi">
             <strong>{{ historico.resumo.totalMissoes }}</strong>
-            <span>Missoes</span>
+            <span>Missões</span>
           </article>
           <article class="kpi">
             <strong>{{ historico.resumo.totalChecklists }}</strong>
@@ -1252,7 +1255,7 @@
             type="button"
             [class.active]="modoHistoricoVeiculo === 'OPERACIONAL'"
             (click)="alternarModoHistoricoVeiculo('OPERACIONAL')">
-            Historico operacional
+            Histórico operacional
           </button>
           <button
             mat-stroked-button
@@ -1276,14 +1279,14 @@
             type="button"
             [class.active]="filtroHistoricoSomenteComFotos"
             (click)="filtroHistoricoSomenteComFotos = !filtroHistoricoSomenteComFotos; aplicarFiltroHistoricoVeiculo()">
-            So com fotos
+            Só com fotos
           </button>
           <button
             mat-stroked-button
             type="button"
             [class.active]="filtroHistoricoSomenteComAvarias"
             (click)="filtroHistoricoSomenteComAvarias = !filtroHistoricoSomenteComAvarias; aplicarFiltroHistoricoVeiculo()">
-            So com avarias
+            Só com avarias
           </button>
         </div>
       </section>
@@ -1342,17 +1345,13 @@
             <p *ngIf="detalhe.tipoOperacao"><strong>Operacao:</strong> {{ tipoOperacaoLabel(detalhe.tipoOperacao) }}</p>
             <p *ngIf="detalhe.origemAberturaMissao"><strong>Inicio:</strong> {{ origemAberturaMissaoLabel(detalhe.origemAberturaMissao) }}</p>
             <p *ngIf="detalhe.origemEncerramentoMissao"><strong>Fim:</strong> {{ origemEncerramentoMissaoLabel(detalhe.origemEncerramentoMissao) }}</p>
-            <p *ngIf="detalhe.statusDocumentalMissao"><strong>{{ eventoEhViagemHistorico(evento) ? 'Status da viagem:' : 'Dados da missao:' }}</strong> {{ statusDocumentalEventoHistoricoLabel(evento) }}</p>
-            <p *ngIf="eventoEhViagemHistorico(evento) && detalhe.localDestino">
-              <strong>Local da viagem:</strong>
-              {{ detalhe.localDestino }}
-            </p>
-            <p *ngIf="!eventoEhViagemHistorico(evento) && (detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome)">
+            <p *ngIf="detalhe.statusDocumentalMissao"><strong>{{ eventoEhViagemHistorico(evento) ? 'Status da viagem:' : 'Dados da missão:' }}</strong> {{ statusDocumentalEventoHistoricoLabel(evento) }}</p>
+            <p *ngIf="detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome">
               <strong>Destino | Setor | Solicitante:</strong>
               {{ detalhe.localDestino || '-' }} | {{ detalhe.setorSolicitante || '-' }} | {{ detalhe.solicitanteNome || '-' }}
             </p>
             <p *ngIf="detalhe.motivoExcecao"><strong>Motivo:</strong> {{ motivoExcecaoLabel(detalhe.motivoExcecao) }}</p>
-            <p *ngIf="detalhe.statusExcecaoMissao"><strong>Status da regularizacao:</strong> {{ statusExcecaoLabel(detalhe.statusExcecaoMissao) }}</p>
+            <p *ngIf="detalhe.statusExcecaoMissao"><strong>Status da regularização:</strong> {{ statusExcecaoLabel(detalhe.statusExcecaoMissao) }}</p>
             <p *ngIf="detalhe.justificativa"><strong>Justificativa:</strong> {{ detalhe.justificativa }}</p>
             <p *ngIf="detalhe.justificativaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ detalhe.justificativaEncerramento }}</p>
             <p *ngIf="detalhe.resultadoVistoria"><strong>Resultado da vistoria:</strong> {{ resultadoVistoriaLabel(detalhe.resultadoVistoria) }}</p>
@@ -1373,7 +1372,7 @@
       </section>
     </ng-container>
 
-    <p *ngIf="!loadingHistoricoVeiculo && historicoVeiculo && historicoVeiculo.eventos.length === 0">Nenhum evento registrado para este veiculo.</p>
+    <p *ngIf="!loadingHistoricoVeiculo && historicoVeiculo && historicoVeiculo.eventos.length === 0">Nenhum evento registrado para este veículo.</p>
   </article>
 </section>
 

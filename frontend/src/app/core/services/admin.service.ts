@@ -62,6 +62,8 @@ export interface AtualizarContraparteVistoriaCompletaPayload {
 export interface RegistrarVeiculoEmViagemPayload {
   motoristaId: number;
   localDestino: string;
+  setorSolicitante: string | null;
+  solicitanteNome: string | null;
   dataHoraSaida: string;
   observacao: string | null;
 }

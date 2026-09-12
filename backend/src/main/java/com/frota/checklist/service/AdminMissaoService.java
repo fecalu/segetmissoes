@@ -20,6 +20,7 @@ import com.frota.checklist.repository.MissaoRepository;
 import com.frota.checklist.repository.MotoristaRepository;
 import com.frota.checklist.repository.VeiculoRepository;
 import com.frota.checklist.exception.NotFoundException;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
@@ -89,12 +90,9 @@ public class AdminMissaoService {
             }
             if (statusDocumental != null) {
                 if (statusDocumental == StatusDocumentalMissao.PENDENTE_DADOS_ADMIN) {
-                    predicates.add(cb.or(
-                            cb.equal(root.get("statusDocumental"), StatusDocumentalMissao.PENDENTE_DADOS_ADMIN),
-                            cb.isNull(root.get("statusDocumental"))
-                    ));
+                    predicates.add(dadosAdministrativosPendentes(root, cb));
                 } else {
-                    predicates.add(cb.equal(root.get("statusDocumental"), statusDocumental));
+                    predicates.add(dadosAdministrativosCompletos(root, cb));
                 }
             }
             if (dataInicio != null) {
@@ -620,8 +618,7 @@ public class AdminMissaoService {
         if (destinoNormalizado == null) {
             throw new BusinessException("Informe o destino da missao");
         }
-        if (tipoNormalizado == TipoDeslocamentoMissao.NA_CIDADE
-                && (setorNormalizado == null || solicitanteNormalizado == null)) {
+        if (setorNormalizado == null || solicitanteNormalizado == null) {
             throw new BusinessException("Informe setor solicitante e quem solicitou a missao");
         }
 
@@ -854,6 +851,7 @@ public class AdminMissaoService {
                 || veiculo.getStatusAdministrativo() == StatusVeiculo.AGUARDANDO_REALOCACAO) {
             veiculo.setStatusAdministrativo(null);
         }
+        veiculo.setLocalizacaoOperacional(null);
     }
 
     private String formatarMotoristaAuditoria(Motorista motorista) {
@@ -869,8 +867,38 @@ public class AdminMissaoService {
     }
 
     private StatusDocumentalMissao statusDocumentalEfetivo(Missao missao) {
-        return missao.getStatusDocumental() == null
-                ? StatusDocumentalMissao.PENDENTE_DADOS_ADMIN
-                : missao.getStatusDocumental();
+        return missao.possuiDadosAdministrativosCompletos()
+                ? StatusDocumentalMissao.DADOS_ADMIN_COMPLETOS
+                : StatusDocumentalMissao.PENDENTE_DADOS_ADMIN;
+    }
+
+    private Predicate dadosAdministrativosPendentes(jakarta.persistence.criteria.Root<Missao> root, CriteriaBuilder cb) {
+        return cb.or(
+                campoTextoVazio(root, cb, "localDestino"),
+                campoTextoVazio(root, cb, "setorSolicitante"),
+                campoTextoVazio(root, cb, "solicitanteNome")
+        );
+    }
+
+    private Predicate dadosAdministrativosCompletos(jakarta.persistence.criteria.Root<Missao> root, CriteriaBuilder cb) {
+        return cb.and(
+                campoTextoPreenchido(root, cb, "localDestino"),
+                campoTextoPreenchido(root, cb, "setorSolicitante"),
+                campoTextoPreenchido(root, cb, "solicitanteNome")
+        );
+    }
+
+    private Predicate campoTextoVazio(jakarta.persistence.criteria.Root<Missao> root, CriteriaBuilder cb, String campo) {
+        return cb.or(
+                cb.isNull(root.get(campo)),
+                cb.equal(cb.trim(root.<String>get(campo)), "")
+        );
+    }
+
+    private Predicate campoTextoPreenchido(jakarta.persistence.criteria.Root<Missao> root, CriteriaBuilder cb, String campo) {
+        return cb.and(
+                cb.isNotNull(root.get(campo)),
+                cb.notEqual(cb.trim(root.<String>get(campo)), "")
+        );
     }
 }
