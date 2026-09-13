@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.IniciarMissaoExcecaoRequest;
 import com.frota.checklist.dto.MissaoExcecaoResponse;
 import com.frota.checklist.dto.FinalizarMissaoSemChecklistRequest;
@@ -34,6 +36,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class MissaoExcecaoService {
+
+    private final AutorizacaoService autorizacao;
 
     private static final EnumSet<MotivoExcecaoMissao> MOTIVOS_PERMITIDOS = EnumSet.of(
             MotivoExcecaoMissao.URGENCIA_OPERACIONAL,
@@ -155,9 +159,7 @@ public class MissaoExcecaoService {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem encerrar excecao");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_ENCERRAR_EXCECAO);
         if (!missao.getStatus().isAberta()) {
             throw new BusinessException("Missao em excecao ja foi encerrada");
         }

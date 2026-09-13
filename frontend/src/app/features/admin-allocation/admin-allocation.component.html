@@ -1,0 +1,100 @@
+<section class="allocation-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">REGISTRO ADMINISTRATIVO</p>
+      <h1>Alocações administrativas</h1>
+      <p class="page-description">Controle documental de vagas, órgãos, veículos e responsáveis. Este registro não altera a operação diária da frota.</p>
+    </div>
+    <button *ngIf="auth.can('ALOCACAO_GERIR')" mat-flat-button class="primary-action" type="button" (click)="abrirCriacao()"><app-icon name="plus" /> Nova alocação</button>
+  </header>
+
+  <section class="summary" aria-label="Resumo das alocações">
+    <article><strong>{{ totalAtivas }}</strong><span>Alocações ativas</span></article>
+    <article><strong>{{ totalGrupos }}</strong><span>Grupos de órgão e setor</span></article>
+    <article><strong>{{ totalEncerradas }}</strong><span>Encerradas na consulta</span></article>
+  </section>
+
+  <section class="toolbar" aria-label="Filtros de alocações">
+    <label class="search-field"><app-icon name="search" /><input [(ngModel)]="busca" (keyup.enter)="carregar()" placeholder="Buscar por placa, responsável, órgão ou setor" /><button type="button" (click)="carregar()">Buscar</button></label>
+    <label class="show-closed"><input type="checkbox" [(ngModel)]="mostrarEncerradas" (change)="carregar()" /> Mostrar encerradas</label>
+  </section>
+
+  <p class="empty-state" *ngIf="!carregando && !alocacoes.length">Nenhuma alocação encontrada. Crie a primeira para começar o controle.</p>
+  <div class="table-wrap" *ngIf="alocacoes.length">
+    <table class="allocation-table">
+      <thead><tr><th>Vaga</th><th>Placa</th><th>Responsável</th><th>Limite autorizado</th><th>Modelo</th><th>Situação</th><th>Observação</th><th>Ações</th></tr></thead>
+      <tbody *ngFor="let grupo of gruposAlocacoes">
+        <tr class="group-row"><th colspan="8"><span>{{ grupo.orgao }}</span><span class="group-divider">/</span><strong>{{ grupo.setor }}</strong><small>{{ grupo.alocacoes.length }} {{ grupo.alocacoes.length === 1 ? 'vaga' : 'vagas' }} na consulta</small></th></tr>
+        <tr *ngFor="let alocacao of grupo.alocacoes; let impar = odd" [class.closed]="!alocacao.ativa" [class.pale-row]="impar">
+          <td class="number">{{ alocacao.numeroControle }}</td>
+          <td><button *ngIf="alocacao.linkConsulta; else placaSemLink" class="plate-link" type="button" (click)="abrirLinkConsulta(alocacao.linkConsulta)" title="Abrir link de consulta cadastrado">{{ alocacao.placa }}</button><ng-template #placaSemLink><span class="plate-no-link" title="Cadastre um link de consulta para esta placa">{{ alocacao.placa }}</span></ng-template><small *ngIf="alocacao.marca">{{ alocacao.marca }}</small></td>
+          <td>{{ alocacao.responsavelNome }}</td>
+          <td>{{ alocacao.limiteAutorizado }}</td>
+          <td>{{ alocacao.modelo }}</td>
+          <td><span class="status" [class.inactive]="!alocacao.ativa">{{ alocacao.ativa ? 'ATIVA' : 'ENCERRADA' }}</span></td>
+          <td class="observation">{{ alocacao.observacao || '—' }}</td>
+          <td class="actions"><button type="button" title="Ver histórico" aria-label="Ver histórico" (click)="abrirHistorico(alocacao)"><app-icon name="history" /></button><ng-container *ngIf="alocacao.ativa"><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Editar dados" (click)="abrirDados(alocacao)">Editar</button><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar veículo" (click)="abrirTrocaVeiculo(alocacao)">Veículo</button><button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar responsável" (click)="abrirTrocaResponsavel(alocacao)">Responsável</button><button *ngIf="auth.can('ALOCACAO_GERIR')" class="danger" type="button" title="Encerrar alocação" (click)="abrirEncerramento(alocacao)">Encerrar</button></ng-container></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal-backdrop" *ngIf="editorMode" (click)="fecharEditor()">
+  <section class="editor-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <button type="button" class="close" aria-label="Fechar" (click)="fecharEditor()"><app-icon name="close" /></button>
+
+    <ng-container *ngIf="editorMode === 'CRIAR' || editorMode === 'DADOS'">
+      <p class="eyebrow">{{ editorMode === 'CRIAR' ? 'NOVA ALOCAÇÃO' : 'EDITAR ALOCAÇÃO' }}</p>
+      <h2>{{ editorMode === 'CRIAR' ? 'Registrar alocação' : 'Atualizar dados administrativos' }}</h2>
+      <p>O responsável é registrado como informação administrativa e não exige acesso ao aplicativo.</p>
+      <form [formGroup]="alocacaoForm" (ngSubmit)="salvarAlocacao()" class="editor-form">
+        <label *ngIf="editorMode === 'CRIAR'">Placa <input formControlName="placa" placeholder="Ex.: ABC1D23" /></label>
+        <label *ngIf="editorMode === 'CRIAR'">Modelo <input formControlName="modelo" placeholder="Ex.: S10 LS" /></label>
+        <label *ngIf="editorMode === 'CRIAR'">Marca <input formControlName="marca" placeholder="Opcional" /></label>
+        <label *ngIf="editorMode === 'CRIAR'">Responsável atual <input formControlName="responsavelNome" placeholder="Nome do motorista responsável" /></label>
+        <label>Secretaria / órgão <input formControlName="secretariaOrgao" /></label>
+        <label>Setor <input formControlName="setor" /></label>
+        <label>Limite autorizado <input formControlName="limiteAutorizado" placeholder="Ex.: R$ 1.000,00 ou Não Renova" /></label>
+        <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
+        <label class="full">Link de consulta da placa <input type="text" inputmode="url" formControlName="linkConsulta" placeholder="https://... ou www.exemplo.com" /><small>Opcional. Quando informado, a placa abrirá este endereço em uma nova aba. Se necessário, o sistema adiciona https:// automaticamente.</small></label>
+        <label class="full">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional"></textarea></label>
+        <button mat-flat-button class="primary-action full" [disabled]="salvando" type="submit">{{ salvando ? 'Salvando...' : (editorMode === 'CRIAR' ? 'Criar alocação' : 'Salvar dados') }}</button>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="editorMode === 'VEICULO'">
+      <p class="eyebrow">ALOC. {{ selected?.numeroControle }}</p><h2>Trocar veículo</h2><p>O veículo atual será preservado no histórico desta alocação, sem interferir no cadastro da frota.</p>
+      <form [formGroup]="veiculoForm" (ngSubmit)="salvarTrocaVeiculo()" class="editor-form one-column">
+        <label>Nova placa <input formControlName="placa" placeholder="Ex.: ABC1D23" /></label>
+        <label>Novo modelo <input formControlName="modelo" /></label>
+        <label>Nova marca <input formControlName="marca" placeholder="Opcional" /></label>
+        <label>Motivo da troca <textarea formControlName="motivo" rows="3" placeholder="Ex.: veículo anterior enviado para oficina"></textarea></label>
+        <button mat-flat-button class="primary-action" [disabled]="salvando" type="submit">Confirmar troca</button>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="editorMode === 'RESPONSAVEL'">
+      <p class="eyebrow">ALOC. {{ selected?.numeroControle }}</p><h2>Trocar responsável</h2><p>Registre o novo motorista responsável e o motivo para manter a rastreabilidade.</p>
+      <form [formGroup]="responsavelForm" (ngSubmit)="salvarTrocaResponsavel()" class="editor-form one-column">
+        <label>Novo responsável <input formControlName="responsavelNome" /></label>
+        <label>Motivo da troca <textarea formControlName="motivo" rows="3" placeholder="Ex.: mudança de lotação"></textarea></label>
+        <button mat-flat-button class="primary-action" [disabled]="salvando" type="submit">Confirmar troca</button>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="editorMode === 'ENCERRAR'">
+      <p class="eyebrow">ALOC. {{ selected?.numeroControle }}</p><h2>Encerrar alocação</h2><p>A alocação sai da lista ativa, mas o histórico continuará disponível para consulta.</p>
+      <form [formGroup]="encerramentoForm" (ngSubmit)="confirmarEncerramento()" class="editor-form one-column">
+        <label>Motivo do encerramento <textarea formControlName="motivo" rows="3" placeholder="Ex.: veículo devolvido à secretaria"></textarea></label>
+        <button mat-flat-button class="danger-action" [disabled]="salvando" type="submit">Encerrar alocação</button>
+      </form>
+    </ng-container>
+
+    <ng-container *ngIf="editorMode === 'HISTORICO'">
+      <p class="eyebrow">ALOC. {{ selected?.numeroControle }}</p><h2>Histórico da alocação</h2>
+      <p class="history-empty" *ngIf="!historico.length">Carregando histórico...</p>
+      <div class="history-table-wrap" *ngIf="historico.length"><table class="history-table"><thead><tr><th>Data e hora</th><th>Evento</th><th>Antes</th><th>Depois</th><th>Motivo / observação</th><th>Alterado por</th></tr></thead><tbody><tr *ngFor="let evento of historico"><td>{{ formatarData(evento.dataHora) }}</td><td><strong>{{ labelEvento(evento.tipo) }}</strong></td><td class="change-cell">{{ resumoAntes(evento) }}</td><td class="change-cell">{{ resumoDepois(evento) }}</td><td>{{ observacaoEvento(evento) }}</td><td>{{ evento.administradorNome }}</td></tr></tbody></table></div>
+    </ng-container>
+  </section>
+</div>

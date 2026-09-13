@@ -39,6 +39,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String absoluteUploadDir = Path.of(uploadBaseDir).toAbsolutePath().toString().replace("\\", "/");
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + absoluteUploadDir + "/");
+                .addResourceLocations("file:" + absoluteUploadDir + "/")
+                .setCacheControl(org.springframework.http.CacheControl.noStore());
     }
 }

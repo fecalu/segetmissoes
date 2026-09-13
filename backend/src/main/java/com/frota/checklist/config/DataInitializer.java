@@ -22,9 +22,12 @@ public class DataInitializer implements CommandLineRunner {
     private final MotoristaRepository motoristaRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${app.demo-data-enabled:false}")
+    private boolean demoDataEnabled;
+
     @Override
     public void run(String... args) {
-        if (veiculoRepository.count() == 0) {
+        if (demoDataEnabled && veiculoRepository.count() == 0) {
             Veiculo v1 = new Veiculo();
             v1.setPlaca("BRA2E19");
             v1.setModelo("Cargo 2429");
@@ -57,42 +60,16 @@ public class DataInitializer implements CommandLineRunner {
             }
         });
 
-        Optional<Motorista> motoristaOpt = motoristaRepository.findByLogin("motorista1");
-        if (motoristaOpt.isPresent()) {
-            Motorista motorista = motoristaOpt.get();
-            motorista.setNome("Motorista Teste");
-            motorista.setSenha(passwordEncoder.encode("123456"));
-            if (motorista.getCpf() == null || motorista.getCpf().isBlank()) {
-                motorista.setCpf("12345678901");
-            }
-            motorista.setPerfil(Perfil.MOTORISTA);
-            motoristaRepository.save(motorista);
-        } else {
-            Motorista motorista = new Motorista();
-            motorista.setNome("Motorista Teste");
-            motorista.setLogin("motorista1");
-            motorista.setSenha(passwordEncoder.encode("123456"));
-            motorista.setCpf("12345678901");
-            motorista.setPerfil(Perfil.MOTORISTA);
-            motoristaRepository.save(motorista);
-        }
+        if (!demoDataEnabled) return;
+        criarDemonstracaoSeAusente("motorista1", "Motorista Teste", "12345678901", "123456", Perfil.MOTORISTA);
+        criarDemonstracaoSeAusente("admin", "Administrador", "99999999999", "admin123", Perfil.ADMIN);
+    }
 
-        Optional<Motorista> adminOpt = motoristaRepository.findByLogin("admin");
-        if (adminOpt.isPresent()) {
-            Motorista admin = adminOpt.get();
-            admin.setNome("Administrador");
-            admin.setSenha(passwordEncoder.encode("admin123"));
-            admin.setCpf("99999999999");
-            admin.setPerfil(Perfil.ADMIN);
-            motoristaRepository.save(admin);
-        } else {
-            Motorista admin = new Motorista();
-            admin.setNome("Administrador");
-            admin.setLogin("admin");
-            admin.setSenha(passwordEncoder.encode("admin123"));
-            admin.setCpf("99999999999");
-            admin.setPerfil(Perfil.ADMIN);
-            motoristaRepository.save(admin);
-        }
+    private void criarDemonstracaoSeAusente(String login, String nome, String cpf, String senha, Perfil perfil) {
+        if (motoristaRepository.existsByLogin(login)) return;
+        Motorista usuario = new Motorista();
+        usuario.setLogin(login); usuario.setNome(nome); usuario.setCpf(cpf);
+        usuario.setSenha(passwordEncoder.encode(senha)); usuario.setPerfil(perfil);
+        motoristaRepository.save(usuario);
     }
 }

@@ -53,6 +53,6 @@ public class AuthService {
         motorista.setPerfil(Perfil.MOTORISTA);
 
         Motorista saved = motoristaRepository.save(motorista);
-        return new MotoristaResponse(saved.getId(), saved.getNome(), saved.getLogin(), saved.getCpf(), saved.getPerfil());
+        return new MotoristaResponse(saved.getId(), saved.getNome(), saved.getLogin(), saved.getCpf(), saved.getPerfil(), saved.isAcessoHabilitado());
     }
 }

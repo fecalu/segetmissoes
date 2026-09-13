@@ -42,6 +42,9 @@ public class Veiculo {
     @Column(name = "status", length = 30)
     private StatusVeiculo statusAdministrativo;
 
+    @Column(name = "localizacao_operacional", length = 80)
+    private String localizacaoOperacional;
+
     @Column(name = "data_hora_ultimo_encerramento_sem_checklist")
     private LocalDateTime dataHoraUltimoEncerramentoSemChecklist;
 

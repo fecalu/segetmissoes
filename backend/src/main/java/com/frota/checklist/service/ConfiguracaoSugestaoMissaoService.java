@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.SugestoesCamposMissaoResponse;
 import com.frota.checklist.entity.CampoSugestaoMissao;
 import com.frota.checklist.entity.ConfiguracaoSugestaoMissao;
@@ -22,6 +24,8 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class ConfiguracaoSugestaoMissaoService {
+
+    private final AutorizacaoService autorizacao;
 
     private final ConfiguracaoSugestaoMissaoRepository configuracaoRepository;
     private final MotoristaRepository motoristaRepository;
@@ -47,9 +51,7 @@ public class ConfiguracaoSugestaoMissaoService {
     ) {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administrador pode alterar sugestoes de missao");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.CONFIGURACAO_GERIR);
 
         substituirCampo(CampoSugestaoMissao.DESTINO, normalizarLista(destinos, 180, "Destino"), administrador);
         substituirCampo(CampoSugestaoMissao.SETOR_SOLICITANTE, normalizarLista(setoresSolicitantes, 160, "Setor solicitante"), administrador);

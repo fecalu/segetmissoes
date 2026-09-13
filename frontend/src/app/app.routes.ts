@@ -10,6 +10,10 @@ import { AdminReportComponent } from './features/admin-report/admin-report.compo
 import { AdminMissionStatsComponent } from './features/admin-mission-stats/admin-mission-stats.component';
 import { MissaoExcecaoComponent } from './features/missao-excecao/missao-excecao.component';
 import { VistoriaCompletaComponent } from './features/vistoria-completa/vistoria-completa.component';
+import { AdminLayoutComponent } from './features/admin-layout/admin-layout.component';
+import { AdminReportsComponent } from './features/admin-reports/admin-reports.component';
+import { AdminAllocationComponent } from './features/admin-allocation/admin-allocation.component';
+import { AdminUsersComponent } from './features/admin-users/admin-users.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -18,9 +22,15 @@ export const routes: Routes = [
   { path: 'checklist', component: ChecklistComponent, canActivate: [motoristaGuard] },
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },
   { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
-  { path: 'admin/checklists/relatorio', component: AdminReportComponent, canActivate: [adminGuard] },
-  { path: 'admin/estatisticas/missoes', component: AdminMissionStatsComponent, canActivate: [adminGuard] },
-  { path: 'admin', component: AdminDashboardComponent, canActivate: [adminGuard] },
+  { path: 'admin', component: AdminLayoutComponent, canActivate: [adminGuard], canActivateChild: [adminGuard], children: [
+    { path: 'checklists/relatorio', component: AdminReportComponent, data: { permission: 'RELATORIO_EXPORTAR' } },
+    { path: 'estatisticas/missoes', component: AdminMissionStatsComponent, data: { permission: 'ESTATISTICA_CONSULTAR' } },
+    { path: 'relatorios', component: AdminReportsComponent, data: { permission: 'RELATORIO_EXPORTAR' } },
+    { path: 'alocacoes', component: AdminAllocationComponent, data: { permission: 'ALOCACAO_CONSULTAR' } },
+    { path: 'usuarios', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR' } },
+    { path: 'auditoria-acessos', component: AdminUsersComponent, data: { permission: 'ACESSO_GERIR', auditOnly: true } },
+    { path: '', component: AdminDashboardComponent, runGuardsAndResolvers: 'paramsOrQueryParamsChange' }
+  ] },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: '**', redirectTo: 'login' }
 ];

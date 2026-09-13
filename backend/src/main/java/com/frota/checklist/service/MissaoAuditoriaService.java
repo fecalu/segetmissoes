@@ -88,6 +88,8 @@ public class MissaoAuditoriaService {
         auditoria.setStatusAnterior(statusAnterior);
         auditoria.setStatusNovo(statusNovo);
         auditoria.setUsuarioAcao(usuarioAcao);
+        auditoria.setUsuarioAcaoNome(usuarioAcao == null ? null : usuarioAcao.getNome());
+        auditoria.setUsuarioAcaoPerfil(usuarioAcao == null ? null : usuarioAcao.getPerfil());
         auditoria.setDetalhe(detalhe);
         auditoria.setCampoAlterado(campoAlterado);
         auditoria.setValorAnterior(valorAnterior);
@@ -104,12 +106,13 @@ public class MissaoAuditoriaService {
                         item.getStatusAnterior(),
                         item.getStatusNovo(),
                         item.getUsuarioAcao() != null ? item.getUsuarioAcao().getId() : null,
-                        item.getUsuarioAcao() != null ? item.getUsuarioAcao().getNome() : null,
+                        item.getUsuarioAcaoNome() != null ? item.getUsuarioAcaoNome()
+                                : item.getUsuarioAcao() != null ? item.getUsuarioAcao().getNome() : null,
                         item.getDataHora(),
                         item.getDetalhe(),
                         item.getCampoAlterado(),
                         item.getValorAnterior(),
-                        item.getValorNovo()
+                        item.getValorNovo(), item.getUsuarioAcaoPerfil()
                 ))
                 .toList();
     }

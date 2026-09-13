@@ -1,0 +1,56 @@
+<header class="page-heading">
+  <div><p class="eyebrow">SISTEMA</p><h1>{{ auditOnly ? 'Auditoria de acessos' : 'Usuários e acessos' }}</h1>
+    <p>{{ auditOnly ? 'Quem alterou as contas, quando e o que mudou.' : 'Defina o que cada pessoa pode fazer no sistema.' }}</p></div>
+  <button *ngIf="!auditOnly" class="primary" type="button" (click)="abrir()">Adicionar usuário</button>
+</header>
+<p *ngIf="error" class="error" role="alert">{{ error }}</p>
+<p *ngIf="success" class="success" role="status">{{ success }}</p>
+<section class="users-panel" *ngIf="!auditOnly">
+  <div class="table-toolbar"><label for="user-search">Buscar pessoa ou perfil<input id="user-search" type="search" [(ngModel)]="busca" placeholder="Nome, login ou perfil"></label>
+    <button type="button" (click)="carregar()" [disabled]="loading">Atualizar</button></div>
+  <p class="helper">O perfil define as permissões. Suspender o acesso mantém os registros e o histórico da pessoa.</p>
+  <div class="table-scroll"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Acesso</th><th>Ações</th></tr></thead>
+    <tbody><tr *ngFor="let usuario of filtrados">
+      <td><strong>{{ usuario.nome }}</strong><small *ngIf="usuario.id === auth.loggedMotoristaId()">Sua conta</small></td>
+      <td>{{ usuario.login }}</td><td><span class="role-label">{{ labels[usuario.perfil] }}</span></td>
+      <td><span [class.suspended]="!usuario.acessoHabilitado">{{ usuario.acessoHabilitado ? 'Habilitado' : 'Suspenso' }}</span></td>
+      <td><div class="actions"><button type="button" (click)="abrir(usuario)">Editar</button>
+        <button type="button" (click)="abrirAcesso(usuario)">{{ usuario.acessoHabilitado ? 'Suspender acesso' : 'Habilitar acesso' }}</button>
+        <button class="danger" type="button" [disabled]="usuario.id === auth.loggedMotoristaId()" (click)="excluir(usuario)">Excluir conta</button></div></td>
+    </tr></tbody></table></div>
+  <p *ngIf="!loading && !filtrados.length" class="helper">Nenhum usuário encontrado.</p>
+  <p *ngIf="loading" class="helper" role="status">Carregando usuários...</p>
+</section>
+<section *ngIf="auditOnly" class="users-panel">
+  <div class="table-toolbar"><p>Eventos recentes de contas de acesso.</p><button type="button" (click)="carregar()" [disabled]="loading">Atualizar</button></div>
+  <div class="table-scroll"><table><thead><tr><th>Data e hora</th><th>Registrado por</th><th>Conta</th><th>Ação</th><th>Alteração</th></tr></thead>
+    <tbody><tr *ngFor="let evento of eventos"><td class="date">{{ evento.dataHora | date:'dd/MM/yyyy HH:mm' }}</td>
+      <td>{{ evento.autorNome }}<small>{{ labels[evento.autorPerfil] }}</small></td><td>#{{ evento.registroId }}</td>
+      <td>{{ acaoLabel(evento.acao) }}</td><td><ng-container *ngIf="evento.campo"><strong>{{ evento.campo }}</strong>
+        <div>Antes: {{ valorLabel(evento.campo, evento.valorAnterior) }}</div><div>Depois: {{ valorLabel(evento.campo, evento.valorNovo) }}</div></ng-container>
+        <p *ngIf="evento.justificativa">{{ evento.justificativa }}</p><span *ngIf="!evento.campo && !evento.justificativa">Evento registrado</span></td></tr></tbody>
+  </table></div><p *ngIf="!loading && !eventos.length" class="helper">Nenhuma alteração de acesso registrada.</p>
+</section>
+<dialog #editor aria-labelledby="user-editor-title" (cancel)="saving && $event.preventDefault()">
+  <form [formGroup]="form" (ngSubmit)="salvar()">
+    <h2 id="user-editor-title">{{ editing ? 'Editar acesso' : 'Adicionar usuário' }}</h2>
+    <p class="helper">Escolha o perfil de acordo com as atividades da pessoa.</p>
+    <div class="form-grid">
+      <label>Nome<input formControlName="nome" autocomplete="name"><small class="error" *ngIf="form.controls.nome.touched && form.controls.nome.invalid">Informe o nome.</small></label>
+      <label>CPF<input formControlName="cpf" inputmode="numeric" maxlength="11"><small class="error" *ngIf="form.controls.cpf.touched && form.controls.cpf.invalid">Informe os 11 números do CPF.</small></label>
+      <label>Login<input formControlName="login" autocomplete="off"><small class="error" *ngIf="form.controls.login.touched && form.controls.login.invalid">Informe o login.</small></label>
+      <label>{{ editing ? 'Nova senha (opcional)' : 'Senha inicial' }}<input formControlName="senha" type="password" autocomplete="new-password"><small *ngIf="editing">Deixe vazio para manter a senha atual.</small></label>
+      <label class="full">Perfil<select formControlName="perfil"><option *ngFor="let perfil of perfis" [value]="perfil">{{ labels[perfil] }}</option></select><small>{{ descriptions[form.controls.perfil.value] }}</small></label>
+    </div>
+    <p *ngIf="editorError" class="error" role="alert">{{ editorError }}</p>
+    <footer><button type="button" [disabled]="saving" (click)="editor.close()">Cancelar</button><button class="primary" [disabled]="saving" type="submit">{{ saving ? 'Salvando...' : 'Salvar acesso' }}</button></footer>
+  </form>
+</dialog>
+<dialog #accessDialog aria-labelledby="access-title" (cancel)="saving && $event.preventDefault()">
+  <form (ngSubmit)="alterarAcesso()"><h2 id="access-title">{{ acessoAlvo?.acessoHabilitado ? 'Suspender acesso' : 'Habilitar acesso' }}</h2>
+    <p>{{ acessoAlvo?.nome }} · {{ acessoAlvo?.login }}</p><p class="helper">O histórico será preservado. Uma missão em andamento não será encerrada por esta ação.</p>
+    <label>Motivo<textarea name="motivo" [(ngModel)]="motivoAcesso" rows="3" minlength="10" maxlength="700" required></textarea><small>Mínimo de 10 caracteres.</small></label>
+    <p *ngIf="editorError" class="error" role="alert">{{ editorError }}</p>
+    <footer><button type="button" [disabled]="saving" (click)="accessDialog.close()">Cancelar</button><button class="primary" [disabled]="saving || motivoAcesso.trim().length < 10" type="submit">Confirmar alteração</button></footer>
+  </form>
+</dialog>

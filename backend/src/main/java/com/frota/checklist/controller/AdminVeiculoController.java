@@ -36,6 +36,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminVeiculoController {
 
+    public record JustificativaRequest(@jakarta.validation.constraints.Size(max = 700) String justificativa) {}
+    public record LocalizacaoOperacionalRequest(@jakarta.validation.constraints.Size(max = 80) String localizacaoOperacional) {}
+
     private final AdminVeiculoService adminVeiculoService;
     private final AdminHistoricoVeiculoService adminHistoricoVeiculoService;
 
@@ -57,14 +60,23 @@ public class AdminVeiculoController {
     @PatchMapping("/{id}/status-administrativo")
     public ResponseEntity<VeiculoResponse> atualizarStatusAdministrativo(
             @PathVariable Long id,
-            @RequestBody AtualizarStatusAdministrativoRequest request,
+            @Valid @RequestBody AtualizarStatusAdministrativoRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(adminVeiculoService.atualizarStatusAdministrativo(
                 id,
                 request.statusAdministrativo(),
-                userDetails.getMotoristaId()
+                userDetails.getMotoristaId(),
+                request.justificativa()
         ));
+    }
+
+    @PatchMapping("/{id}/localizacao-operacional")
+    public ResponseEntity<VeiculoResponse> atualizarLocalizacaoOperacional(
+            @PathVariable Long id,
+            @Valid @RequestBody LocalizacaoOperacionalRequest request
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.atualizarLocalizacaoOperacional(id, request.localizacaoOperacional()));
     }
 
     @PostMapping("/{id}/em-viagem")
@@ -106,17 +118,19 @@ public class AdminVeiculoController {
     @PatchMapping("/{id}/desativar")
     public ResponseEntity<VeiculoResponse> desativar(
             @PathVariable Long id,
+            @Valid @RequestBody(required = false) JustificativaRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(adminVeiculoService.desativar(id, userDetails.getMotoristaId()));
+        return ResponseEntity.ok(adminVeiculoService.desativar(id, userDetails.getMotoristaId(), request == null ? null : request.justificativa()));
     }
 
     @PatchMapping("/{id}/reativar")
     public ResponseEntity<VeiculoResponse> reativar(
             @PathVariable Long id,
+            @Valid @RequestBody(required = false) JustificativaRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(adminVeiculoService.reativar(id, userDetails.getMotoristaId()));
+        return ResponseEntity.ok(adminVeiculoService.reativar(id, userDetails.getMotoristaId(), request == null ? null : request.justificativa()));
     }
 
     @GetMapping("/{id}/historico-status")

@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.AdminVeiculoRequest;
 import com.frota.checklist.entity.AuditoriaExclusaoVeiculo;
 import com.frota.checklist.dto.HistoricoStatusVeiculoResponse;
@@ -11,6 +13,8 @@ import com.frota.checklist.dto.VeiculoResponse;
 import com.frota.checklist.entity.Checklist;
 import com.frota.checklist.entity.HistoricoStatusVeiculo;
 import com.frota.checklist.entity.Motorista;
+import com.frota.checklist.entity.Missao;
+import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.OrigemRegistroUsoExterno;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.RegistroUsoExternoVeiculo;
@@ -47,6 +51,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AdminVeiculoService {
 
+    private final AutorizacaoService autorizacao;
+    private final AuditoriaAdministrativaService auditoriaAdministrativa;
+
     private final VeiculoRepository veiculoRepository;
     private final ChecklistRepository checklistRepository;
     private final MotoristaRepository motoristaRepository;
@@ -78,6 +85,7 @@ public class AdminVeiculoService {
     }
 
     public VeiculoResponse criar(AdminVeiculoRequest request) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
         String placa = normalizarPlaca(request.placa());
         if (veiculoRepository.existsByPlaca(placa)) {
             throw new BusinessException("Placa ja cadastrada");
@@ -94,6 +102,7 @@ public class AdminVeiculoService {
     }
 
     public VeiculoResponse editar(Long id, AdminVeiculoRequest request) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
 
@@ -110,10 +119,26 @@ public class AdminVeiculoService {
     }
 
     @Transactional
-    public VeiculoResponse desativar(Long id, Long administradorId) {
+    public VeiculoResponse atualizarLocalizacaoOperacional(Long id, String localizacaoOperacional) {
+        autorizacao.exigir(Permissao.FROTA_OPERAR);
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        Motorista administrador = validarAdministrador(administradorId);
+        String localizacaoNormalizada = normalizarTextoOpcional(localizacaoOperacional);
+        if (localizacaoNormalizada != null && localizacaoNormalizada.length() > 80) {
+            throw new BusinessException("Localizacao operacional deve ter no maximo 80 caracteres");
+        }
+        veiculo.setLocalizacaoOperacional(localizacaoNormalizada);
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
+    public VeiculoResponse desativar(Long id, Long administradorId, String justificativa) {
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        Motorista administrador = autorizacao.exigir(administradorId, Permissao.VEICULO_GERIR);
+        if (administrador.getPerfil() == Perfil.GESTOR && (justificativa == null || justificativa.trim().length() < 10))
+            throw new BusinessException("Informe uma justificativa com pelo menos 10 caracteres");
+        auditoriaAdministrativa.registrar(administrador, "VEICULO", id, "DESATIVAR", null, null, null, justificativa);
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
             return toResponse(veiculo);
         }
@@ -125,6 +150,7 @@ public class AdminVeiculoService {
 
         veiculo.setDesativado(true);
         veiculo.setStatusAdministrativo(StatusVeiculo.BLOQUEADO);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), StatusVeiculo.BLOQUEADO, administrador);
 
@@ -134,10 +160,13 @@ public class AdminVeiculoService {
     }
 
     @Transactional
-    public VeiculoResponse reativar(Long id, Long administradorId) {
+    public VeiculoResponse reativar(Long id, Long administradorId, String justificativa) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-        Motorista administrador = validarAdministrador(administradorId);
+        Motorista administrador = autorizacao.exigir(administradorId, Permissao.VEICULO_GERIR);
+        if (administrador.getPerfil() == Perfil.GESTOR && (justificativa == null || justificativa.trim().length() < 10))
+            throw new BusinessException("Informe uma justificativa com pelo menos 10 caracteres");
+        auditoriaAdministrativa.registrar(administrador, "VEICULO", id, "REATIVAR", null, null, null, justificativa);
         if (!Boolean.TRUE.equals(veiculo.getDesativado())) {
             return toResponse(veiculo);
         }
@@ -145,6 +174,7 @@ public class AdminVeiculoService {
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         veiculo.setDesativado(false);
         veiculo.setStatusAdministrativo(null);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), administrador);
@@ -155,7 +185,7 @@ public class AdminVeiculoService {
     }
 
     @Transactional
-    public VeiculoResponse atualizarStatusAdministrativo(Long id, StatusVeiculo novoStatusAdministrativo, Long administradorId) {
+    public VeiculoResponse atualizarStatusAdministrativo(Long id, StatusVeiculo novoStatusAdministrativo, Long administradorId, String justificativa) {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         Motorista administrador = validarAdministrador(administradorId);
@@ -172,6 +202,13 @@ public class AdminVeiculoService {
         }
 
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        if (administrador.getPerfil() == Perfil.OPERADOR) {
+            autorizacao.validarInicio(administrador, veiculo, snapshotAntes.statusAtual());
+            if (novoStatusNormalizado != null && novoStatusNormalizado != StatusVeiculo.NO_PATIO)
+                throw new org.springframework.security.access.AccessDeniedException("Esta alteracao precisa de um Gestor ou Administrador");
+            if (justificativa == null || justificativa.trim().length() < 10)
+                throw new BusinessException("Informe o motivo da correcao com pelo menos 10 caracteres");
+        }
         if (snapshotAntes.statusAdministrativo() == novoStatusNormalizado) {
             return toResponse(veiculo);
         }
@@ -180,12 +217,13 @@ public class AdminVeiculoService {
         }
 
         veiculo.setStatusAdministrativo(novoStatusNormalizado);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
 
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         encerrarViagemAtivaSeNecessario(salvo, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), administrador);
 
-        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual(), justificativa);
 
         return toResponse(salvo);
     }
@@ -203,6 +241,7 @@ public class AdminVeiculoService {
         }
 
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        autorizacao.validarInicio(administrador, veiculo, snapshotAntes.statusAtual());
         if (snapshotAntes.statusAutomatico().isDeslocamentoAtivo()) {
             throw new BusinessException("Nao e possivel colocar em viagem um veiculo com missao em andamento");
         }
@@ -217,17 +256,16 @@ public class AdminVeiculoService {
             justificativaAbertura = "Viagem registrada manualmente pela administracao.";
         }
 
-        missaoService.abrirContingenciaAdministrativa(
+        if (motoristaViagem.getPerfil() != Perfil.MOTORISTA) throw new BusinessException("Selecione um motorista valido");
+        missaoService.abrirRegistroAdministrativo(
                 administrador,
                 motoristaViagem,
                 veiculo,
                 request.dataHoraSaida(),
-                null,
                 TipoDeslocamentoMissao.VIAGEM,
-                justificativaAbertura,
                 request.localDestino(),
-                null,
-                null
+                request.setorSolicitante(),
+                request.solicitanteNome()
         );
 
         Veiculo salvo = veiculoRepository.findById(id)
@@ -240,36 +278,78 @@ public class AdminVeiculoService {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         Motorista administrador = validarAdministrador(administradorId);
+        StatusVeiculo destinoRetorno = validarDestinoRetornoViagem(request.statusAdministrativoDestino());
+        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
         Optional<com.frota.checklist.entity.Missao> missaoViagemAtiva = missaoRepository
                 .findFirstByVeiculoIdAndStatusOrderByDataHoraInicioDesc(id, com.frota.checklist.entity.StatusMissao.ATIVA)
                 .filter(missao -> missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM);
         if (missaoViagemAtiva.isPresent()) {
+            autorizacao.validarRetornoMissao(administrador, missaoViagemAtiva.get());
+            if (request.dataHoraRetorno() == null || !request.dataHoraRetorno().isAfter(missaoViagemAtiva.get().getDataHoraInicio()))
+                throw new BusinessException("O retorno deve ser posterior a saida");
+            if (missaoViagemAtiva.get().getOrigemAbertura() == com.frota.checklist.entity.OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
+                missaoService.encerrarRegistroAdministrativo(missaoViagemAtiva.get(), administrador, request.dataHoraRetorno());
+                return aplicarDestinoRetornoViagem(id, administrador, snapshotAntes, destinoRetorno);
+            }
             missaoService.encerrarPendenteAdministrativamente(
                     missaoViagemAtiva.get(),
                     administrador,
                     request.dataHoraRetorno(),
                     request.justificativaSemChecklist().trim()
             );
-            Veiculo salvo = veiculoRepository.findById(id)
-                    .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
-            return toResponse(salvo);
+            return aplicarDestinoRetornoViagem(id, administrador, snapshotAntes, destinoRetorno);
         }
         RegistroViagemVeiculo viagem = registroViagemVeiculoRepository
                 .findFirstByVeiculoIdAndDataHoraRetornoIsNullOrderByDataHoraSaidaDesc(id)
                 .orElseThrow(() -> new BusinessException("Nao existe registro de viagem em aberto para este veiculo"));
 
-        VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        if (administrador.getPerfil() == Perfil.OPERADOR && (Boolean.TRUE.equals(veiculo.getDesativado())
+                || snapshotAntes.statusAtual() != StatusVeiculo.EM_VIAGEM))
+            throw new org.springframework.security.access.AccessDeniedException("Este retorno precisa de um Gestor ou Administrador");
+        if (!request.dataHoraRetorno().isAfter(viagem.getDataHoraSaida()))
+            throw new BusinessException("O retorno deve ser posterior a saida");
         viagem.setDataHoraRetorno(request.dataHoraRetorno());
         viagem.setObservacaoRetorno(trimToNull(request.observacao()));
         viagem.setJustificativaSemChecklistRetorno(request.justificativaSemChecklist().trim());
         viagem.setAdministradorEncerramento(administrador);
         registroViagemVeiculoRepository.save(viagem);
 
-        veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        veiculo.setStatusAdministrativo(destinoRetorno);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
         return toResponse(salvo);
+    }
+
+    private VeiculoResponse aplicarDestinoRetornoViagem(
+            Long veiculoId,
+            Motorista administrador,
+            VeiculoStatusSnapshot snapshotAntes,
+            StatusVeiculo destinoRetorno
+    ) {
+        Veiculo veiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        veiculo.setStatusAdministrativo(destinoRetorno);
+        limparLocalizacaoOperacional(veiculo);
+        Veiculo salvo = veiculoRepository.save(veiculo);
+        VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
+        registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
+        return toResponse(salvo);
+    }
+
+    private StatusVeiculo validarDestinoRetornoViagem(StatusVeiculo statusAdministrativoDestino) {
+        if (statusAdministrativoDestino == null) {
+            return StatusVeiculo.AGUARDANDO_REALOCACAO;
+        }
+        StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(statusAdministrativoDestino);
+        if (destinoNormalizado != null
+                && destinoNormalizado != StatusVeiculo.NO_PATIO
+                && destinoNormalizado != StatusVeiculo.AGUARDANDO_REALOCACAO
+                && destinoNormalizado != StatusVeiculo.BLOQUEADO) {
+            throw new BusinessException("Status de retorno invalido");
+        }
+        return destinoNormalizado;
     }
 
     @Transactional
@@ -283,6 +363,7 @@ public class AdminVeiculoService {
         }
 
         VeiculoStatusSnapshot snapshotAntes = veiculoStatusResolver.resolver(veiculo);
+        autorizacao.validarInicio(administrador, veiculo, snapshotAntes.statusAtual());
         if (snapshotAntes.statusAutomatico().isDeslocamentoAtivo()) {
             throw new BusinessException("Nao e possivel colocar em uso externo um veiculo com missao em andamento");
         }
@@ -305,6 +386,7 @@ public class AdminVeiculoService {
         registroUsoExternoVeiculoRepository.save(registro);
 
         veiculo.setStatusAdministrativo(StatusVeiculo.EM_USO_EXTERNO);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
 
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), StatusVeiculo.EM_USO_EXTERNO);
@@ -316,6 +398,10 @@ public class AdminVeiculoService {
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         Motorista administrador = validarAdministrador(administradorId);
+        if (administrador.getPerfil() == Perfil.OPERADOR && (Boolean.TRUE.equals(veiculo.getDesativado())
+                || veiculoStatusResolver.resolver(veiculo).statusAtual() != StatusVeiculo.EM_USO_EXTERNO
+                || request.statusAdministrativoDestino() != StatusVeiculo.AGUARDANDO_REALOCACAO))
+            throw new org.springframework.security.access.AccessDeniedException("Registre o recebimento em Aguardando realocacao. A liberacao depende do Gestor.");
         RegistroUsoExternoVeiculo registro = obterOuCriarRegistroUsoExternoAbertoParaRetorno(veiculo);
 
         StatusVeiculo destinoNormalizado = StatusVeiculo.normalizarStatusAdministrativo(request.statusAdministrativoDestino());
@@ -339,6 +425,7 @@ public class AdminVeiculoService {
         registroUsoExternoVeiculoRepository.save(registro);
 
         veiculo.setStatusAdministrativo(destinoNormalizado);
+        limparLocalizacaoOperacional(veiculo);
         Veiculo salvo = veiculoRepository.save(veiculo);
         VeiculoStatusSnapshot snapshotDepois = veiculoStatusResolver.resolver(salvo);
         registrarHistoricoStatus(salvo, administrador, snapshotAntes.statusAtual(), snapshotDepois.statusAtual());
@@ -386,13 +473,14 @@ public class AdminVeiculoService {
                         h.getStatusNovo(),
                         h.getAdministrador().getId(),
                         h.getAdministrador().getNome(),
-                        h.getDataHora()
+                        h.getDataHora(), h.getAdministradorPerfil(), h.getJustificativa()
                 ))
                 .toList();
     }
 
     @Transactional
     public void excluir(Long id) {
+        autorizacao.exigir(Permissao.CADASTRO_EXCLUIR);
         Veiculo veiculo = veiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         if (checklistRepository.existsByVeiculoId(id)) {
@@ -411,9 +499,7 @@ public class AdminVeiculoService {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
 
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem excluir definitivamente");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.CADASTRO_EXCLUIR);
         if (!Boolean.TRUE.equals(veiculo.getDesativado())) {
             throw new BusinessException("Desative o veiculo antes da exclusao definitiva");
         }
@@ -431,6 +517,14 @@ public class AdminVeiculoService {
 
         long totalChecklists = checklistRepository.countByVeiculoId(id);
         long totalExcecoes = missaoExcecaoRepository.countByVeiculoId(id);
+        long totalMissoes = missaoRepository.countByVeiculoId(id);
+        long totalVistorias = vistoriaCompletaRepository.countByVeiculoId(id);
+        if (totalChecklists > 0 || totalExcecoes > 0 || totalMissoes > 0 || totalVistorias > 0) {
+            throw new BusinessException(
+                    "Este veiculo possui historico operacional vinculado. Use Desativar/Baixar para manter a auditoria e remover da operacao."
+            );
+        }
+
         Optional<Checklist> primeiroChecklist = checklistRepository.findTopByVeiculoIdOrderByDataHoraAscIdAsc(id);
         Optional<Checklist> ultimoChecklist = checklistRepository.findTopByVeiculoIdOrderByDataHoraDescIdDesc(id);
 
@@ -459,6 +553,13 @@ public class AdminVeiculoService {
 
     private String normalizarPlaca(String placa) {
         return placa == null ? "" : placa.replace("-", "").trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizarTextoOpcional(String valor) {
+        if (valor == null || valor.trim().isBlank()) {
+            return null;
+        }
+        return valor.trim();
     }
 
     private VeiculoResponse toResponse(Veiculo veiculo) {
@@ -502,6 +603,7 @@ public class AdminVeiculoService {
                 veiculo.getPlaca(),
                 veiculo.getModelo(),
                 veiculo.getMarca(),
+                veiculo.getLocalizacaoOperacional(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,
@@ -527,12 +629,30 @@ public class AdminVeiculoService {
         );
     }
 
+    // Only called inside the transaction that has just finalized the mission.
+    void aplicarDestinoDeRetorno(Missao missao, StatusVeiculo destino, Long autorId) {
+        Motorista autor = autorizacao.exigir(autorId, Permissao.MISSAO_REGISTRAR);
+        // Origin was checked before finalization; the vehicle may now be awaiting reallocation.
+        if (autor.getPerfil() == Perfil.OPERADOR
+                && missao.getOrigemAbertura() != com.frota.checklist.entity.OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO)
+            throw new org.springframework.security.access.AccessDeniedException("Encerramento excepcional nao permitido");
+        autorizacao.validarDestinoRetorno(autor, destino);
+        if (missao.getStatus() == StatusMissao.ATIVA) {
+            throw new BusinessException("Finalize a missao antes de registrar seu destino de retorno");
+        }
+        Veiculo veiculo = missao.getVeiculo();
+        VeiculoStatusSnapshot antes = veiculoStatusResolver.resolver(veiculo);
+        veiculo.setStatusAdministrativo(destino);
+        limparLocalizacaoOperacional(veiculo);
+        veiculoRepository.save(veiculo);
+        registrarHistoricoStatus(veiculo, autor, antes.statusAtual(), veiculoStatusResolver.resolver(veiculo).statusAtual(),
+                "Destino registrado no retorno da missao " + missao.getId());
+    }
+
     private Motorista validarAdministrador(Long administradorId) {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administradores podem alterar dados do veiculo");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.FROTA_OPERAR);
         return administrador;
     }
 
@@ -542,12 +662,23 @@ public class AdminVeiculoService {
             StatusVeiculo statusAnterior,
             StatusVeiculo statusNovo
     ) {
+        registrarHistoricoStatus(veiculo, administrador, statusAnterior, statusNovo, null);
+    }
+
+    private void registrarHistoricoStatus(Veiculo veiculo, Motorista administrador, StatusVeiculo statusAnterior,
+                                          StatusVeiculo statusNovo, String justificativa) {
         HistoricoStatusVeiculo historico = new HistoricoStatusVeiculo();
+        historico.setJustificativa(justificativa);
+        historico.setAdministradorPerfil(administrador.getPerfil());
         historico.setVeiculo(veiculo);
         historico.setAdministrador(administrador);
         historico.setStatusAnterior(statusAnterior);
         historico.setStatusNovo(statusNovo);
         historicoStatusVeiculoRepository.save(historico);
+    }
+
+    private void limparLocalizacaoOperacional(Veiculo veiculo) {
+        veiculo.setLocalizacaoOperacional(null);
     }
 
     private void encerrarViagemAtivaSeNecessario(

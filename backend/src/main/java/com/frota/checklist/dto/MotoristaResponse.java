@@ -7,6 +7,7 @@ public record MotoristaResponse(
         String nome,
         String login,
         String cpf,
-        Perfil perfil
+        Perfil perfil,
+        boolean acessoHabilitado
 ) {
 }

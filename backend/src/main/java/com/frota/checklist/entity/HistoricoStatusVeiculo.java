@@ -46,6 +46,13 @@ public class HistoricoStatusVeiculo {
     @Column(name = "data_hora", nullable = false)
     private LocalDateTime dataHora;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Perfil administradorPerfil;
+
+    @Column(length = 700)
+    private String justificativa;
+
     @PrePersist
     public void prePersist() {
         if (dataHora == null) {

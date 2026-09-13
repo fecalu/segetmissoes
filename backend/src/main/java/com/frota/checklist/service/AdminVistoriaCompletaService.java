@@ -20,6 +20,8 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class AdminVistoriaCompletaService {
+    private final com.frota.checklist.security.AutorizacaoService autorizacao;
+    private final AuditoriaAdministrativaService auditoria;
 
     private final VistoriaCompletaRepository vistoriaCompletaRepository;
     private final RegistroUsoExternoVeiculoRepository registroUsoExternoVeiculoRepository;
@@ -54,6 +56,8 @@ public class AdminVistoriaCompletaService {
         VistoriaCompleta vistoria = vistoriaCompletaRepository.findById(vistoriaId)
                 .orElseThrow(() -> new NotFoundException("Vistoria completa nao encontrada"));
 
+        var autor = autorizacao.exigir(com.frota.checklist.security.Permissao.VISTORIA_CORRIGIR);
+        auditoria.registrar(autor, "VISTORIA", vistoriaId, "CONTRAPARTE_CORRIGIDA", "nomeContraparte", vistoria.getNomeContraparte(), trimToNull(nomeContraparte), null);
         vistoria.setNomeContraparte(trimToNull(nomeContraparte));
         VistoriaCompleta salva = vistoriaCompletaRepository.save(vistoria);
         sincronizarContraparteComUsoExterno(salva);

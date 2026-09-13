@@ -1,0 +1,17 @@
+<header class="reports-heading"><p class="eyebrow">DOCUMENTOS E INDICADORES</p><h1>Relatórios</h1><p>Consulte os registros e acompanhe a operação do setor.</p></header>
+<div class="reports-grid">
+  <section class="report-card daily-report">
+    <span class="report-icon"><app-icon name="mission" /></span>
+    <h2>Relatório diário de missões</h2>
+    <p>Motorista, veículo, destino, solicitante e horários em um único PDF.</p>
+    <form (ngSubmit)="download()">
+      <label for="mission-report-date">Data do relatório</label>
+      <div class="report-actions"><input id="mission-report-date" name="date" type="date" required [(ngModel)]="date" [disabled]="loading"><button type="submit" [disabled]="loading || !date"><app-icon name="download" />{{ loading ? 'Gerando PDF…' : 'Exportar PDF' }}</button></div>
+    </form>
+    <small>O relatório considera a data de saída da missão.</small>
+    <p class="error" role="alert" *ngIf="error">{{ error }}</p>
+    <p class="success" role="status" *ngIf="success">{{ success }}</p>
+  </section>
+  <a class="report-card report-link" routerLink="/admin/checklists/relatorio"><span class="report-icon"><app-icon name="inspection" /></span><h2>Relatório de checklists</h2><p>Selecione um período e exporte os checklists registrados.</p><span class="link-label">Selecionar período <app-icon name="arrow" /></span></a>
+  <a *ngIf="auth.can('ESTATISTICA_CONSULTAR')" class="report-card report-link" routerLink="/admin/estatisticas/missoes"><span class="report-icon"><app-icon name="report" /></span><h2>Estatísticas de missões</h2><p>Compare a quantidade de missões e o tempo em deslocamento.</p><span class="link-label">Ver estatísticas <app-icon name="arrow" /></span></a>
+</div>

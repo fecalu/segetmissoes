@@ -18,6 +18,8 @@ public class CustomUserDetails implements UserDetails {
     private final String login;
     private final String senha;
     private final Perfil perfil;
+    private final boolean acessoHabilitado;
+    private final long versaoAcesso;
 
     public CustomUserDetails(Motorista motorista) {
         this.motoristaId = motorista.getId();
@@ -25,12 +27,21 @@ public class CustomUserDetails implements UserDetails {
         this.login = motorista.getLogin();
         this.senha = motorista.getSenha();
         this.perfil = motorista.getPerfil();
+        this.acessoHabilitado = motorista.isAcessoHabilitado();
+        this.versaoAcesso = motorista.getVersaoAcesso();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + perfil.name()));
+        if (perfil == null || !acessoHabilitado) return List.of();
+        var authorities = new java.util.ArrayList<GrantedAuthority>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + perfil.name()));
+        perfil.permissoes().forEach(p -> authorities.add(new SimpleGrantedAuthority(p.name())));
+        return authorities;
     }
+
+    @Override
+    public boolean isEnabled() { return acessoHabilitado && perfil != null; }
 
     @Override
     public String getPassword() {

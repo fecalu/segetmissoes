@@ -73,6 +73,7 @@ public class VeiculoService {
                 veiculo.getPlaca(),
                 veiculo.getModelo(),
                 veiculo.getMarca(),
+                veiculo.getLocalizacaoOperacional(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,

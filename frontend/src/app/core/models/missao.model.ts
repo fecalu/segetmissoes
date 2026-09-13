@@ -2,7 +2,7 @@ import { MotivoExcecaoMissao } from './missao-excecao.model';
 
 export type StatusMissao = 'ATIVA' | 'FINALIZADA';
 export type StatusDocumentalMissao = 'PENDENTE_DADOS_ADMIN' | 'DADOS_ADMIN_COMPLETOS';
-export type OrigemAberturaMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'CONTINGENCIA_ADMIN';
+export type OrigemAberturaMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'REGISTRO_ADMINISTRATIVO' | 'CONTINGENCIA_ADMIN';
 export type OrigemEncerramentoMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'ADMINISTRATIVO';
 export type TipoDeslocamentoMissao = 'NA_CIDADE' | 'VIAGEM';
 
@@ -40,10 +40,12 @@ export interface MissaoResponse {
 export type AcaoAuditoriaMissao =
   | 'ABERTURA_CHECKLIST'
   | 'ABERTURA_SEM_CHECKLIST'
+  | 'ABERTURA_REGISTRO_ADMINISTRATIVO'
   | 'ABERTURA_CONTINGENCIA_ADMIN'
   | 'ABERTURA_LEGADO_RECONSTRUIDA'
   | 'ENCERRAMENTO_CHECKLIST'
   | 'ENCERRAMENTO_SEM_CHECKLIST'
+  | 'ENCERRAMENTO_REGISTRO_ADMINISTRATIVO'
   | 'ENCERRAMENTO_PENDENTE_ADMIN'
   | 'ENCERRAMENTO_ADMINISTRATIVO'
   | 'ATUALIZACAO_DADOS_ADMINISTRATIVOS';
@@ -56,6 +58,7 @@ export interface AuditoriaMissaoResponse {
   statusNovo: StatusMissao | null;
   usuarioAcaoId: number | null;
   usuarioAcaoNome: string | null;
+  usuarioAcaoPerfil?: string | null;
   dataHora: string;
   detalhe: string | null;
   campoAlterado: string | null;

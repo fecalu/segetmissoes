@@ -14,6 +14,10 @@ import java.util.Optional;
 
 public interface MissaoRepository extends JpaRepository<Missao, Long>, JpaSpecificationExecutor<Missao> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Missao m where m.id = :id")
+    Optional<Missao> buscarParaAtualizacao(@Param("id") Long id);
+
     @EntityGraph(attributePaths = {"motorista", "veiculo"})
     Optional<Missao> findFirstByMotoristaIdAndStatusOrderByDataHoraInicioDesc(Long motoristaId, StatusMissao status);
 
@@ -24,6 +28,8 @@ public interface MissaoRepository extends JpaRepository<Missao, Long>, JpaSpecif
     List<Missao> findByStatusAndVeiculoIdIn(StatusMissao status, List<Long> veiculoIds);
 
     List<Missao> findByVeiculoIdOrderByDataHoraInicioDescIdDesc(Long veiculoId);
+
+    long countByVeiculoId(Long veiculoId);
 
     boolean existsByMotoristaIdAndStatus(Long motoristaId, StatusMissao status);
 

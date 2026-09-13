@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface MotoristaRepository extends JpaRepository<Motorista, Long> {
+    long countByPerfilAndAcessoHabilitadoTrue(com.frota.checklist.entity.Perfil perfil);
     Optional<Motorista> findByLogin(String login);
     Optional<Motorista> findByCpf(String cpf);
     boolean existsByLogin(String login);

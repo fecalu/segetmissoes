@@ -14,6 +14,22 @@ jobs:
   backend:
     name: Backend - Java 17
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: seget_perfis_test
+          POSTGRES_USER: seget_test
+          POSTGRES_PASSWORD: isolated_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U seget_test -d seget_perfis_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RBAC_TEST_DB_URL: jdbc:postgresql://localhost:5432/seget_perfis_test
+      RBAC_TEST_DB_USER: seget_test
+      RBAC_TEST_DB_PASSWORD: isolated_test_only
     defaults:
       run:
         working-directory: backend
@@ -30,7 +46,7 @@ jobs:
           cache: maven
 
       - name: Build backend
-        run: mvn -B clean package -DskipTests
+        run: mvn -B clean verify
 
   frontend:
     name: Frontend - Angular

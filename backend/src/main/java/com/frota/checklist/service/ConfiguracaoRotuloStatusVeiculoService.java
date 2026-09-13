@@ -1,5 +1,7 @@
 package com.frota.checklist.service;
 
+import com.frota.checklist.security.AutorizacaoService;
+import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.RotuloStatusVeiculoRequest;
 import com.frota.checklist.dto.RotuloStatusVeiculoResponse;
 import com.frota.checklist.entity.ConfiguracaoRotuloStatusVeiculo;
@@ -23,6 +25,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class ConfiguracaoRotuloStatusVeiculoService {
+
+    private final AutorizacaoService autorizacao;
 
     private static final List<StatusVeiculo> STATUS_EDITAVEIS = List.of(
             StatusVeiculo.CIRCULANDO,
@@ -80,9 +84,7 @@ public class ConfiguracaoRotuloStatusVeiculoService {
     public List<RotuloStatusVeiculoResponse> salvar(Long administradorId, List<RotuloStatusVeiculoRequest> requests) {
         Motorista administrador = motoristaRepository.findById(administradorId)
                 .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
-        if (administrador.getPerfil() != Perfil.ADMIN) {
-            throw new BusinessException("Somente administrador pode alterar rotulos de status");
-        }
+        autorizacao.exigir(administrador.getId(), Permissao.CONFIGURACAO_GERIR);
 
         validarDuplicidadeStatus(requests);
 

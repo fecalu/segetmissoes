@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public interface VistoriaCompletaRepository extends JpaRepository<VistoriaCompleta, Long>, JpaSpecificationExecutor<VistoriaCompleta> {
     List<VistoriaCompleta> findByVeiculoIdOrderByDataHoraDescIdDesc(Long veiculoId);
+    long countByVeiculoId(Long veiculoId);
     List<VistoriaCompleta> findByVeiculoIdInAndTipoOperacaoOrderByDataHoraDescIdDesc(Collection<Long> veiculoIds, TipoOperacao tipoOperacao);
     Optional<VistoriaCompleta> findTopByVeiculoIdAndTipoOperacaoOrderByDataHoraDescIdDesc(Long veiculoId, TipoOperacao tipoOperacao);
 }
