@@ -4,23 +4,25 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import {
   AlocacaoVeiculo,
   AtualizarDadosAlocacaoVeiculoPayload,
   CriarAlocacaoVeiculoPayload,
+  CriarVagaAdministrativaPayload,
   HistoricoAlocacaoVeiculo,
-  TipoEventoAlocacaoVeiculo
+  TipoEventoAlocacaoVeiculo,
+  VagaAdministrativa
 } from '../../core/models/alocacao-veiculo.model';
 import { AdminService } from '../../core/services/admin.service';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
 
-type EditorMode = 'CRIAR' | 'DADOS' | 'VEICULO' | 'RESPONSAVEL' | 'ENCERRAR' | 'HISTORICO' | null;
+type EditorMode = 'CRIAR_VAGA' | 'EDITAR_VAGA' | 'OCUPAR_VAGA' | 'DADOS' | 'VEICULO' | 'RESPONSAVEL' | 'ENCERRAR' | 'HISTORICO' | null;
 
-interface GrupoAlocacao {
+interface GrupoVaga {
   orgao: string;
   setor: string;
-  alocacoes: AlocacaoVeiculo[];
+  vagas: VagaAdministrativa[];
 }
 
 @Component({
@@ -36,13 +38,23 @@ export class AdminAllocationComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   alocacoes: AlocacaoVeiculo[] = [];
+  vagas: VagaAdministrativa[] = [];
   historico: HistoricoAlocacaoVeiculo[] = [];
   busca = '';
-  mostrarEncerradas = false;
+  mostrarDesativadas = false;
   carregando = false;
   salvando = false;
   editorMode: EditorMode = null;
   selected: AlocacaoVeiculo | null = null;
+  selectedVaga: VagaAdministrativa | null = null;
+
+  readonly vagaForm = this.fb.group({
+    secretariaOrgao: ['', [Validators.required, Validators.maxLength(160)]],
+    setor: ['', [Validators.required, Validators.maxLength(160)]],
+    limiteAutorizado: ['', [Validators.required, Validators.maxLength(60)]],
+    documentoReferencia: ['', Validators.maxLength(180)],
+    observacao: ['', Validators.maxLength(500)]
+  });
 
   readonly alocacaoForm = this.fb.group({
     placa: ['', [Validators.required, Validators.maxLength(10)]],
@@ -74,45 +86,88 @@ export class AdminAllocationComponent implements OnInit {
     this.carregar();
   }
 
-  get totalAtivas(): number { return this.alocacoes.filter(item => item.ativa).length; }
-  get totalEncerradas(): number { return this.alocacoes.filter(item => !item.ativa).length; }
-  get gruposAlocacoes(): GrupoAlocacao[] {
-    const grupos = new Map<string, GrupoAlocacao>();
-    for (const alocacao of this.alocacoes) {
-      const orgao = alocacao.secretariaOrgao.trim();
-      const setor = alocacao.setor.trim();
+  get totalVagas(): number { return this.vagas.length; }
+  get totalOcupadas(): number { return this.vagas.filter(item => item.status === 'OCUPADA').length; }
+  get totalLivres(): number { return this.vagas.filter(item => item.status === 'LIVRE').length; }
+  get totalDesativadas(): number { return this.vagas.filter(item => item.status === 'DESATIVADA').length; }
+  get totalGrupos(): number { return this.gruposVagas.length; }
+
+  get gruposVagas(): GrupoVaga[] {
+    const grupos = new Map<string, GrupoVaga>();
+    for (const vaga of this.vagas) {
+      const orgao = vaga.secretariaOrgao.trim();
+      const setor = vaga.setor.trim();
       const chave = `${orgao}\u0000${setor}`.toLocaleLowerCase('pt-BR');
-      const grupo = grupos.get(chave) ?? { orgao, setor, alocacoes: [] };
-      grupo.alocacoes.push(alocacao);
+      const grupo = grupos.get(chave) ?? { orgao, setor, vagas: [] };
+      grupo.vagas.push(vaga);
       grupos.set(chave, grupo);
     }
     return [...grupos.values()]
       .sort((a, b) => a.orgao.localeCompare(b.orgao, 'pt-BR') || a.setor.localeCompare(b.setor, 'pt-BR'))
-      .map(grupo => ({ ...grupo, alocacoes: [...grupo.alocacoes].sort((a, b) => a.numeroControle - b.numeroControle) }));
+      .map(grupo => ({ ...grupo, vagas: [...grupo.vagas].sort((a, b) => a.numeroControle - b.numeroControle) }));
   }
-  get totalGrupos(): number { return this.gruposAlocacoes.length; }
 
   carregar(): void {
     this.carregando = true;
-    this.adminService.listarAlocacoes(this.busca, this.mostrarEncerradas)
+    forkJoin({
+      vagas: this.adminService.listarVagasAdministrativas(this.busca, this.mostrarDesativadas),
+      alocacoes: this.adminService.listarAlocacoes(this.busca, true)
+    })
       .pipe(finalize(() => this.carregando = false))
       .subscribe({
-        next: alocacoes => this.alocacoes = alocacoes,
-        error: () => this.mensagem('Não foi possível carregar as alocações.')
+        next: ({ vagas, alocacoes }) => { this.vagas = vagas; this.alocacoes = alocacoes; },
+        error: () => this.mensagem('Não foi possível carregar as vagas administrativas.')
       });
+  }
+
+  abrirCriacaoVaga(): void {
+    this.selected = null;
+    this.selectedVaga = null;
+    this.vagaForm.reset({ secretariaOrgao: '', setor: '', limiteAutorizado: '', documentoReferencia: '', observacao: '' });
+    this.editorMode = 'CRIAR_VAGA';
+  }
+
+  abrirEdicaoVaga(vaga: VagaAdministrativa): void {
+    this.selected = this.alocacaoDaVaga(vaga);
+    this.selectedVaga = vaga;
+    this.vagaForm.reset({
+      secretariaOrgao: vaga.secretariaOrgao,
+      setor: vaga.setor,
+      limiteAutorizado: vaga.limiteAutorizado,
+      documentoReferencia: vaga.documentoReferencia || '',
+      observacao: vaga.observacao || ''
+    });
+    this.editorMode = 'EDITAR_VAGA';
+  }
+
+  abrirOcupacaoVaga(vaga: VagaAdministrativa): void {
+    this.selected = null;
+    this.selectedVaga = vaga;
+    this.alocacaoForm.reset({
+      placa: '', modelo: '', marca: '', responsavelNome: '',
+      secretariaOrgao: vaga.secretariaOrgao,
+      setor: vaga.setor,
+      limiteAutorizado: vaga.limiteAutorizado,
+      documentoReferencia: vaga.documentoReferencia || '',
+      linkConsulta: '',
+      observacao: vaga.observacao || ''
+    });
+    this.editorMode = 'OCUPAR_VAGA';
   }
 
   abrirCriacao(): void {
     this.selected = null;
+    this.selectedVaga = null;
     this.alocacaoForm.reset({
       placa: '', modelo: '', marca: '', responsavelNome: '', secretariaOrgao: '', setor: '', limiteAutorizado: '',
       documentoReferencia: '', linkConsulta: '', observacao: ''
     });
-    this.editorMode = 'CRIAR';
+    this.editorMode = 'OCUPAR_VAGA';
   }
 
   abrirDados(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
+    this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
     this.alocacaoForm.reset({
       placa: alocacao.placa,
       modelo: alocacao.modelo,
@@ -130,24 +185,28 @@ export class AdminAllocationComponent implements OnInit {
 
   abrirTrocaVeiculo(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
+    this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
     this.veiculoForm.reset({ placa: '', modelo: '', marca: '', motivo: '' });
     this.editorMode = 'VEICULO';
   }
 
   abrirTrocaResponsavel(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
+    this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
     this.responsavelForm.reset({ responsavelNome: '', motivo: '' });
     this.editorMode = 'RESPONSAVEL';
   }
 
   abrirEncerramento(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
+    this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
     this.encerramentoForm.reset({ motivo: '' });
     this.editorMode = 'ENCERRAR';
   }
 
   abrirHistorico(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
+    this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
     this.historico = [];
     this.editorMode = 'HISTORICO';
     this.adminService.listarHistoricoAlocacao(alocacao.id).subscribe({
@@ -160,6 +219,29 @@ export class AdminAllocationComponent implements OnInit {
     window.open(link, '_blank', 'noopener');
   }
 
+  salvarVaga(): void {
+    if (this.vagaForm.invalid) {
+      this.vagaForm.markAllAsTouched();
+      return;
+    }
+    const value = this.vagaForm.getRawValue();
+    const payload: CriarVagaAdministrativaPayload = {
+      secretariaOrgao: value.secretariaOrgao!,
+      setor: value.setor!,
+      limiteAutorizado: value.limiteAutorizado!,
+      documentoReferencia: this.nulo(value.documentoReferencia),
+      observacao: this.nulo(value.observacao)
+    };
+    this.salvando = true;
+    const requisicao = this.editorMode === 'CRIAR_VAGA'
+      ? this.adminService.criarVagaAdministrativa(payload)
+      : this.adminService.atualizarVagaAdministrativa(this.selectedVaga!.id, payload);
+    requisicao.pipe(finalize(() => this.salvando = false)).subscribe({
+      next: () => { this.mensagem(this.editorMode === 'CRIAR_VAGA' ? 'Vaga criada.' : 'Vaga atualizada.'); this.fecharEditor(); this.carregar(); },
+      error: error => this.mensagem(this.erroApi(error, 'Não foi possível salvar a vaga.'))
+    });
+  }
+
   salvarAlocacao(): void {
     if (this.alocacaoForm.invalid) {
       this.alocacaoForm.markAllAsTouched();
@@ -167,14 +249,14 @@ export class AdminAllocationComponent implements OnInit {
     }
     const value = this.alocacaoForm.getRawValue();
     this.salvando = true;
-    if (this.editorMode === 'CRIAR') {
+    if (this.editorMode === 'OCUPAR_VAGA') {
       const payload: CriarAlocacaoVeiculoPayload = {
         placa: value.placa!, modelo: value.modelo!, marca: this.nulo(value.marca), responsavelNome: value.responsavelNome!, secretariaOrgao: value.secretariaOrgao!,
         setor: value.setor!, limiteAutorizado: value.limiteAutorizado!, documentoReferencia: this.nulo(value.documentoReferencia), linkConsulta: this.linkConsulta(value.linkConsulta),
-        observacao: this.nulo(value.observacao)
+        observacao: this.nulo(value.observacao), vagaAdministrativaId: this.selectedVaga?.id || null
       };
       this.adminService.criarAlocacao(payload).pipe(finalize(() => this.salvando = false)).subscribe({
-        next: () => { this.mensagem('Alocação criada e registrada no histórico.'); this.fecharEditor(); this.carregar(); },
+        next: () => { this.mensagem(this.selectedVaga ? 'Vaga ocupada e histórico iniciado.' : 'Vaga e alocação criadas.'); this.fecharEditor(); this.carregar(); },
         error: error => this.mensagem(this.erroApi(error, 'Não foi possível criar a alocação.'))
       });
       return;
@@ -204,10 +286,35 @@ export class AdminAllocationComponent implements OnInit {
 
   confirmarEncerramento(): void {
     if (this.encerramentoForm.invalid) { this.encerramentoForm.markAllAsTouched(); return; }
-    this.executar(() => this.adminService.encerrarAlocacao(this.selected!.id, this.encerramentoForm.value.motivo!), 'Alocação encerrada. O histórico foi preservado.');
+    this.executar(() => this.adminService.encerrarAlocacao(this.selected!.id, this.encerramentoForm.value.motivo!), 'Alocação encerrada. A vaga ficou livre.');
   }
 
-  fecharEditor(): void { this.editorMode = null; this.selected = null; }
+  desativarVaga(vaga: VagaAdministrativa): void {
+    if (!confirm(`Desativar a vaga ${vaga.numeroControle}? Ela sairá da consulta principal.`)) return;
+    this.salvando = true;
+    this.adminService.desativarVagaAdministrativa(vaga.id).pipe(finalize(() => this.salvando = false)).subscribe({
+      next: () => { this.mensagem('Vaga desativada.'); this.carregar(); },
+      error: error => this.mensagem(this.erroApi(error, 'Não foi possível desativar a vaga.'))
+    });
+  }
+
+  reativarVaga(vaga: VagaAdministrativa): void {
+    this.salvando = true;
+    this.adminService.reativarVagaAdministrativa(vaga.id).pipe(finalize(() => this.salvando = false)).subscribe({
+      next: () => { this.mensagem('Vaga reativada.'); this.carregar(); },
+      error: error => this.mensagem(this.erroApi(error, 'Não foi possível reativar a vaga.'))
+    });
+  }
+
+  alocacaoDaVaga(vaga: VagaAdministrativa): AlocacaoVeiculo | null {
+    return vaga.alocacaoAtivaId ? this.alocacoes.find(alocacao => alocacao.id === vaga.alocacaoAtivaId) || null : null;
+  }
+
+  statusVagaLabel(vaga: VagaAdministrativa): string {
+    return { LIVRE: 'LIVRE', OCUPADA: 'OCUPADA', DESATIVADA: 'DESATIVADA' }[vaga.status];
+  }
+
+  fecharEditor(): void { this.editorMode = null; this.selected = null; this.selectedVaga = null; }
 
   private linkConsulta(valor: string | null | undefined): string | null {
     const link = this.nulo(valor);

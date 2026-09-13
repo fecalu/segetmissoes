@@ -60,20 +60,19 @@ public class AdminAlocacaoVeiculoService {
         }
 
         AlocacaoVeiculo alocacao = new AlocacaoVeiculo();
-        Integer numeroControle = proximoNumeroControle();
-        VagaAdministrativa vaga = criarVagaParaNovaAlocacao(request, numeroControle);
+        VagaAdministrativa vaga = resolverVagaParaNovaAlocacao(request);
         alocacao.setVagaAdministrativa(vaga);
-        alocacao.setNumeroControle(numeroControle);
+        alocacao.setNumeroControle(vaga.getNumeroControle());
         alocacao.setPlaca(placa);
         alocacao.setModelo(obrigatorio(request.modelo()));
         alocacao.setMarca(opcional(request.marca()));
         alocacao.setResponsavelNome(obrigatorio(request.responsavelNome()));
-        alocacao.setSecretariaOrgao(obrigatorio(request.secretariaOrgao()));
-        alocacao.setSetor(obrigatorio(request.setor()));
-        alocacao.setLimiteAutorizado(obrigatorio(request.limiteAutorizado()));
-        alocacao.setDocumentoReferencia(opcional(request.documentoReferencia()));
+        alocacao.setSecretariaOrgao(vaga.getSecretariaOrgao());
+        alocacao.setSetor(vaga.getSetor());
+        alocacao.setLimiteAutorizado(vaga.getLimiteAutorizado());
+        alocacao.setDocumentoReferencia(vaga.getDocumentoReferencia());
         alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
-        alocacao.setObservacao(opcional(request.observacao()));
+        alocacao.setObservacao(vaga.getObservacao());
         alocacao.setAtiva(true);
         alocacao.setCriadaEm(LocalDateTime.now());
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
@@ -254,6 +253,24 @@ public class AdminAlocacaoVeiculoService {
         return alocacao.getSecretariaOrgao() + "|" + alocacao.getSetor() + "|" + alocacao.getLimiteAutorizado()
                 + "|" + opcional(alocacao.getDocumentoReferencia()) + "|" + opcional(alocacao.getLinkConsulta())
                 + "|" + opcional(alocacao.getObservacao());
+    }
+
+    private VagaAdministrativa resolverVagaParaNovaAlocacao(CriarAlocacaoVeiculoRequest request) {
+        if (request.vagaAdministrativaId() != null) {
+            VagaAdministrativa vaga = vagaRepository.findById(request.vagaAdministrativaId())
+                    .orElseThrow(() -> new NotFoundException("Vaga administrativa nao encontrada"));
+            if (vaga.getStatus() == StatusVagaAdministrativa.DESATIVADA) {
+                throw new BusinessException("Nao e possivel ocupar uma vaga desativada.");
+            }
+            if (vaga.getStatus() == StatusVagaAdministrativa.OCUPADA
+                    || alocacaoRepository.findByVagaAdministrativaIdAndAtivaTrue(vaga.getId()).isPresent()) {
+                throw new BusinessException("Esta vaga ja esta ocupada.");
+            }
+            vaga.setStatus(StatusVagaAdministrativa.OCUPADA);
+            return vagaRepository.save(vaga);
+        }
+        Integer numeroControle = proximoNumeroControle();
+        return criarVagaParaNovaAlocacao(request, numeroControle);
     }
 
     private VagaAdministrativa criarVagaParaNovaAlocacao(CriarAlocacaoVeiculoRequest request, Integer numeroControle) {

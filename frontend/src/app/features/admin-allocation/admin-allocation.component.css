@@ -16,13 +16,16 @@ h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing: -.035em; line-height: 1.1; }
 .page-description { max-width: 760px; margin-bottom: 0; color: var(--allocation-muted); line-height: 1.55; }
 
-.primary-action, .danger-action { min-height: 42px; border-radius: 8px; font-weight: 700; }
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.primary-action, .secondary-action, .danger-action { min-height: 42px; border-radius: 8px; font-weight: 700; }
 .primary-action { background: var(--allocation-accent) !important; color: #fff !important; }
 .primary-action:hover:not(:disabled) { background: #164a64 !important; }
+.secondary-action { background: #eef5f8 !important; color: #1c5c7a !important; border: 1px solid #c6dae4; }
+.secondary-action:hover:not(:disabled) { background: #deedf3 !important; }
 .danger-action { background: #ad3d43 !important; color: #fff !important; }
-.primary-action app-icon { margin-right: 6px; }
+.primary-action app-icon, .secondary-action app-icon { margin-right: 6px; }
 
-.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 18px; overflow: hidden; border: 1px solid var(--allocation-line); border-radius: 12px; background: #fff; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; overflow: hidden; border: 1px solid var(--allocation-line); border-radius: 12px; background: #fff; }
 .summary article { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 17px 20px; border-right: 1px solid var(--allocation-line); }
 .summary article:last-child { border-right: 0; }
 .summary strong { color: var(--allocation-accent); font-size: 1.7rem; font-variant-numeric: tabular-nums; }
@@ -42,6 +45,7 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .allocation-table td { padding: 12px; color: #2d495b; border-bottom: 1px solid #e7edf0; vertical-align: middle; line-height: 1.38; }
 .allocation-table tbody tr:last-child td { border-bottom: 0; }
 .allocation-table tbody tr.pale-row { background: #fafcfd; }
+.allocation-table tbody tr.free-row { background: #fbfdf8; }
 .allocation-table tbody tr:not(.group-row):hover { background: #f2f8fb; }
 .allocation-table tr.closed { color: #7e8c95; background: #f7f8f9; }
 .allocation-table td.number { color: #55768c; font-weight: 800; text-align: center; }
@@ -56,12 +60,14 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .group-row small { margin-left: 12px; color: #638095; font-weight: 650; }
 
 .status { display: inline-block; padding: 4px 7px; border-radius: 999px; color: #2d6279; background: #e8f2f6; font-size: .65rem; font-weight: 800; letter-spacing: .07em; }
+.status.free { color: #537118; background: #eef6d8; }
 .status.inactive { color: #6c7880; background: #e9edef; }
 .plate-link { display: block; padding: 0; border: 0; color: #165c83; background: transparent; font: inherit; font-weight: 800; letter-spacing: .02em; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: #a4cadb; text-underline-offset: 3px; }
 .plate-link:hover { color: #0d486b; text-decoration-color: currentColor; }
 .plate-no-link { display: block; color: #3f6177; font-weight: 800; letter-spacing: .02em; }
+.muted { color: #8192a0; font-size: .78rem; font-style: italic; }
 
-.allocation-table .actions { min-width: 258px; white-space: nowrap; }
+.allocation-table .actions { min-width: 292px; white-space: nowrap; }
 .actions button { min-height: 32px; margin: 2px; padding: 6px 8px; border: 1px solid #cad8e3; border-radius: 8px; background: #fff; color: #24465f; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
 .actions button:hover { border-color: #a7c0ce; background: #f1f7f9; }
 .actions button:first-child { padding: 6px; vertical-align: middle; }
@@ -96,7 +102,8 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 
 @media (max-width: 680px) {
   .page-header, .toolbar { align-items: stretch; flex-direction: column; }
-  .primary-action { width: 100%; }
+  .header-actions, .primary-action, .secondary-action { width: 100%; }
+  .header-actions { align-items: stretch; }
   .summary { grid-template-columns: 1fr; }
   .summary article { border-right: 0; border-bottom: 1px solid var(--allocation-line); }
   .summary article:last-child { border-bottom: 0; }

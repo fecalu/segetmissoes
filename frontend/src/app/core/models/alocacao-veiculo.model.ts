@@ -72,6 +72,7 @@ export interface CriarAlocacaoVeiculoPayload {
   documentoReferencia: string | null;
   linkConsulta: string | null;
   observacao: string | null;
+  vagaAdministrativaId?: number | null;
 }
 
 export interface AtualizarDadosAlocacaoVeiculoPayload {
