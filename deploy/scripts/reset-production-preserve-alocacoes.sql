@@ -29,8 +29,8 @@ TRUNCATE TABLE missoes RESTART IDENTITY CASCADE;
 
 -- Operacoes administrativas da frota.
 TRUNCATE TABLE historico_status_veiculo RESTART IDENTITY CASCADE;
-TRUNCATE TABLE registro_uso_externo_veiculo RESTART IDENTITY CASCADE;
-TRUNCATE TABLE registro_viagem_veiculo RESTART IDENTITY CASCADE;
+TRUNCATE TABLE registros_uso_externo_veiculo RESTART IDENTITY CASCADE;
+TRUNCATE TABLE registros_viagem_veiculo RESTART IDENTITY CASCADE;
 TRUNCATE TABLE auditoria_exclusao_veiculo RESTART IDENTITY CASCADE;
 TRUNCATE TABLE auditoria_administrativa RESTART IDENTITY CASCADE;
 TRUNCATE TABLE controle_alocacoes_historicos RESTART IDENTITY CASCADE;
