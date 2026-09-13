@@ -1,9 +1,11 @@
 import { Veiculo } from '../../core/models/veiculo.model';
+import { MissaoResponse } from '../../core/models/missao.model';
 
 export type PainelCategoria = 'DISPONIVEL' | 'MISSAO' | 'USO_EXTERNO' | 'VIAGEM' | 'PATIO' | 'REALOCACAO' | 'BLOQUEADO';
 
 export interface FleetCard {
   vehicle: Veiculo;
+  activeMission: MissaoResponse | null;
   statusLabel: string;
   driver: string | null;
   departure: string | null;

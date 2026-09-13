@@ -320,7 +320,7 @@
               <p>{{ resumoDadosAdministrativos(m) }}</p>
               <p *ngIf="m.justificativaContingenciaAbertura"><strong>Justificativa do registro manual:</strong> {{ m.justificativaContingenciaAbertura }}</p>
               <p *ngIf="m.justificativaContingenciaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ m.justificativaContingenciaEncerramento }}</p>
-              <p><strong>Registrada por:</strong> {{ abertaPorMissaoLabel(m) }} | <strong>Finalizada por:</strong> {{ encerradaPorMissaoLabel(m) }}</p>
+              <p><strong>Origem:</strong> {{ origemOperacionalMissaoLabel(m) }} | <strong>Finalização:</strong> {{ finalizacaoOperacionalMissaoLabel(m) }}</p>
               <div class="row-badges">
                 <span class="status-pill" [ngClass]="m.status === 'ATIVA' ? 'status-circulando' : 'status-finalizada'">{{ statusMissaoLabel(m.status) }}</span>
                 <span class="status-pill" [ngClass]="classeStatusDocumentalMissao(m.statusDocumental)">{{ labelStatusDocumentalMissao(m) }}</span>
@@ -1214,37 +1214,21 @@
     <ng-container *ngIf="!loadingHistoricoVeiculo && historicoVeiculo as historico">
       <section class="history-summary">
         <div class="history-current-status">
-          <span class="history-section-label">Situação atual</span>
-          <span class="status-pill" [ngClass]="statusClass(historico.statusAtual)">{{ historico.statusAtualRotulo }}</span>
-          <p><strong>Motorista atual:</strong> {{ historico.motoristaAtualNome || '-' }}</p>
+          <div>
+            <span class="history-section-label">Situação atual</span>
+            <span class="status-pill" [ngClass]="statusClass(historico.statusAtual)">{{ historico.statusAtualRotulo }}</span>
+          </div>
+          <p><strong>Motorista:</strong> {{ historico.motoristaAtualNome || '-' }}</p>
           <p><strong>Última movimentação:</strong> {{ historico.ultimaMovimentacaoEm ? (historico.ultimaMovimentacaoEm | date:'dd/MM/yyyy HH:mm') : '-' }}</p>
         </div>
 
         <div class="history-kpis">
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalMissoes }}</strong>
-            <span>Missões</span>
-          </article>
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalChecklists }}</strong>
-            <span>Checklists</span>
-          </article>
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalExcecoes }}</strong>
-            <span>Sem checklist</span>
-          </article>
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalVistoriasCompletas }}</strong>
-            <span>Vistorias completas</span>
-          </article>
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalUsosExternos }}</strong>
-            <span>Usos externos</span>
-          </article>
-          <article class="kpi">
-            <strong>{{ historico.resumo.totalIdasOficina }}</strong>
-            <span>Idas para oficina</span>
-          </article>
+          <span><em>Missões</em><strong>{{ historico.resumo.totalMissoes }}</strong></span>
+          <span><em>Checklists</em><strong>{{ historico.resumo.totalChecklists }}</strong></span>
+          <span><em>Sem checklist</em><strong>{{ historico.resumo.totalExcecoes }}</strong></span>
+          <span><em>Vistorias</em><strong>{{ historico.resumo.totalVistoriasCompletas }}</strong></span>
+          <span><em>Usos externos</em><strong>{{ historico.resumo.totalUsosExternos }}</strong></span>
+          <span><em>Oficina</em><strong>{{ historico.resumo.totalIdasOficina }}</strong></span>
         </div>
       </section>
 
@@ -1255,14 +1239,14 @@
             type="button"
             [class.active]="modoHistoricoVeiculo === 'OPERACIONAL'"
             (click)="alternarModoHistoricoVeiculo('OPERACIONAL')">
-            Histórico operacional
+            Movimentações
           </button>
           <button
             mat-stroked-button
             type="button"
             [class.active]="modoHistoricoVeiculo === 'AUDITORIA'"
             (click)="alternarModoHistoricoVeiculo('AUDITORIA')">
-            Auditoria completa
+            Auditoria
           </button>
         </div>
 
@@ -1306,14 +1290,8 @@
             <strong>{{ evento.titulo }}</strong>
             <p>{{ modoHistoricoVeiculo === 'OPERACIONAL' ? resumoOperacionalEvento(evento) : descricaoEventoHistorico(evento) }}</p>
             <div class="history-event-meta">
-              <span
-                class="status-pill"
-                *ngIf="historicoVeiculoBadgeSecundaria(evento) as badgeSecundaria"
-                [ngClass]="historicoVeiculoBadgeSecundariaClasse(evento)">
-                {{ badgeSecundaria }}
-              </span>
-              <span *ngIf="evento.motoristaNome && !eventoEhUsoExterno(evento)">Motorista: {{ evento.motoristaNome }}</span>
-              <span *ngIf="!evento.motoristaNome && evento.responsavelNome">Por: {{ evento.responsavelNome }}</span>
+              <span *ngIf="historicoVeiculoBadgeSecundaria(evento) as badgeSecundaria">{{ badgeSecundaria }}</span>
+              <span *ngIf="resumoResponsavelEventoHistorico(evento) as responsavel">{{ responsavel }}</span>
               <span *ngIf="evento.possuiFotos">Fotos: {{ evento.quantidadeFotos }}</span>
               <span *ngIf="evento.possuiAvarias">Avarias: {{ evento.quantidadeAvarias }}</span>
             </div>
@@ -1335,38 +1313,56 @@
             </span>
           </div>
 
-          <p><strong>Resumo:</strong> {{ descricaoEventoHistorico(evento) }}</p>
-          <p *ngIf="evento.motoristaNome && !eventoEhUsoExterno(evento)"><strong>Motorista:</strong> {{ evento.motoristaNome }}</p>
-          <p *ngIf="evento.responsavelNome"><strong>Registrado por:</strong> {{ evento.responsavelNome }}</p>
-          <p *ngIf="evento.possuiFotos"><strong>Fotos vinculadas:</strong> {{ evento.quantidadeFotos }}</p>
-          <p *ngIf="evento.possuiAvarias"><strong>Avarias registradas:</strong> {{ evento.quantidadeAvarias }}</p>
+          <section class="history-detail-section">
+            <h5>Resumo</h5>
+            <p>{{ descricaoEventoHistorico(evento) }}</p>
+          </section>
 
           <ng-container *ngIf="evento.detalhe as detalhe">
-            <p *ngIf="detalhe.tipoOperacao"><strong>Operacao:</strong> {{ tipoOperacaoLabel(detalhe.tipoOperacao) }}</p>
-            <p *ngIf="detalhe.origemAberturaMissao"><strong>Inicio:</strong> {{ origemAberturaMissaoLabel(detalhe.origemAberturaMissao) }}</p>
-            <p *ngIf="detalhe.origemEncerramentoMissao"><strong>Fim:</strong> {{ origemEncerramentoMissaoLabel(detalhe.origemEncerramentoMissao) }}</p>
-            <p *ngIf="detalhe.statusDocumentalMissao"><strong>{{ eventoEhViagemHistorico(evento) ? 'Status da viagem:' : 'Dados da missão:' }}</strong> {{ statusDocumentalEventoHistoricoLabel(evento) }}</p>
-            <p *ngIf="detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome">
-              <strong>Destino | Setor | Solicitante:</strong>
-              {{ detalhe.localDestino || '-' }} | {{ detalhe.setorSolicitante || '-' }} | {{ detalhe.solicitanteNome || '-' }}
-            </p>
-            <p *ngIf="detalhe.motivoExcecao"><strong>Motivo:</strong> {{ motivoExcecaoLabel(detalhe.motivoExcecao) }}</p>
-            <p *ngIf="detalhe.statusExcecaoMissao"><strong>Status da regularização:</strong> {{ statusExcecaoLabel(detalhe.statusExcecaoMissao) }}</p>
-            <p *ngIf="detalhe.justificativa"><strong>Justificativa:</strong> {{ detalhe.justificativa }}</p>
-            <p *ngIf="detalhe.justificativaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ detalhe.justificativaEncerramento }}</p>
-            <p *ngIf="detalhe.resultadoVistoria"><strong>Resultado da vistoria:</strong> {{ resultadoVistoriaLabel(detalhe.resultadoVistoria) }}</p>
-            <p *ngIf="detalhe.tipoUsoExterno"><strong>Tipo do uso externo:</strong> {{ tipoUsoExternoLabel(detalhe.tipoUsoExterno) }}</p>
-            <p *ngIf="detalhe.nomeContraparte">
-              <strong>{{ detalhe.tipoOperacao === 'SAIDA' ? 'Entregue para' : 'Recebido de' }}:</strong>
-              {{ detalhe.nomeContraparte }}
-            </p>
-            <p *ngIf="detalhe.quilometragem !== null && detalhe.quilometragem !== undefined"><strong>Quilometragem:</strong> {{ detalhe.quilometragem }} km</p>
-            <p *ngIf="detalhe.localizacao"><strong>Localizacao:</strong> {{ detalhe.localizacao }}</p>
-            <p *ngIf="detalhe.observacaoGeral"><strong>Observacao geral:</strong> {{ detalhe.observacaoGeral }}</p>
-            <p *ngIf="detalhe.statusAnterior && detalhe.statusNovo">
-              <strong>Mudanca de status:</strong>
-              {{ statusLabel(detalhe.statusAnterior) }} -> {{ statusLabel(detalhe.statusNovo) }}
-            </p>
+            <section class="history-detail-section" *ngIf="detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome || detalhe.statusDocumentalMissao || detalhe.tipoOperacao || detalhe.origemAberturaMissao || detalhe.origemEncerramentoMissao">
+              <h5>Dados da operação</h5>
+              <p *ngIf="detalhe.tipoOperacao"><strong>Operação:</strong> {{ tipoOperacaoLabel(detalhe.tipoOperacao) }}</p>
+              <p *ngIf="detalhe.origemAberturaMissao"><strong>Início:</strong> {{ origemAberturaMissaoLabel(detalhe.origemAberturaMissao) }}</p>
+              <p *ngIf="detalhe.origemEncerramentoMissao"><strong>Fim:</strong> {{ origemEncerramentoMissaoLabel(detalhe.origemEncerramentoMissao) }}</p>
+              <p *ngIf="detalhe.statusDocumentalMissao"><strong>{{ eventoEhViagemHistorico(evento) ? 'Status da viagem:' : 'Dados da missão:' }}</strong> {{ statusDocumentalEventoHistoricoLabel(evento) }}</p>
+              <p *ngIf="detalhe.localDestino || detalhe.setorSolicitante || detalhe.solicitanteNome">
+                <strong>Destino | Setor | Solicitante:</strong>
+                {{ detalhe.localDestino || '-' }} | {{ detalhe.setorSolicitante || '-' }} | {{ detalhe.solicitanteNome || '-' }}
+              </p>
+            </section>
+
+            <section class="history-detail-section" *ngIf="evento.motoristaNome || evento.responsavelNome || detalhe.nomeContraparte">
+              <h5>Responsáveis</h5>
+              <p *ngIf="evento.motoristaNome && !eventoEhUsoExterno(evento)"><strong>Motorista:</strong> {{ evento.motoristaNome }}</p>
+              <p *ngIf="registroEventoHistoricoLabel(evento) as registro"><strong>Registro:</strong> {{ registro }}</p>
+              <p *ngIf="detalhe.nomeContraparte">
+                <strong>{{ detalhe.tipoOperacao === 'SAIDA' ? 'Entregue para' : 'Recebido de' }}:</strong>
+                {{ detalhe.nomeContraparte }}
+              </p>
+            </section>
+
+            <section class="history-detail-section" *ngIf="evento.possuiFotos || evento.possuiAvarias || detalhe.resultadoVistoria || detalhe.quilometragem !== null && detalhe.quilometragem !== undefined || detalhe.localizacao || detalhe.observacaoGeral">
+              <h5>Checklist, fotos e vistoria</h5>
+              <p *ngIf="evento.possuiFotos"><strong>Fotos vinculadas:</strong> {{ evento.quantidadeFotos }}</p>
+              <p *ngIf="evento.possuiAvarias"><strong>Avarias registradas:</strong> {{ evento.quantidadeAvarias }}</p>
+              <p *ngIf="detalhe.resultadoVistoria"><strong>Resultado da vistoria:</strong> {{ resultadoVistoriaLabel(detalhe.resultadoVistoria) }}</p>
+              <p *ngIf="detalhe.quilometragem !== null && detalhe.quilometragem !== undefined"><strong>Quilometragem:</strong> {{ detalhe.quilometragem }} km</p>
+              <p *ngIf="detalhe.localizacao"><strong>Localização:</strong> {{ detalhe.localizacao }}</p>
+              <p *ngIf="detalhe.observacaoGeral"><strong>Observação geral:</strong> {{ detalhe.observacaoGeral }}</p>
+            </section>
+
+            <section class="history-detail-section" *ngIf="detalhe.motivoExcecao || detalhe.statusExcecaoMissao || detalhe.justificativa || detalhe.justificativaEncerramento || detalhe.tipoUsoExterno || detalhe.statusAnterior && detalhe.statusNovo">
+              <h5>Auditoria</h5>
+              <p *ngIf="detalhe.motivoExcecao"><strong>Motivo:</strong> {{ motivoExcecaoLabel(detalhe.motivoExcecao) }}</p>
+              <p *ngIf="detalhe.statusExcecaoMissao"><strong>Status da regularização:</strong> {{ statusExcecaoLabel(detalhe.statusExcecaoMissao) }}</p>
+              <p *ngIf="detalhe.justificativa"><strong>Justificativa:</strong> {{ detalhe.justificativa }}</p>
+              <p *ngIf="detalhe.justificativaEncerramento"><strong>Justificativa do encerramento manual:</strong> {{ detalhe.justificativaEncerramento }}</p>
+              <p *ngIf="detalhe.tipoUsoExterno"><strong>Tipo do uso externo:</strong> {{ tipoUsoExternoLabel(detalhe.tipoUsoExterno) }}</p>
+              <p *ngIf="detalhe.statusAnterior && detalhe.statusNovo">
+                <strong>Mudança de status:</strong>
+                {{ statusLabel(detalhe.statusAnterior) }} -> {{ statusLabel(detalhe.statusNovo) }}
+              </p>
+            </section>
           </ng-container>
         </div>
       </section>

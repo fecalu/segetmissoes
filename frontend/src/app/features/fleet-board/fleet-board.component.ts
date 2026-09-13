@@ -8,6 +8,13 @@ import { MissaoResponse } from '../../core/models/missao.model';
 import { FleetCard, FleetColumn, PainelCategoria } from './fleet-board.model';
 
 type OperacaoView = 'PAINEL' | 'MAPA';
+type DailyPeriod = 'MANHA' | 'TARDE' | 'NOITE';
+
+interface DailyMissionGroup {
+  id: DailyPeriod;
+  title: string;
+  missions: MissaoResponse[];
+}
 
 @Component({
   selector: 'app-fleet-board',
@@ -48,6 +55,19 @@ export class FleetBoardComponent {
   get total(): number { return this.columns.reduce((total, column) => total + column.cards.length, 0); }
   get matches(): number { return this.columns.reduce((total, column) => total + this.visibleCards(column).length, 0); }
   get dailyMissionsSorted(): MissaoResponse[] { return [...this.dailyMissions].sort((a, b) => a.dataHoraInicio.localeCompare(b.dataHoraInicio)); }
+  get dailyMissionGroups(): DailyMissionGroup[] {
+    const groups: Record<DailyPeriod, DailyMissionGroup> = {
+      MANHA: { id: 'MANHA', title: 'Manhã', missions: [] },
+      TARDE: { id: 'TARDE', title: 'Tarde', missions: [] },
+      NOITE: { id: 'NOITE', title: 'Noite / fora do expediente', missions: [] }
+    };
+
+    for (const mission of this.dailyMissionsSorted) {
+      groups[this.dailyPeriod(mission.dataHoraInicio)].missions.push(mission);
+    }
+
+    return [groups.MANHA, groups.TARDE, groups.NOITE].filter(group => group.missions.length > 0);
+  }
   trackColumn(_: number, column: FleetColumn): string { return column.id; }
   trackCard(_: number, card: FleetCard): number { return card.vehicle.id; }
   trackMission(_: number, mission: MissaoResponse): number { return mission.id; }
@@ -124,6 +144,13 @@ export class FleetBoardComponent {
     if (date.toDateString() === base.toDateString()) return time;
     const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
     return `${day} ${time}`;
+  }
+
+  private dailyPeriod(value: string): DailyPeriod {
+    const hour = new Date(value).getHours();
+    if (hour < 12) return 'MANHA';
+    if (hour < 18) return 'TARDE';
+    return 'NOITE';
   }
 
   private normalize(value: string): string { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase(); }

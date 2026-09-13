@@ -65,10 +65,27 @@
           </div>
           <p class="driver" *ngIf="card.driver"><app-icon name="user" /><span>{{ card.driver }}</span></p>
           <div class="mission-timing" *ngIf="card.departure"><span>Saída <strong>{{ card.departure }}</strong></span><span *ngIf="card.duration"><app-icon name="clock" />{{ card.duration }}</span></div>
-          <dl class="vehicle-details" *ngIf="!hiddenDetailsVehicleIds.has(card.vehicle.id) && card.details.length"><div *ngFor="let detail of card.details"><dt>{{ detail.label }}</dt><dd [class.pending]="!detail.value">{{ detail.value || 'Pendente' }}</dd></div></dl>
-          <span class="manual-note" *ngIf="card.manual">Registro administrativo</span>
+          <section class="vehicle-details-shell" *ngIf="card.details.length">
+            <header class="vehicle-details-heading">
+              <span>Dados da missão</span>
+              <button
+                type="button"
+                class="details-toggle"
+                [class.collapsed]="hiddenDetailsVehicleIds.has(card.vehicle.id)"
+                [attr.aria-label]="hiddenDetailsVehicleIds.has(card.vehicle.id) ? 'Mostrar dados da missão' : 'Ocultar dados da missão'"
+                [attr.aria-expanded]="!hiddenDetailsVehicleIds.has(card.vehicle.id)"
+                (click)="toggleDetails(card.vehicle.id)"
+              ></button>
+            </header>
+            <dl class="vehicle-details" *ngIf="!hiddenDetailsVehicleIds.has(card.vehicle.id)">
+              <div *ngFor="let detail of card.details"><dt>{{ detail.label }}</dt><dd [class.pending]="!detail.value">{{ detail.value || 'Pendente' }}</dd></div>
+            </dl>
+          </section>
+          <span class="manual-note" *ngIf="card.manual">
+            via admin<span *ngIf="card.activeMission?.administradorAberturaNome"> · {{ card.activeMission?.administradorAberturaNome }}</span>
+          </span>
           <div class="vehicle-actions">
-            <button type="button" class="details-button" *ngIf="card.details.length" [attr.aria-expanded]="!hiddenDetailsVehicleIds.has(card.vehicle.id)" (click)="toggleDetails(card.vehicle.id)">{{ hiddenDetailsVehicleIds.has(card.vehicle.id) ? 'Ver dados' : 'Ocultar dados' }}</button>
+            <button type="button" class="details-button primary-action" *ngIf="card.activeMission" (click)="editMission.emit(card.activeMission)">Editar dados</button>
           </div>
           <div class="move-menu" *ngIf="movingVehicleId === card.vehicle.id" aria-label="Escolha a nova situação do veículo">
             <p>{{ card.allowedDestinations.length ? "Para onde deseja mover?" : "A alteração deste veículo precisa de um Gestor ou Administrador." }}</p>
@@ -80,7 +97,7 @@
       </div>
     </section>
   </div>
-  <footer class="board-footer"><span>Atualização automática a cada 15 segundos.</span><button type="button" (click)="missions.emit()">Consultar missões <app-icon name="arrow" /></button></footer>
+  <footer class="board-footer"><span>Atualização automática a cada 5 segundos.</span><button type="button" (click)="missions.emit()">Consultar missões <app-icon name="arrow" /></button></footer>
   </ng-container>
 
   <ng-template #dailyMap>
@@ -117,22 +134,30 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let mission of dailyMissionsSorted; trackBy: trackMission" [class.pending-row]="mission.statusDocumental === 'PENDENTE_DADOS_ADMIN'">
-              <td><strong>{{ missionVehicle(mission) }}</strong></td>
-              <td>{{ mission.motoristaNome }}</td>
-              <td [class.pending]="!mission.localDestino">{{ missionContext(mission.localDestino) }}</td>
-              <td [class.pending]="!mission.setorSolicitante">{{ missionContext(mission.setorSolicitante) }}</td>
-              <td [class.pending]="!mission.solicitanteNome">{{ missionContext(mission.solicitanteNome) }}</td>
-              <td>{{ missionTime(mission.dataHoraInicio) }}</td>
-              <td [class.pending]="!mission.dataHoraFim">{{ missionTime(mission.dataHoraFim, mission.dataHoraInicio) }}</td>
-              <td><span class="map-status" [class.active]="mission.status === 'ATIVA'">{{ mission.status === 'ATIVA' ? 'Em andamento' : 'Finalizada' }}</span></td>
-              <td>
-                <div class="map-row-actions">
-                  <button type="button" (click)="editMission.emit(mission)">Editar missão</button>
-                  <button type="button" *ngIf="mission.status === 'ATIVA' && mission.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="finishMission.emit(mission)">Registrar chegada</button>
-                </div>
-              </td>
-            </tr>
+            <ng-container *ngFor="let group of dailyMissionGroups">
+              <tr class="period-row">
+                <td colspan="9">
+                  <span>{{ group.title }}</span>
+                  <strong>{{ group.missions.length }} {{ group.missions.length === 1 ? 'missão' : 'missões' }}</strong>
+                </td>
+              </tr>
+              <tr *ngFor="let mission of group.missions; trackBy: trackMission" [class.pending-row]="mission.statusDocumental === 'PENDENTE_DADOS_ADMIN'">
+                <td><strong>{{ missionVehicle(mission) }}</strong></td>
+                <td>{{ mission.motoristaNome }}</td>
+                <td [class.pending]="!mission.localDestino">{{ missionContext(mission.localDestino) }}</td>
+                <td [class.pending]="!mission.setorSolicitante">{{ missionContext(mission.setorSolicitante) }}</td>
+                <td [class.pending]="!mission.solicitanteNome">{{ missionContext(mission.solicitanteNome) }}</td>
+                <td>{{ missionTime(mission.dataHoraInicio) }}</td>
+                <td [class.pending]="!mission.dataHoraFim">{{ missionTime(mission.dataHoraFim, mission.dataHoraInicio) }}</td>
+                <td><span class="map-status" [class.active]="mission.status === 'ATIVA'">{{ mission.status === 'ATIVA' ? 'Em andamento' : 'Finalizada' }}</span></td>
+                <td>
+                  <div class="map-row-actions">
+                    <button type="button" (click)="editMission.emit(mission)">Editar missão</button>
+                    <button type="button" *ngIf="mission.status === 'ATIVA' && mission.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="finishMission.emit(mission)">Registrar chegada</button>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
           </tbody>
         </table>
         <p class="empty-column" *ngIf="dailyMissions.length === 0">Nenhuma missão registrada neste dia.</p>

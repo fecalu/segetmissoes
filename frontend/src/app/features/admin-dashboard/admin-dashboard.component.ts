@@ -258,7 +258,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { value: 'STATUS', label: 'Mudancas de status' }
   ];
   readonly filtrosHistoricoOperacional: FiltroHistoricoVeiculo[] = ['', 'MISSOES', 'VIAGENS', 'USO_EXTERNO', 'VISTORIAS', 'SEM_CHECKLIST'];
-  readonly filtrosHistoricoAuditoria: FiltroHistoricoVeiculo[] = ['', 'MISSOES', 'CHECKLISTS', 'SEM_CHECKLIST', 'VIAGENS', 'USO_EXTERNO', 'VISTORIAS', 'STATUS'];
+  readonly filtrosHistoricoAuditoria: FiltroHistoricoVeiculo[] = ['', 'MISSOES', 'SEM_CHECKLIST', 'VIAGENS', 'USO_EXTERNO', 'STATUS'];
   private readonly statusLabelsPadrao: Record<StatusVeiculo, string> = {
     CIRCULANDO: 'NA RUA (MISSAO)',
     BASE_JOAO_GOULART: 'DISPONIVEL',
@@ -318,11 +318,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   ];
   readonly glossarioMissoesCampos: GlossarioItem[] = [
     { termo: 'Destino | Setor | Solicitante', descricao: 'Contexto da missao na cidade, usado nos relatorios e no acompanhamento operacional.' },
-    { termo: 'Local da viagem', descricao: 'Contexto principal das viagens. Substitui setor e solicitante nesse tipo de deslocamento.' },
+    { termo: 'Dados administrativos', descricao: 'Destino, setor e solicitante usados nos relatorios e no acompanhamento operacional.' },
     { termo: 'Registro administrativo', descricao: 'Saida e retorno registrados pelo administrador para manter o controle da operacao, mesmo sem uso do aplicativo pelo motorista.' },
     { termo: 'Justificativa do encerramento manual', descricao: 'Texto explicando por que o encerramento precisou ser feito manualmente, e nao pelo motorista.' },
-    { termo: 'Registrada por', descricao: 'Quem registrou o inicio da missao, motorista ou administrador.' },
-    { termo: 'Finalizada por', descricao: 'Quem registrou o fim da missao. Enquanto a missao estiver em andamento, fica como "-".' },
+    { termo: 'Origem', descricao: 'Como a missao foi aberta: pelo motorista com checklist, pelo motorista sem checklist ou via administracao.' },
+    { termo: 'Finalizacao', descricao: 'Como a missao foi encerrada. Enquanto estiver aberta, aparece como "em andamento".' },
     { termo: 'Inicio | Fim', descricao: 'Horarios oficiais de inicio e fim da missao.' },
     { termo: '-', descricao: 'Campo ainda nao informado ou nao aplicavel para aquela missao.' }
   ];
@@ -603,7 +603,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   atualizarPainelOperacional(): void {
-    if (this.loadingVeiculos || this.loadingTempoReal || this.arrastandoVeiculo || this.selectedCategoriaInclusao) return;
+    if (this.loadingVeiculos || this.loadingTempoReal || this.operadorInteragindoComTela()) return;
     this.carregarVeiculos();
     this.carregarMissoesTempoReal(false);
     if (this.missoesMapaDiario.length > 0) this.carregarMapaDiario(false);
@@ -614,12 +614,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   carregarMapaDiario(showError = true): void {
-    this.loadingMapaDiario = true;
+    const exibeLoading = showError || this.missoesMapaDiario.length === 0;
+    if (exibeLoading) {
+      this.loadingMapaDiario = true;
+    }
     this.adminService.listarMissoes({
       dataInicio: this.dataMapaDiario,
       dataFim: this.dataMapaDiario
     })
-      .pipe(finalize(() => (this.loadingMapaDiario = false)))
+      .pipe(finalize(() => {
+        if (exibeLoading) {
+          this.loadingMapaDiario = false;
+        }
+      }))
       .subscribe({
         next: data => {
           this.missoesMapaDiario = data;
@@ -630,6 +637,34 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           if (showError) this.snackBar.open('Falha ao carregar mapa diario.', 'Fechar', { duration: 2800 });
         }
       });
+  }
+
+  private operadorInteragindoComTela(): boolean {
+    return this.arrastandoVeiculo
+      || !!this.selectedCategoriaInclusao
+      || this.algumModalOperacionalAberto()
+      || this.focoAtualEmCampoEditavel();
+  }
+
+  private algumModalOperacionalAberto(): boolean {
+    return this.showNovaMissaoModal
+      || this.showRegistroViagemModal
+      || this.showRetornoViagemModal
+      || this.showRegistroUsoExternoModal
+      || this.showRetornoUsoExternoModal
+      || !!this.selectedChecklist
+      || !!this.selectedVistoriaCompleta
+      || !!this.selectedMissaoAuditoria
+      || !!this.selectedMissaoDadosAdmin
+      || !!this.selectedMissaoEdicaoManual
+      || !!this.selectedVeiculoHistorico;
+  }
+
+  private focoAtualEmCampoEditavel(): boolean {
+    const active = document.activeElement;
+    if (!active) return false;
+    const tag = active.tagName.toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || active.getAttribute('contenteditable') === 'true';
   }
 
   exportarRelatorioMapaDiario(): void {
@@ -649,7 +684,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         const detalhes: FleetCard['details'] = [];
         if (deslocamento) {
           detalhes.push({ label: 'Destino', value: missao?.localDestino?.trim() || vehicle.viagemLocalDestino?.trim() || null });
-          if (categoria.id === 'MISSAO') detalhes.push(
+          detalhes.push(
             { label: 'Setor', value: missao?.setorSolicitante?.trim() || null },
             { label: 'Solicitante', value: missao?.solicitanteNome?.trim() || null }
           );
@@ -660,6 +695,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         const inicio = missao?.dataHoraInicio || vehicle.viagemDataHoraSaida || vehicle.usoExternoDataHoraSaida;
         return {
           vehicle,
+          activeMission: missao || null,
           statusLabel: this.statusLabel(vehicle.statusAtual),
           driver: deslocamento ? missao?.motoristaNome || vehicle.viagemMotoristaNome || vehicle.motoristaAtualNome || 'Motorista não informado' : null,
           departure: inicio ? this.formatarDataHora(inicio) : null,
@@ -1862,6 +1898,37 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA';
   }
 
+  resumoResponsavelEventoHistorico(evento: EventoHistoricoVeiculo): string | null {
+    return this.registroEventoHistoricoLabel(evento);
+  }
+
+  registroEventoHistoricoLabel(evento: EventoHistoricoVeiculo): string | null {
+    const responsavel = evento.responsavelNome || evento.motoristaNome;
+    if (!responsavel) {
+      return null;
+    }
+    return `${this.eventoRegistradoViaAdmin(evento) ? 'via admin' : 'motorista'} · ${responsavel}`;
+  }
+
+  private eventoRegistradoViaAdmin(evento: EventoHistoricoVeiculo): boolean {
+    if (evento.responsavelNome && evento.motoristaNome && evento.responsavelNome !== evento.motoristaNome) {
+      return true;
+    }
+    if (evento.detalhe?.origemAberturaMissao === 'REGISTRO_ADMINISTRATIVO' || evento.detalhe?.origemAberturaMissao === 'CONTINGENCIA_ADMIN') {
+      return true;
+    }
+    if (evento.detalhe?.origemEncerramentoMissao === 'ADMINISTRATIVO') {
+      return true;
+    }
+    return [
+      'MISSAO_HORARIO_AJUSTADO',
+      'MISSAO_EDITADA_ADMIN',
+      'STATUS_ALTERADO',
+      'USO_EXTERNO_INICIADO',
+      'USO_EXTERNO_FINALIZADO'
+    ].includes(evento.tipo);
+  }
+
   statusDocumentalEventoHistoricoLabel(evento: EventoHistoricoVeiculo): string {
     const status = evento.detalhe?.statusDocumentalMissao;
     if (!status) {
@@ -2573,6 +2640,35 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return missao.administradorEncerramentoNome || missao.motoristaNome;
   }
 
+  origemOperacionalMissaoLabel(missao: MissaoResponse): string {
+    if (missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO') {
+      return `via admin${missao.administradorAberturaNome ? ' · ' + missao.administradorAberturaNome : ''}`;
+    }
+    if (missao.origemAbertura === 'CONTINGENCIA_ADMIN') {
+      return `via admin · contingencia${missao.administradorAberturaNome ? ' · ' + missao.administradorAberturaNome : ''}`;
+    }
+    if (missao.origemAbertura === 'SEM_CHECKLIST') {
+      return `motorista · sem checklist · ${missao.motoristaNome}`;
+    }
+    return `motorista · com checklist · ${missao.motoristaNome}`;
+  }
+
+  finalizacaoOperacionalMissaoLabel(missao: MissaoResponse): string {
+    if (missao.status === 'ATIVA') {
+      return 'em andamento';
+    }
+    if (missao.origemEncerramento === 'ADMINISTRATIVO') {
+      return `via admin${missao.administradorEncerramentoNome ? ' · ' + missao.administradorEncerramentoNome : ''}`;
+    }
+    if (missao.origemEncerramento === 'SEM_CHECKLIST') {
+      return `motorista · sem checklist · ${missao.motoristaNome}`;
+    }
+    if (missao.origemEncerramento === 'CHECKLIST') {
+      return `motorista · com checklist · ${missao.motoristaNome}`;
+    }
+    return 'em andamento';
+  }
+
   origemEncerramentoMissaoLabel(origem: OrigemEncerramentoMissao | null): string {
     if (!origem) {
       return '-';
@@ -3036,7 +3132,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private eventosHistoricoBase(): EventoHistoricoVeiculo[] {
     const eventos = this.historicoVeiculo?.eventos || [];
     if (this.modoHistoricoVeiculo === 'AUDITORIA') {
-      return eventos;
+      return eventos.filter(evento => this.eventoEhAuditoria(evento));
     }
     return eventos.filter(evento => this.eventoEhOperacional(evento));
   }
@@ -3066,6 +3162,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
     if (evento.tipo === 'STATUS_ALTERADO') {
       return evento.detalhe?.statusNovo === 'BLOQUEADO';
+    }
+    return false;
+  }
+
+  private eventoEhAuditoria(evento: EventoHistoricoVeiculo): boolean {
+    if (evento.tipo === 'MISSAO_HORARIO_AJUSTADO' || evento.tipo === 'MISSAO_EDITADA_ADMIN' || evento.tipo === 'STATUS_ALTERADO') {
+      return true;
+    }
+    if (evento.tipo === 'EXCECAO_ABERTA' || evento.tipo === 'EXCECAO_REGULARIZADA') {
+      return true;
+    }
+    if (evento.tipo === 'MISSAO_INICIADA') {
+      return evento.detalhe?.origemAberturaMissao === 'REGISTRO_ADMINISTRATIVO'
+        || evento.detalhe?.origemAberturaMissao === 'CONTINGENCIA_ADMIN';
+    }
+    if (evento.tipo === 'MISSAO_FINALIZADA') {
+      return evento.detalhe?.origemEncerramentoMissao === 'ADMINISTRATIVO';
+    }
+    if (evento.tipo === 'VIAGEM_INICIADA' || evento.tipo === 'VIAGEM_FINALIZADA') {
+      return this.eventoRegistradoViaAdmin(evento);
+    }
+    if (evento.tipo === 'USO_EXTERNO_INICIADO' || evento.tipo === 'USO_EXTERNO_FINALIZADO') {
+      return this.eventoRegistradoViaAdmin(evento);
     }
     return false;
   }
@@ -3459,12 +3578,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.pararAtualizacaoTempoReal();
     if (this.activeMenu === 'operacao') {
       this.atualizarPainelOperacional();
-      this.refreshTempoRealSub = interval(15000).subscribe(() => this.atualizarPainelOperacional());
+      this.refreshTempoRealSub = interval(5000).subscribe(() => this.atualizarPainelOperacional());
       return;
     }
 
     this.carregarMissoesTempoReal();
-    this.refreshTempoRealSub = interval(15000).subscribe(() => this.carregarMissoesTempoReal());
+    this.refreshTempoRealSub = interval(5000).subscribe(() => this.carregarMissoesTempoReal());
   }
 
   private pararAtualizacaoTempoReal(): void {
