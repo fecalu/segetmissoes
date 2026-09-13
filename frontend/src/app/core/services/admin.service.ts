@@ -19,9 +19,12 @@ import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, TipoUsoExternoVeic
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../models/vistoria-completa.model';
 import {
   AlocacaoVeiculo,
+  AtualizarVagaAdministrativaPayload,
   AtualizarDadosAlocacaoVeiculoPayload,
   CriarAlocacaoVeiculoPayload,
-  HistoricoAlocacaoVeiculo
+  CriarVagaAdministrativaPayload,
+  HistoricoAlocacaoVeiculo,
+  VagaAdministrativa
 } from '../models/alocacao-veiculo.model';
 import { environment } from '../../../environments/environment';
 
@@ -161,6 +164,7 @@ export class AdminService {
   private readonly estatisticasMissoesUrl = `${environment.apiBaseUrl}/admin/estatisticas/missoes`;
   private readonly vistoriaCompletaUrl = `${environment.apiBaseUrl}/admin/vistorias-completas`;
   private readonly alocacaoUrl = `${environment.apiBaseUrl}/admin/alocacoes`;
+  private readonly vagaAdministrativaUrl = `${environment.apiBaseUrl}/admin/alocacoes/vagas`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -410,5 +414,28 @@ export class AdminService {
 
   listarHistoricoAlocacao(id: number): Observable<HistoricoAlocacaoVeiculo[]> {
     return this.http.get<HistoricoAlocacaoVeiculo[]>(`${this.alocacaoUrl}/${id}/historico`);
+  }
+
+  listarVagasAdministrativas(busca?: string, incluirDesativadas = false): Observable<VagaAdministrativa[]> {
+    let params = new HttpParams().set('_ts', Date.now().toString());
+    if (busca?.trim()) params = params.set('busca', busca.trim());
+    if (incluirDesativadas) params = params.set('incluirDesativadas', 'true');
+    return this.http.get<VagaAdministrativa[]>(this.vagaAdministrativaUrl, { params });
+  }
+
+  criarVagaAdministrativa(payload: CriarVagaAdministrativaPayload): Observable<VagaAdministrativa> {
+    return this.http.post<VagaAdministrativa>(this.vagaAdministrativaUrl, payload);
+  }
+
+  atualizarVagaAdministrativa(id: number, payload: AtualizarVagaAdministrativaPayload): Observable<VagaAdministrativa> {
+    return this.http.put<VagaAdministrativa>(`${this.vagaAdministrativaUrl}/${id}`, payload);
+  }
+
+  desativarVagaAdministrativa(id: number): Observable<VagaAdministrativa> {
+    return this.http.patch<VagaAdministrativa>(`${this.vagaAdministrativaUrl}/${id}/desativar`, null);
+  }
+
+  reativarVagaAdministrativa(id: number): Observable<VagaAdministrativa> {
+    return this.http.patch<VagaAdministrativa>(`${this.vagaAdministrativaUrl}/${id}/reativar`, null);
   }
 }
