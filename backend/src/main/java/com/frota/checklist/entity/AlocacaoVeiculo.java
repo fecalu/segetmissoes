@@ -28,7 +28,7 @@ public class AlocacaoVeiculo {
     @JoinColumn(name = "vaga_administrativa_id")
     private VagaAdministrativa vagaAdministrativa;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private Integer numeroControle;
 
     @Column(nullable = false, length = 10)
