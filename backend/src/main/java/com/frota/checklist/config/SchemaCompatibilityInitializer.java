@@ -52,19 +52,22 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_anterior_check");
         executarSilencioso("alter table historico_status_veiculo drop constraint if exists historico_status_veiculo_status_novo_check");
 
-        String allowed = """
-                ('CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO','EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO')
-                """;
         executarSilencioso("""
                 alter table historico_status_veiculo
                 add constraint historico_status_veiculo_status_anterior_check
-                check (status_anterior in
-                """ + allowed + ")");
+                check (status_anterior in (
+                    'CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO'
+                ))
+                """);
         executarSilencioso("""
                 alter table historico_status_veiculo
                 add constraint historico_status_veiculo_status_novo_check
-                check (status_novo in
-                """ + allowed + ")");
+                check (status_novo in (
+                    'CIRCULANDO','BASE_JOAO_GOULART','NO_PATIO','AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO','OFICINA','EM_VIAGEM','MANUTENCAO','BLOQUEADO','ATIVO','INATIVO'
+                ))
+                """);
     }
 
     private void atualizarConstraintsConfigRotuloStatusVeiculo() {
@@ -226,6 +229,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 check (origem_abertura in (
                     'CHECKLIST',
                     'SEM_CHECKLIST',
+                    'REGISTRO_ADMINISTRATIVO',
                     'CONTINGENCIA_ADMIN'
                 ))
                 """);
@@ -284,10 +288,12 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 check (acao in (
                     'ABERTURA_CHECKLIST',
                     'ABERTURA_SEM_CHECKLIST',
+                    'ABERTURA_REGISTRO_ADMINISTRATIVO',
                     'ABERTURA_CONTINGENCIA_ADMIN',
                     'ABERTURA_LEGADO_RECONSTRUIDA',
                     'ENCERRAMENTO_CHECKLIST',
                     'ENCERRAMENTO_SEM_CHECKLIST',
+                    'ENCERRAMENTO_REGISTRO_ADMINISTRATIVO',
                     'ENCERRAMENTO_PENDENTE_ADMIN',
                     'ENCERRAMENTO_ADMINISTRATIVO',
                     'ATUALIZACAO_DADOS_ADMINISTRATIVOS'

@@ -233,6 +233,9 @@ Leia:
 
 - `docs/dev-setup.md`
 - `docs/git-workflow.md`
+- `docs/onboarding.md`
+- `docs/contributing.md`
+- `docs/starter-tasks.md`
 
 Resumo:
 

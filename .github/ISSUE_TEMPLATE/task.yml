@@ -1,0 +1,25 @@
+name: Tarefa tecnica
+about: Refatoracao, infraestrutura, documentacao ou melhoria interna
+labels: chore
+body:
+  - type: input
+    id: objetivo
+    attributes:
+      label: Objetivo
+      placeholder: Ex. Organizar documentacao de onboarding
+    validations:
+      required: true
+  - type: textarea
+    id: escopo
+    attributes:
+      label: Escopo
+      placeholder: O que deve ser alterado?
+    validations:
+      required: true
+  - type: textarea
+    id: validacao
+    attributes:
+      label: Como validar
+      placeholder: Comandos, telas ou checks esperados.
+    validations:
+      required: false

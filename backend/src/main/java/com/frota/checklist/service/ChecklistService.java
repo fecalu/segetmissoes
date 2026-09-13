@@ -151,6 +151,7 @@ public class ChecklistService {
 
         Veiculo veiculo = checklist.getVeiculo();
         veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
+        veiculo.setLocalizacaoOperacional(null);
         veiculoRepository.save(veiculo);
     }
 

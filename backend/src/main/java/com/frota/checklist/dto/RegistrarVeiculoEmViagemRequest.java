@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 public record RegistrarVeiculoEmViagemRequest(
         @NotNull Long motoristaId,
         @NotBlankTrimmed @Size(max = 180) String localDestino,
+        @Size(max = 160) String setorSolicitante,
+        @Size(max = 160) String solicitanteNome,
         @NotNull LocalDateTime dataHoraSaida,
         @Size(max = 700) String observacao
 ) {

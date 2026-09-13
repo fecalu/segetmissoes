@@ -100,6 +100,7 @@ public class VistoriaCompletaService {
             registrarRetornoUsoExternoPorVistoria(veiculo, salva);
             veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
         }
+        veiculo.setLocalizacaoOperacional(null);
         veiculoRepository.save(veiculo);
 
         return responseMapper.toResponse(salva);

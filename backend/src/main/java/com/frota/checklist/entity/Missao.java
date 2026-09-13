@@ -132,9 +132,6 @@ public class Missao {
     }
 
     public boolean possuiDadosAdministrativosCompletos() {
-        if (tipoDeslocamento == TipoDeslocamentoMissao.VIAGEM) {
-            return isFilled(localDestino);
-        }
         return isFilled(localDestino) && isFilled(setorSolicitante) && isFilled(solicitanteNome);
     }
 

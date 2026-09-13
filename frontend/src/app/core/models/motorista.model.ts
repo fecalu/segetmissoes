@@ -6,6 +6,7 @@ export interface Motorista {
   login: string;
   cpf: string;
   perfil: Perfil;
+  acessoHabilitado: boolean;
 }
 
 export interface MotoristaAdminPayload {

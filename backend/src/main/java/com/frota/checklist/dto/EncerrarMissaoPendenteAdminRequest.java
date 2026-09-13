@@ -1,5 +1,6 @@
 package com.frota.checklist.dto;
 
+import com.frota.checklist.entity.StatusVeiculo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 
 public record EncerrarMissaoPendenteAdminRequest(
         @NotNull LocalDateTime dataHoraFim,
-        @NotBlank @Size(min = 10, max = 700) String justificativaEncerramento
+        @NotBlank @Size(min = 10, max = 700) String justificativaEncerramento,
+        StatusVeiculo statusAdministrativoDestino
 ) {
 }

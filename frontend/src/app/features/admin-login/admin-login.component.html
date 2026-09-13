@@ -1,31 +1,46 @@
-<section class="page-wrap">
-  <mat-card class="card-shell admin-login-card">
-    <div class="hero">
-      <p class="eyebrow">Area Administrativa</p>
-      <h1>Gestao de Frota</h1>
-      <p>Gerencie motoristas e acompanhe os checklists enviados em campo.</p>
-    </div>
+<section class="page-wrap login-page admin-login-page">
+  <div class="login-wrapper">
+    <mat-card class="login-card">
+      <header class="brand-header">
+        <div class="logo-frame">
+          <img src="/gov.png" alt="Logo Governo do Maranhão" class="gov-logo">
+        </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="off">
-      <h2>Entrar como administrador</h2>
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Login</mat-label>
-        <input matInput formControlName="login" autocomplete="off" autocapitalize="off" spellcheck="false">
-      </mat-form-field>
+        <div class="brand-copy">
+          <p class="tag">SEGET</p>
+          <h1>Serviços Gerais e Transportes</h1>
+          <p>Gestão de frota, missões e vistorias.</p>
+        </div>
+      </header>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Senha</mat-label>
-        <input matInput type="password" formControlName="senha" autocomplete="new-password">
-      </mat-form-field>
+      <section class="form-area">
+        <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="off">
+          <p class="access-label">Área administrativa</p>
+          <h2>Entrar no sistema</h2>
+          <p class="tip">Acesso para administradores, gestores e operadores.</p>
 
-      <mat-checkbox color="primary" formControlName="lembrarAcesso" class="remember-option">
-        Salvar login e senha neste aparelho
-      </mat-checkbox>
+          <mat-form-field appearance="outline" class="full-width input-field">
+            <mat-label>Login</mat-label>
+            <mat-icon matPrefix class="field-icon" fontSet="material-symbols-rounded">person</mat-icon>
+            <input matInput formControlName="login" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </mat-form-field>
 
-      <button mat-flat-button color="primary" class="full-width" [disabled]="loading">
-        {{ loading ? 'Entrando...' : 'Entrar' }}
-      </button>
-      <a routerLink="/login" class="back-link">Voltar para login do motorista</a>
-    </form>
-  </mat-card>
+          <mat-form-field appearance="outline" class="full-width input-field">
+            <mat-label>Senha</mat-label>
+            <mat-icon matPrefix class="field-icon" fontSet="material-symbols-rounded">lock</mat-icon>
+            <input matInput type="password" formControlName="senha" autocomplete="current-password">
+          </mat-form-field>
+
+          <mat-checkbox color="primary" formControlName="lembrarAcesso" class="remember-option">
+            Lembrar meu login neste aparelho
+          </mat-checkbox>
+
+          <button mat-flat-button color="primary" class="full-width cta" [disabled]="loading">
+            {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
+          </button>
+          <a routerLink="/login" class="back-link">Sou motorista</a>
+        </form>
+      </section>
+    </mat-card>
+  </div>
 </section>

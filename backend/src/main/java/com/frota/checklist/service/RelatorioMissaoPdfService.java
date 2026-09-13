@@ -75,6 +75,7 @@ public class RelatorioMissaoPdfService {
             document.open();
             adicionarCabecalho(document, dataRelatorio, total, finalizadas, emAndamento);
             adicionarTabela(document, missoes);
+            adicionarAssinatura(document);
             document.close();
             return outputStream.toByteArray();
         } catch (Exception ex) {
@@ -116,9 +117,16 @@ public class RelatorioMissaoPdfService {
         top.addCell(textCell);
         document.add(top);
 
-        Paragraph data = new Paragraph("Data do relatorio: " + dataRelatorio.format(DATE_FORMATTER), font(10, Font.BOLD, TEXT));
+        Paragraph data = new Paragraph("Missões com saída em: " + dataRelatorio.format(DATE_FORMATTER), font(10, Font.BOLD, TEXT));
         data.setSpacingAfter(2);
         document.add(data);
+
+        Paragraph criterio = new Paragraph(
+                "Critério: a missão pertence à data da saída. Início e fim exibem data e hora para identificar retornos em outro dia.",
+                font(8.5f, Font.NORMAL, new Color(71, 85, 105))
+        );
+        criterio.setSpacingAfter(4);
+        document.add(criterio);
 
         Paragraph geradoEm = new Paragraph("Gerado em: " + LocalDateTime.now().format(DATE_TIME_FORMATTER), font(9, Font.NORMAL, new Color(71, 85, 105)));
         geradoEm.setSpacingAfter(8);
@@ -128,7 +136,7 @@ public class RelatorioMissaoPdfService {
         resumo.setWidthPercentage(100);
         resumo.setWidths(new float[]{1f, 1f, 1f});
         resumo.setSpacingAfter(12);
-        resumo.addCell(buildResumoCell("Total de missoes", String.valueOf(total)));
+        resumo.addCell(buildResumoCell("Total de missões", String.valueOf(total)));
         resumo.addCell(buildResumoCell("Finalizadas", String.valueOf(finalizadas)));
         resumo.addCell(buildResumoCell("Em andamento", String.valueOf(emAndamento)));
         document.add(resumo);
@@ -144,18 +152,20 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarTabela(Document document, List<Missao> missoes) throws DocumentException {
-        PdfPTable tabela = new PdfPTable(new float[]{2.2f, 1.6f, 4.95f, 1.2f, 1.2f});
+        PdfPTable tabela = new PdfPTable(new float[]{1.55f, 1.35f, 1.5f, 1.35f, 1.45f, 1.15f, 1.15f});
         tabela.setWidthPercentage(100);
 
-        adicionarHeaderTabela(tabela, "Veiculo");
+        adicionarHeaderTabela(tabela, "Veículo");
         adicionarHeaderTabela(tabela, "Motorista");
-        adicionarHeaderTabela(tabela, "Contexto");
-        adicionarHeaderTabela(tabela, "Inicio");
+        adicionarHeaderTabela(tabela, "Destino");
+        adicionarHeaderTabela(tabela, "Setor");
+        adicionarHeaderTabela(tabela, "Solicitante");
+        adicionarHeaderTabela(tabela, "Início");
         adicionarHeaderTabela(tabela, "Fim");
 
         if (missoes.isEmpty()) {
             PdfPCell empty = new PdfPCell(new Phrase("Nenhuma missao encontrada para o dia informado.", font(10, Font.NORMAL, TEXT)));
-            empty.setColspan(5);
+            empty.setColspan(7);
             empty.setPadding(12);
             empty.setHorizontalAlignment(Element.ALIGN_CENTER);
             empty.setBorderColor(BORDER);
@@ -171,7 +181,9 @@ public class RelatorioMissaoPdfService {
                                 + missao.getVeiculo().getModelo()
                 );
                 adicionarBodyTabela(tabela, missao.getMotorista().getNome());
-                adicionarBodyTabela(tabela, dadosMissaoResumidos(missao));
+                adicionarBodyTabela(tabela, valorOuTraco(missao.getLocalDestino()));
+                adicionarBodyTabela(tabela, valorOuTraco(missao.getSetorSolicitante()));
+                adicionarBodyTabela(tabela, valorOuTraco(missao.getSolicitanteNome()));
                 adicionarBodyTabela(tabela, missao.getDataHoraInicio().format(DATE_TIME_FORMATTER));
                 adicionarBodyTabela(tabela, formatarChegada(missao.getDataHoraFim()));
             }
@@ -191,8 +203,8 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarBodyTabela(PdfPTable tabela, String valor) {
-        PdfPCell body = new PdfPCell(new Phrase(valor, font(8f, Font.NORMAL, TEXT)));
-        body.setPadding(6);
+        PdfPCell body = new PdfPCell(new Phrase(valor, font(7.2f, Font.NORMAL, TEXT)));
+        body.setPadding(5);
         body.setBorderColor(BORDER);
         body.setVerticalAlignment(Element.ALIGN_MIDDLE);
         tabela.addCell(body);
@@ -205,16 +217,35 @@ public class RelatorioMissaoPdfService {
         return dataHoraFim.format(DATE_TIME_FORMATTER);
     }
 
-    private String dadosMissaoResumidos(Missao missao) {
-        if (missao.getTipoDeslocamento() == TipoDeslocamentoMissao.VIAGEM) {
-            return "Local da viagem: " + valorOuTraco(missao.getLocalDestino());
-        }
-        String destino = valorOuTraco(missao.getLocalDestino());
-        String setor = valorOuTraco(missao.getSetorSolicitante());
-        String solicitante = valorOuTraco(missao.getSolicitanteNome());
-        return "Destino: " + destino
-                + " | Setor: " + setor
-                + " | Solicitante: " + solicitante;
+    private void adicionarAssinatura(Document document) throws DocumentException {
+        Paragraph conferencia = new Paragraph("Conferência do relatório", font(10, Font.BOLD, TEXT));
+        conferencia.setSpacingBefore(18);
+        conferencia.setSpacingAfter(4);
+        document.add(conferencia);
+
+        Paragraph declaracao = new Paragraph(
+                "Declaro que conferi as informações apresentadas neste relatório e que estão de acordo com os registros do sistema.",
+                font(8.5f, Font.NORMAL, TEXT)
+        );
+        declaracao.setSpacingAfter(16);
+        document.add(declaracao);
+
+        PdfPTable assinatura = new PdfPTable(new float[]{1f, 1f});
+        assinatura.setWidthPercentage(100);
+        assinatura.setSpacingBefore(4);
+        assinatura.addCell(celulaAssinatura("Responsável pela conferência"));
+        assinatura.addCell(celulaAssinatura("Data e assinatura"));
+        document.add(assinatura);
+    }
+
+    private PdfPCell celulaAssinatura(String rotulo) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.TOP);
+        cell.setBorderColor(BORDER);
+        cell.setPaddingTop(8);
+        cell.setPaddingBottom(2);
+        cell.setPhrase(new Phrase(rotulo, font(8.5f, Font.NORMAL, TEXT)));
+        return cell;
     }
 
     private String valorOuTraco(String value) {

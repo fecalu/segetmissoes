@@ -4,9 +4,11 @@ import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
+import com.frota.checklist.dto.CriarRegistroAdministrativoMissaoRequest;
 import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
 import com.frota.checklist.dto.MissaoResponse;
+import com.frota.checklist.dto.RegistrarRetornoAdministrativoMissaoRequest;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
@@ -76,7 +78,8 @@ public class AdminMissaoController {
                 userDetails.getMotoristaId(),
                 request.localDestino(),
                 request.setorSolicitante(),
-                request.solicitanteNome()
+                request.solicitanteNome(),
+                request.justificativa()
         );
         return ResponseEntity.ok(response);
     }
@@ -101,6 +104,37 @@ public class AdminMissaoController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/registros-administrativos")
+    public ResponseEntity<MissaoResponse> criarRegistroAdministrativo(
+            @Valid @RequestBody CriarRegistroAdministrativoMissaoRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.criarRegistroAdministrativo(
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.veiculoId(),
+                request.dataHoraInicio(),
+                request.tipoDeslocamento(),
+                request.localDestino(),
+                request.setorSolicitante(),
+                request.solicitanteNome()
+        ));
+    }
+
+    @PatchMapping("/{id}/registrar-retorno")
+    public ResponseEntity<MissaoResponse> registrarRetornoAdministrativo(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistrarRetornoAdministrativoMissaoRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.registrarRetornoAdministrativo(
+                id,
+                userDetails.getMotoristaId(),
+                request.dataHoraFim(),
+                request.statusAdministrativoDestino()
+        ));
+    }
+
     @PatchMapping("/{id}/encerrar-pendente")
     public ResponseEntity<MissaoResponse> encerrarPendente(
             @PathVariable Long id,
@@ -111,7 +145,8 @@ public class AdminMissaoController {
                 id,
                 userDetails.getMotoristaId(),
                 request.dataHoraFim(),
-                request.justificativaEncerramento()
+                request.justificativaEncerramento(),
+                request.statusAdministrativoDestino()
         );
         return ResponseEntity.ok(response);
     }
@@ -126,8 +161,7 @@ public class AdminMissaoController {
                 id,
                 userDetails.getMotoristaId(),
                 request.dataHoraInicio(),
-                request.dataHoraFim(),
-                request.justificativa()
+                request.dataHoraFim()
         );
         return ResponseEntity.ok(response);
     }

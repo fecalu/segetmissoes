@@ -34,6 +34,12 @@ public class Motorista {
     private String cpf;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(nullable = false, length = 20)
     private Perfil perfil = Perfil.MOTORISTA;
+
+    @Column(nullable = false)
+    private boolean acessoHabilitado = true;
+
+    @Column(nullable = false)
+    private long versaoAcesso = 0;
 }

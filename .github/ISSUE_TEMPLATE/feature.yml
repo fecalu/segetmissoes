@@ -1,0 +1,39 @@
+name: Funcionalidade
+about: Propor uma nova funcionalidade ou melhoria de produto
+labels: enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este modelo para melhorias funcionais, novas telas ou mudancas de regra de negocio.
+  - type: input
+    id: objetivo
+    attributes:
+      label: Objetivo
+      placeholder: Ex. Permitir editar dados administrativos da missao
+    validations:
+      required: true
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto de negocio
+      description: Explique por que isso e importante para a SEGET ou para o usuario.
+    validations:
+      required: true
+  - type: textarea
+    id: regras
+    attributes:
+      label: Regras e criterios de aceite
+      placeholder: |
+        - Administrador consegue editar destino, setor e solicitante
+        - Motorista nao ve esses campos
+        - Alteracoes ficam auditadas
+    validations:
+      required: true
+  - type: textarea
+    id: observacoes
+    attributes:
+      label: Observacoes tecnicas
+      description: APIs, telas, entidades ou impactos conhecidos.
+    validations:
+      required: false
