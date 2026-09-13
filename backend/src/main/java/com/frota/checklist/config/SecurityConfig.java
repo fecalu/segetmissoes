@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/motoristas", "/api/admin/motoristas/*").hasAuthority("MOTORISTA_GERIR")
                         .requestMatchers(HttpMethod.GET, "/api/admin/configuracoes/rotulos-status-veiculo", "/api/admin/configuracoes/sugestoes-missao").hasAuthority("FROTA_CONSULTAR")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/configuracoes/rotulos-status-veiculo", "/api/admin/configuracoes/sugestoes-missao").hasAuthority("CONFIGURACAO_GERIR")
-                        .requestMatchers(HttpMethod.GET, "/api/admin/alocacoes", "/api/admin/alocacoes/*/historico", "/api/admin/alocacoes/vagas").hasAuthority("ALOCACAO_CONSULTAR")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/alocacoes", "/api/admin/alocacoes/*/historico", "/api/admin/alocacoes/vagas", "/api/admin/alocacoes/vagas/*/historico").hasAuthority("ALOCACAO_CONSULTAR")
                         .requestMatchers(HttpMethod.POST, "/api/admin/alocacoes", "/api/admin/alocacoes/vagas").hasAuthority("ALOCACAO_GERIR")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/alocacoes/*/dados", "/api/admin/alocacoes/vagas/*").hasAuthority("ALOCACAO_GERIR")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/alocacoes/*/veiculo", "/api/admin/alocacoes/*/responsavel", "/api/admin/alocacoes/*/encerrar", "/api/admin/alocacoes/vagas/*/desativar", "/api/admin/alocacoes/vagas/*/reativar").hasAuthority("ALOCACAO_GERIR")

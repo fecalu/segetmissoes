@@ -10,15 +10,18 @@ import com.frota.checklist.dto.TrocarResponsavelAlocacaoRequest;
 import com.frota.checklist.dto.TrocarVeiculoAlocacaoRequest;
 import com.frota.checklist.entity.AlocacaoVeiculo;
 import com.frota.checklist.entity.HistoricoAlocacaoVeiculo;
+import com.frota.checklist.entity.HistoricoVagaAdministrativa;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusVagaAdministrativa;
 import com.frota.checklist.entity.TipoEventoAlocacaoVeiculo;
+import com.frota.checklist.entity.TipoEventoVagaAdministrativa;
 import com.frota.checklist.entity.VagaAdministrativa;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.AlocacaoVeiculoRepository;
 import com.frota.checklist.repository.HistoricoAlocacaoVeiculoRepository;
+import com.frota.checklist.repository.HistoricoVagaAdministrativaRepository;
 import com.frota.checklist.repository.MotoristaRepository;
 import com.frota.checklist.repository.VagaAdministrativaRepository;
 import jakarta.transaction.Transactional;
@@ -38,6 +41,7 @@ public class AdminAlocacaoVeiculoService {
 
     private final AlocacaoVeiculoRepository alocacaoRepository;
     private final HistoricoAlocacaoVeiculoRepository historicoRepository;
+    private final HistoricoVagaAdministrativaRepository historicoVagaRepository;
     private final MotoristaRepository motoristaRepository;
     private final VagaAdministrativaRepository vagaRepository;
 
@@ -79,6 +83,12 @@ public class AdminAlocacaoVeiculoService {
 
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.CRIACAO,
                 null, placa, null, salva.getResponsavelNome(), null, salva.getLimiteAutorizado(), salva.getObservacao());
+        if (request.vagaAdministrativaId() == null) {
+            registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.CRIACAO,
+                    null, null, null, null, null, resumoDados(salva), "Vaga administrativa criada junto com a alocação.");
+        }
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                null, placa, null, salva.getResponsavelNome(), null, resumoDados(salva), salva.getObservacao());
         return toResponse(salva);
     }
 
@@ -101,6 +111,8 @@ public class AdminAlocacaoVeiculoService {
             registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.ATUALIZACAO_DADOS,
                     salva.getPlaca(), salva.getPlaca(), null, null, limiteAnterior, salva.getLimiteAutorizado(),
                     "Dados atualizados v2: " + antes + " -> " + depois);
+            registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.ATUALIZACAO_DADOS,
+                    null, null, null, null, antes, depois, "Dados administrativos da vaga atualizados.");
         }
         return toResponse(salva);
     }
@@ -124,6 +136,8 @@ public class AdminAlocacaoVeiculoService {
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.TROCA_VEICULO,
                 anterior, novaPlaca, null, null, null, null, obrigatorio(request.motivo()));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                anterior, novaPlaca, null, salva.getResponsavelNome(), null, null, obrigatorio(request.motivo()));
         return toResponse(salva);
     }
 
@@ -141,6 +155,8 @@ public class AdminAlocacaoVeiculoService {
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.TROCA_RESPONSAVEL,
                 null, null, anterior, novoResponsavel, null, null, obrigatorio(request.motivo()));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                salva.getPlaca(), salva.getPlaca(), anterior, novoResponsavel, null, null, obrigatorio(request.motivo()));
         return toResponse(salva);
     }
 
@@ -154,6 +170,8 @@ public class AdminAlocacaoVeiculoService {
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.ENCERRAMENTO,
                 salva.getPlaca(), null, salva.getResponsavelNome(), null, salva.getLimiteAutorizado(), null, obrigatorio(motivo));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.LIBERACAO,
+                salva.getPlaca(), null, salva.getResponsavelNome(), null, resumoDados(salva), null, obrigatorio(motivo));
         return toResponse(salva);
     }
 
@@ -188,6 +206,28 @@ public class AdminAlocacaoVeiculoService {
         evento.setObservacao(opcional(observacao));
         evento.setDataHora(LocalDateTime.now());
         historicoRepository.save(evento);
+    }
+
+    private void registrarHistoricoVaga(VagaAdministrativa vaga, Motorista administrador, TipoEventoVagaAdministrativa tipo,
+                                        String placaAnterior, String placaNova, String responsavelAnterior,
+                                        String responsavelNovo, String dadosAnteriores, String dadosNovos,
+                                        String observacao) {
+        if (vaga == null) {
+            return;
+        }
+        HistoricoVagaAdministrativa evento = new HistoricoVagaAdministrativa();
+        evento.setVagaAdministrativa(vaga);
+        evento.setAdministrador(administrador);
+        evento.setTipo(tipo);
+        evento.setPlacaAnterior(placaAnterior);
+        evento.setPlacaNova(placaNova);
+        evento.setResponsavelAnterior(responsavelAnterior);
+        evento.setResponsavelNovo(responsavelNovo);
+        evento.setDadosAnteriores(dadosAnteriores);
+        evento.setDadosNovos(dadosNovos);
+        evento.setObservacao(opcional(observacao));
+        evento.setDataHora(LocalDateTime.now());
+        historicoVagaRepository.save(evento);
     }
 
     private AlocacaoVeiculo buscarAtiva(Long id) {

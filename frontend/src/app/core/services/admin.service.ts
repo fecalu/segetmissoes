@@ -24,6 +24,7 @@ import {
   CriarAlocacaoVeiculoPayload,
   CriarVagaAdministrativaPayload,
   HistoricoAlocacaoVeiculo,
+  HistoricoVagaAdministrativa,
   VagaAdministrativa
 } from '../models/alocacao-veiculo.model';
 import { environment } from '../../../environments/environment';
@@ -414,6 +415,10 @@ export class AdminService {
 
   listarHistoricoAlocacao(id: number): Observable<HistoricoAlocacaoVeiculo[]> {
     return this.http.get<HistoricoAlocacaoVeiculo[]>(`${this.alocacaoUrl}/${id}/historico`);
+  }
+
+  listarHistoricoVagaAdministrativa(id: number): Observable<HistoricoVagaAdministrativa[]> {
+    return this.http.get<HistoricoVagaAdministrativa[]>(`${this.vagaAdministrativaUrl}/${id}/historico`);
   }
 
   listarVagasAdministrativas(busca?: string, incluirDesativadas = false): Observable<VagaAdministrativa[]> {

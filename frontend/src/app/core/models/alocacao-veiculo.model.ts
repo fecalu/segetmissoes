@@ -6,6 +6,14 @@ export type TipoEventoAlocacaoVeiculo =
   | 'ATUALIZACAO_DADOS'
   | 'ENCERRAMENTO';
 
+export type TipoEventoVagaAdministrativa =
+  | 'CRIACAO'
+  | 'ATUALIZACAO_DADOS'
+  | 'OCUPACAO'
+  | 'LIBERACAO'
+  | 'DESATIVACAO'
+  | 'REATIVACAO';
+
 export interface AlocacaoVeiculo {
   id: number;
   numeroControle: number;
@@ -56,6 +64,20 @@ export interface HistoricoAlocacaoVeiculo {
   responsavelNovo: string | null;
   limiteAnterior: string | null;
   limiteNovo: string | null;
+  observacao: string | null;
+  dataHora: string;
+  administradorNome: string;
+}
+
+export interface HistoricoVagaAdministrativa {
+  id: number;
+  tipo: TipoEventoVagaAdministrativa;
+  placaAnterior: string | null;
+  placaNova: string | null;
+  responsavelAnterior: string | null;
+  responsavelNovo: string | null;
+  dadosAnteriores: string | null;
+  dadosNovos: string | null;
   observacao: string | null;
   dataHora: string;
   administradorNome: string;

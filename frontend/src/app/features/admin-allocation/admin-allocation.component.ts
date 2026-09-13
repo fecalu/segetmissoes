@@ -11,13 +11,15 @@ import {
   CriarAlocacaoVeiculoPayload,
   CriarVagaAdministrativaPayload,
   HistoricoAlocacaoVeiculo,
+  HistoricoVagaAdministrativa,
   TipoEventoAlocacaoVeiculo,
+  TipoEventoVagaAdministrativa,
   VagaAdministrativa
 } from '../../core/models/alocacao-veiculo.model';
 import { AdminService } from '../../core/services/admin.service';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
 
-type EditorMode = 'CRIAR_VAGA' | 'EDITAR_VAGA' | 'OCUPAR_VAGA' | 'DADOS' | 'VEICULO' | 'RESPONSAVEL' | 'ENCERRAR' | 'HISTORICO' | null;
+type EditorMode = 'CRIAR_VAGA' | 'EDITAR_VAGA' | 'OCUPAR_VAGA' | 'DADOS' | 'VEICULO' | 'RESPONSAVEL' | 'ENCERRAR' | 'HISTORICO' | 'HISTORICO_VAGA' | null;
 
 interface GrupoVaga {
   orgao: string;
@@ -40,6 +42,7 @@ export class AdminAllocationComponent implements OnInit {
   alocacoes: AlocacaoVeiculo[] = [];
   vagas: VagaAdministrativa[] = [];
   historico: HistoricoAlocacaoVeiculo[] = [];
+  historicoVaga: HistoricoVagaAdministrativa[] = [];
   busca = '';
   mostrarDesativadas = false;
   carregando = false;
@@ -215,6 +218,17 @@ export class AdminAllocationComponent implements OnInit {
     });
   }
 
+  abrirHistoricoVaga(vaga: VagaAdministrativa): void {
+    this.selected = this.alocacaoDaVaga(vaga);
+    this.selectedVaga = vaga;
+    this.historicoVaga = [];
+    this.editorMode = 'HISTORICO_VAGA';
+    this.adminService.listarHistoricoVagaAdministrativa(vaga.id).subscribe({
+      next: historico => this.historicoVaga = historico,
+      error: () => this.mensagem('Não foi possível carregar o histórico desta vaga.')
+    });
+  }
+
   abrirLinkConsulta(link: string): void {
     window.open(link, '_blank', 'noopener');
   }
@@ -323,12 +337,17 @@ export class AdminAllocationComponent implements OnInit {
   labelEvento(tipo: TipoEventoAlocacaoVeiculo): string {
     return { IMPORTACAO_INICIAL: 'Importação inicial', CRIACAO: 'Alocação criada', TROCA_VEICULO: 'Veículo trocado', TROCA_RESPONSAVEL: 'Responsável trocado', ATUALIZACAO_DADOS: 'Dados atualizados', ENCERRAMENTO: 'Alocação encerrada' }[tipo];
   }
+  labelEventoVaga(tipo: TipoEventoVagaAdministrativa): string {
+    return { CRIACAO: 'Vaga criada', ATUALIZACAO_DADOS: 'Dados da vaga atualizados', OCUPACAO: 'Vaga ocupada', LIBERACAO: 'Vaga liberada', DESATIVACAO: 'Vaga desativada', REATIVACAO: 'Vaga reativada' }[tipo];
+  }
   formatarData(value: string): string { return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
   resumoAntes(evento: HistoricoAlocacaoVeiculo): string { return this.resumoEvento(evento, 'ANTES'); }
   resumoDepois(evento: HistoricoAlocacaoVeiculo): string { return this.resumoEvento(evento, 'DEPOIS'); }
   observacaoEvento(evento: HistoricoAlocacaoVeiculo): string {
     return this.dadosAdministrativosEvento(evento) ? 'Dados administrativos atualizados.' : evento.observacao || '—';
   }
+  resumoVagaAntes(evento: HistoricoVagaAdministrativa): string { return this.resumoEventoVaga(evento, 'ANTES'); }
+  resumoVagaDepois(evento: HistoricoVagaAdministrativa): string { return this.resumoEventoVaga(evento, 'DEPOIS'); }
 
   private executar(requisicao: () => ReturnType<AdminService['encerrarAlocacao']>, sucesso: string): void {
     this.salvando = true;
@@ -377,5 +396,25 @@ export class AdminAllocationComponent implements OnInit {
       const campo = campos[indice]?.trim();
       return !campo || campo.toLowerCase() === 'null' ? 'Não informado' : campo;
     });
+  }
+
+  private resumoEventoVaga(evento: HistoricoVagaAdministrativa, lado: 'ANTES' | 'DEPOIS'): string {
+    const dados = lado === 'ANTES' ? evento.dadosAnteriores : evento.dadosNovos;
+    const placa = lado === 'ANTES' ? evento.placaAnterior : evento.placaNova;
+    const responsavel = lado === 'ANTES' ? evento.responsavelAnterior : evento.responsavelNovo;
+    const linhas = [
+      placa ? `Veículo: ${placa}` : '',
+      responsavel ? `Responsável: ${responsavel}` : '',
+      dados ? this.formatarDadosVaga(dados) : ''
+    ].filter(Boolean);
+    return linhas.join('\n') || '—';
+  }
+
+  private formatarDadosVaga(valor: string): string {
+    const campos = this.camposAdministrativos(valor, 6);
+    const rotulos = ['Órgão', 'Setor', 'Limite', 'Documento', 'Observação', 'Status'];
+    return campos
+      .map((campo, indice) => `${rotulos[indice]}: ${campo}`)
+      .join('\n');
   }
 }

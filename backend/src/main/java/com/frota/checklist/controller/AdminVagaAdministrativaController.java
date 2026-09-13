@@ -2,12 +2,15 @@ package com.frota.checklist.controller;
 
 import com.frota.checklist.dto.AtualizarVagaAdministrativaRequest;
 import com.frota.checklist.dto.CriarVagaAdministrativaRequest;
+import com.frota.checklist.dto.HistoricoVagaAdministrativaResponse;
 import com.frota.checklist.dto.VagaAdministrativaResponse;
+import com.frota.checklist.security.CustomUserDetails;
 import com.frota.checklist.service.AdminVagaAdministrativaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,26 +38,41 @@ public class AdminVagaAdministrativaController {
         return ResponseEntity.ok(vagaService.listar(busca, incluirDesativadas));
     }
 
+    @GetMapping("/{id}/historico")
+    public ResponseEntity<List<HistoricoVagaAdministrativaResponse>> historico(@PathVariable Long id) {
+        return ResponseEntity.ok(vagaService.listarHistorico(id));
+    }
+
     @PostMapping
-    public ResponseEntity<VagaAdministrativaResponse> criar(@Valid @RequestBody CriarVagaAdministrativaRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(vagaService.criar(request));
+    public ResponseEntity<VagaAdministrativaResponse> criar(
+            @Valid @RequestBody CriarVagaAdministrativaRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(vagaService.criar(request, userDetails.getMotoristaId()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<VagaAdministrativaResponse> atualizar(
             @PathVariable Long id,
-            @Valid @RequestBody AtualizarVagaAdministrativaRequest request
+            @Valid @RequestBody AtualizarVagaAdministrativaRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(vagaService.atualizar(id, request));
+        return ResponseEntity.ok(vagaService.atualizar(id, request, userDetails.getMotoristaId()));
     }
 
     @PatchMapping("/{id}/desativar")
-    public ResponseEntity<VagaAdministrativaResponse> desativar(@PathVariable Long id) {
-        return ResponseEntity.ok(vagaService.desativar(id));
+    public ResponseEntity<VagaAdministrativaResponse> desativar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(vagaService.desativar(id, userDetails.getMotoristaId()));
     }
 
     @PatchMapping("/{id}/reativar")
-    public ResponseEntity<VagaAdministrativaResponse> reativar(@PathVariable Long id) {
-        return ResponseEntity.ok(vagaService.reativar(id));
+    public ResponseEntity<VagaAdministrativaResponse> reativar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(vagaService.reativar(id, userDetails.getMotoristaId()));
     }
 }

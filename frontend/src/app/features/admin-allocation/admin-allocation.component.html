@@ -6,7 +6,6 @@
       <p class="page-description">Controle separado entre vagas autorizadas e veículos atualmente ocupando cada vaga.</p>
     </div>
     <div class="header-actions" *ngIf="auth.can('ALOCACAO_GERIR')">
-      <button mat-flat-button class="secondary-action" type="button" (click)="abrirCriacao()"><app-icon name="plus" /> Alocação nova</button>
       <button mat-flat-button class="primary-action" type="button" (click)="abrirCriacaoVaga()"><app-icon name="plus" /> Nova vaga</button>
     </div>
   </header>
@@ -61,8 +60,8 @@
           <td>{{ vaga.documentoReferencia || '—' }}</td>
           <td class="observation">{{ vaga.observacao || '—' }}</td>
           <td class="actions">
+            <button type="button" title="Ver histórico da vaga" aria-label="Ver histórico da vaga" (click)="abrirHistoricoVaga(vaga)"><app-icon name="history" /></button>
             <ng-container *ngIf="alocacaoDaVaga(vaga) as alocacao">
-              <button type="button" title="Ver histórico" aria-label="Ver histórico" (click)="abrirHistorico(alocacao)"><app-icon name="history" /></button>
               <button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Editar dados" (click)="abrirDados(alocacao)">Editar</button>
               <button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar veículo" (click)="abrirTrocaVeiculo(alocacao)">Veículo</button>
               <button *ngIf="auth.can('ALOCACAO_GERIR')" type="button" title="Trocar responsável" (click)="abrirTrocaResponsavel(alocacao)">Responsável</button>
@@ -150,6 +149,13 @@
       <p class="eyebrow">VAGA {{ selected?.numeroControle }}</p><h2>Histórico da ocupação</h2>
       <p class="history-empty" *ngIf="!historico.length">Carregando histórico...</p>
       <div class="history-table-wrap" *ngIf="historico.length"><table class="history-table"><thead><tr><th>Data e hora</th><th>Evento</th><th>Antes</th><th>Depois</th><th>Motivo / observação</th><th>Alterado por</th></tr></thead><tbody><tr *ngFor="let evento of historico"><td>{{ formatarData(evento.dataHora) }}</td><td><strong>{{ labelEvento(evento.tipo) }}</strong></td><td class="change-cell">{{ resumoAntes(evento) }}</td><td class="change-cell">{{ resumoDepois(evento) }}</td><td>{{ observacaoEvento(evento) }}</td><td>{{ evento.administradorNome }}</td></tr></tbody></table></div>
+    </ng-container>
+
+    <ng-container *ngIf="editorMode === 'HISTORICO_VAGA'">
+      <p class="eyebrow">VAGA {{ selectedVaga?.numeroControle }}</p><h2>Histórico da vaga</h2>
+      <p>Mostra a vida administrativa da vaga, mesmo quando ela está livre.</p>
+      <p class="history-empty" *ngIf="!historicoVaga.length">Carregando histórico...</p>
+      <div class="history-table-wrap" *ngIf="historicoVaga.length"><table class="history-table"><thead><tr><th>Data e hora</th><th>Evento</th><th>Antes</th><th>Depois</th><th>Motivo / observação</th><th>Alterado por</th></tr></thead><tbody><tr *ngFor="let evento of historicoVaga"><td>{{ formatarData(evento.dataHora) }}</td><td><strong>{{ labelEventoVaga(evento.tipo) }}</strong></td><td class="change-cell">{{ resumoVagaAntes(evento) }}</td><td class="change-cell">{{ resumoVagaDepois(evento) }}</td><td>{{ evento.observacao || '—' }}</td><td>{{ evento.administradorNome }}</td></tr></tbody></table></div>
     </ng-container>
   </section>
 </div>
