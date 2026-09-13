@@ -846,6 +846,13 @@
   background: #eaf0ff;
 }
 
+.history-mode-helper {
+  margin: -2px 0 2px;
+  color: #5b698b;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .history-filter-actions {
   display: flex;
   flex-wrap: wrap;

@@ -96,7 +96,7 @@ export class AdminLayoutComponent {
       this.navigation.find(item => item.menu === this.currentMenu || item.children?.some(child => child.menu === this.currentMenu)) || this.navigation[0];
     this.activeId = item.id;
     this.expandedGroup = item.children ? item.id : '';
-    this.pageLabel = reportPage ? (path.includes('usuarios') ? 'Usuários e acessos' : path.includes('auditoria-acessos') ? 'Auditoria de acessos' : path.includes('alocacoes') ? 'Controle de alocações' : path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
+    this.pageLabel = reportPage ? (path.includes('usuarios') ? 'Usuários e acessos' : path.includes('auditoria-acessos') ? 'Auditoria de acessos' : path.includes('alocacoes') ? 'Alocações administrativas' : path.includes('estatisticas') ? 'Estatísticas de missões' : path.includes('checklists/relatorio') ? 'Relatório de checklists' : 'Relatórios') :
       item.children?.find(child => child.menu === this.currentMenu)?.label || item.label;
   }
 }

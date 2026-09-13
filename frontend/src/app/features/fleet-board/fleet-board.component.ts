@@ -44,7 +44,7 @@ export class FleetBoardComponent {
   @Output() editMission = new EventEmitter<MissaoResponse>();
   @Output() finishMission = new EventEmitter<MissaoResponse>();
   @Output() createMission = new EventEmitter<void>();
-  @Output() exportDailyReport = new EventEmitter<void>();
+  @Output() printDailyReport = new EventEmitter<void>();
   search = '';
   movingVehicleId: number | null = null;
   locationVehicleId: number | null = null;

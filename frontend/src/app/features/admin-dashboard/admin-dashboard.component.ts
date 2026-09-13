@@ -327,32 +327,32 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { termo: '-', descricao: 'Campo ainda nao informado ou nao aplicavel para aquela missao.' }
   ];
   readonly glossarioChecklistsBadges: GlossarioBadgeItem[] = [
-    { termo: 'COM CHECKLIST', descricao: 'Registro com checklist fotografico enviado pelo motorista.', exemplo: 'Ex.: saida ou chegada com fotos anexadas.', classe: 'status-circulando' },
-    { termo: 'SEM CHECKLIST', descricao: 'Registro sem checklist fotografico. Pode ser saida ou chegada regularizada sem fotos.', exemplo: 'Ex.: saida sem checklist por excecao operacional.', classe: 'status-oficina' },
-    { termo: 'REGULARIZADA', descricao: 'Registro concluido normalmente ou ja regularizado.', exemplo: 'Ex.: checklist enviado ou excecao ja fechada.', classe: 'status-base_joao_goulart' },
-    { termo: 'PENDENTE', descricao: 'Registro sem checklist ainda aguardando regularizacao.', exemplo: 'Ex.: saida sem checklist ainda em aberto.', classe: 'status-documental-pendente' },
-    { termo: 'ATRASADA', descricao: 'Registro sem checklist passou do prazo esperado de regularizacao.', exemplo: 'Ex.: saida sem checklist ainda aberta apos o prazo.', classe: 'status-bloqueado' },
-    { termo: 'SEM FOTOS', descricao: 'Registro nao possui fotos anexadas.', exemplo: 'Ex.: evento sem checklist ou checklist salvo sem imagens.', classe: 'status-no_patio' }
+    { termo: 'COM CHECKLIST', descricao: 'Registro enviado com checklist fotográfico.', exemplo: 'Ex.: saída ou chegada com fotos anexadas.', classe: 'status-circulando' },
+    { termo: 'SEM CHECKLIST', descricao: 'Registro feito sem checklist fotográfico.', exemplo: 'Ex.: saída ou chegada registrada por exceção operacional.', classe: 'status-oficina' },
+    { termo: 'REGULARIZADA', descricao: 'Registro concluído normalmente ou exceção já resolvida.', exemplo: 'Ex.: checklist enviado ou exceção fechada.', classe: 'status-base_joao_goulart' },
+    { termo: 'PENDENTE', descricao: 'Registro sem checklist ainda aguardando regularização.', exemplo: 'Ex.: saída sem checklist ainda em aberto.', classe: 'status-documental-pendente' },
+    { termo: 'ATRASADA', descricao: 'Registro sem checklist passou do prazo esperado de regularização.', exemplo: 'Ex.: saída sem checklist ainda aberta após o prazo.', classe: 'status-bloqueado' },
+    { termo: 'SEM FOTOS', descricao: 'Registro não possui fotos anexadas.', exemplo: 'Ex.: exceção sem checklist ou checklist salvo sem imagens.', classe: 'status-no_patio' }
   ];
   readonly glossarioChecklistsCampos: GlossarioItem[] = [
-    { termo: 'SAIDA | CHEGADA', descricao: 'Tipo do registro operacional.' },
+    { termo: 'SAÍDA | CHEGADA', descricao: 'Tipo do registro operacional.' },
     { termo: 'Resumo', descricao: 'Explica rapidamente o que aconteceu naquele registro.' },
-    { termo: 'Fotos', descricao: 'Abre as imagens quando o registro possui checklist fotografico.' },
-    { termo: 'Sem fotos', descricao: 'Aparece quando o registro nao tem nenhuma imagem vinculada.' }
+    { termo: 'Fotos', descricao: 'Abre as imagens quando o registro possui checklist fotográfico.' },
+    { termo: 'Sem fotos', descricao: 'Aparece quando o registro não tem nenhuma imagem vinculada.' }
   ];
   readonly glossarioVistoriasBadges: GlossarioBadgeItem[] = [
-    { termo: 'SAIDA', descricao: 'Vistoria registrada antes da entrega do veiculo para uso externo.', exemplo: 'Ex.: envio para oficina, locadora ou outra secretaria.', classe: 'status-circulando' },
-    { termo: 'CHEGADA', descricao: 'Vistoria registrada no retorno do veiculo de uso externo.', exemplo: 'Ex.: veiculo voltou da oficina e foi recebido pelo transporte.', classe: 'status-no_patio' },
-    { termo: 'APROVADO', descricao: 'Veiculo retornou ou saiu sem impedimento apontado na vistoria.', exemplo: 'Ex.: fotos e itens sem problema relevante.', classe: 'status-base_joao_goulart' },
-    { termo: 'COM RESSALVA', descricao: 'Veiculo pode seguir, mas houve observacao ou avaria registrada.', exemplo: 'Ex.: pequeno risco ja existente, sem impedir o uso.', classe: 'status-oficina' },
-    { termo: 'REPROVADO', descricao: 'A vistoria identificou problema que impede a liberacao normal.', exemplo: 'Ex.: item obrigatorio faltando ou avaria relevante.', classe: 'status-bloqueado' },
-    { termo: 'EM USO EXTERNO', descricao: 'Depois da vistoria completa de saida, o veiculo fica marcado como entregue para uso fora do setor.', exemplo: 'Ex.: carro entregue para oficina, locadora ou outra secretaria.', classe: 'status-em_uso_externo' },
-    { termo: 'AGUARDANDO REALOCACAO', descricao: 'Depois da vistoria completa de chegada, o veiculo volta e aguarda definicao do transporte.', exemplo: 'Ex.: veiculo recebido de volta e aguardando novo destino interno.', classe: 'status-aguardando_realocacao' }
+    { termo: 'ENTREGA', descricao: 'Vistoria registrada antes de entregar o veículo para uso externo.', exemplo: 'Ex.: envio para oficina, locadora ou outra secretaria.', classe: 'status-circulando' },
+    { termo: 'RECEBIMENTO', descricao: 'Vistoria registrada quando o veículo retorna do uso externo.', exemplo: 'Ex.: veículo voltou da oficina e foi recebido pelo transporte.', classe: 'status-no_patio' },
+    { termo: 'APROVADO', descricao: 'Veículo retornou ou saiu sem impedimento apontado na vistoria.', exemplo: 'Ex.: fotos e itens sem problema relevante.', classe: 'status-base_joao_goulart' },
+    { termo: 'COM RESSALVA', descricao: 'Veículo pode seguir, mas houve observação ou avaria registrada.', exemplo: 'Ex.: pequeno risco já existente, sem impedir o uso.', classe: 'status-oficina' },
+    { termo: 'REPROVADO', descricao: 'A vistoria identificou problema que impede a liberação normal.', exemplo: 'Ex.: item obrigatório faltando ou avaria relevante.', classe: 'status-bloqueado' },
+    { termo: 'EM USO EXTERNO', descricao: 'Depois da vistoria de entrega, o veículo fica marcado como entregue para uso fora do setor.', exemplo: 'Ex.: carro entregue para oficina, locadora ou outra secretaria.', classe: 'status-em_uso_externo' },
+    { termo: 'AGUARDANDO REALOCAÇÃO', descricao: 'Depois da vistoria de recebimento, o veículo volta e aguarda definição do transporte.', exemplo: 'Ex.: veículo recebido de volta e aguardando novo destino interno.', classe: 'status-aguardando_realocacao' }
   ];
   readonly glossarioVistoriasCampos: GlossarioItem[] = [
     { termo: 'Quilometragem', descricao: 'Quilometragem informada no momento da vistoria.' },
-    { termo: 'Localizacao', descricao: 'Posicao capturada pelo celular, quando disponivel.' },
-    { termo: 'Itens faltando', descricao: 'Quantidade de itens obrigatorios marcados como faltando.' },
+    { termo: 'Localização', descricao: 'Posição capturada pelo celular, quando disponível.' },
+    { termo: 'Itens faltando', descricao: 'Quantidade de itens obrigatórios marcados como faltando.' },
     { termo: 'Avarias', descricao: 'Quantidade de avarias registradas na vistoria.' },
     { termo: 'Ver detalhes', descricao: 'Abre itens, avarias e fotos completas daquela vistoria.' }
   ];
@@ -667,9 +667,39 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return tag === 'input' || tag === 'textarea' || tag === 'select' || active.getAttribute('contenteditable') === 'true';
   }
 
-  exportarRelatorioMapaDiario(): void {
-    this.dataRelatorioMissoes = this.dataMapaDiario;
-    this.exportarRelatorioMissoesPdf();
+  imprimirRelatorioMapaDiario(): void {
+    if (!this.dataMapaDiario) {
+      this.snackBar.open('Selecione a data do mapa diário.', 'Fechar', { duration: 2500 });
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.snackBar.open('O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o mapa.', 'Fechar', { duration: 4200 });
+      return;
+    }
+
+    printWindow.document.write('<p style="font-family: Arial, sans-serif;">Gerando mapa diário para impressão...</p>');
+    printWindow.document.close();
+
+    this.gerandoRelatorioMissoes = true;
+    this.adminService.gerarRelatorioMissoesPdf(this.dataMapaDiario)
+      .pipe(finalize(() => (this.gerandoRelatorioMissoes = false)))
+      .subscribe({
+        next: blob => {
+          const url = URL.createObjectURL(blob);
+          printWindow.location.href = url;
+          setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          }, 1200);
+        },
+        error: () => {
+          printWindow.close();
+          this.snackBar.open('Falha ao gerar mapa diário para impressão.', 'Fechar', { duration: 3200 });
+        }
+      });
   }
 
   get colunasOperacao(): FleetColumn[] {
@@ -2394,6 +2424,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return value === 'ENTRADA' ? 'CHEGADA' : 'SAIDA';
   }
 
+  tipoOperacaoVistoriaLabel(value: string): string {
+    return value === 'ENTRADA' ? 'RECEBIMENTO' : 'ENTREGA';
+  }
+
   origemConsultaLabel(origem: OrigemConsultaChecklist): string {
     return origem === 'CHECKLIST' ? 'COM CHECKLIST' : 'SEM CHECKLIST';
   }
@@ -2684,7 +2718,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => (this.loadingAuditoriaMissao = false)))
       .subscribe({
         next: data => (this.auditoriaMissao = data),
-        error: () => this.snackBar.open('Falha ao carregar o historico da missao.', 'Fechar', { duration: 2800 })
+        error: () => this.snackBar.open('Falha ao carregar a auditoria da missão.', 'Fechar', { duration: 2800 })
       });
   }
 
