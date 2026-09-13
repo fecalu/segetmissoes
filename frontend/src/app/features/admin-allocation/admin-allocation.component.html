@@ -102,17 +102,38 @@
       <p class="eyebrow">{{ selectedVaga ? 'VAGA ' + selectedVaga.numeroControle : 'NOVA ALOCAÇÃO' }}</p>
       <h2>{{ editorMode === 'OCUPAR_VAGA' ? 'Ocupar vaga com veículo' : 'Atualizar dados da alocação' }}</h2>
       <p>{{ selectedVaga ? 'Informe o veículo e o responsável que passarão a ocupar esta vaga.' : 'Sem vaga escolhida, o sistema criará uma nova vaga junto com a alocação.' }}</p>
+      <section class="slot-summary" *ngIf="editorMode === 'OCUPAR_VAGA' && selectedVaga">
+        <div>
+          <span>Órgão / setor</span>
+          <strong>{{ selectedVaga.secretariaOrgao }} / {{ selectedVaga.setor }}</strong>
+        </div>
+        <div>
+          <span>Limite</span>
+          <strong>{{ selectedVaga.limiteAutorizado }}</strong>
+        </div>
+        <div>
+          <span>Documento</span>
+          <strong>{{ selectedVaga.documentoReferencia || 'Não informado' }}</strong>
+        </div>
+        <div>
+          <span>Observação da vaga</span>
+          <strong>{{ selectedVaga.observacao || 'Não informado' }}</strong>
+        </div>
+        <button type="button" *ngIf="auth.can('ALOCACAO_GERIR')" (click)="abrirEdicaoVaga(selectedVaga)">Editar dados da vaga</button>
+      </section>
       <form [formGroup]="alocacaoForm" (ngSubmit)="salvarAlocacao()" class="editor-form">
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Placa <input formControlName="placa" placeholder="Ex.: ABC1D23" /></label>
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Modelo <input formControlName="modelo" placeholder="Ex.: S10 LS" /></label>
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Marca <input formControlName="marca" placeholder="Opcional" /></label>
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Responsável atual <input formControlName="responsavelNome" placeholder="Nome do motorista responsável" /></label>
-        <label>Secretaria / órgão <input formControlName="secretariaOrgao" [readonly]="!!selectedVaga && editorMode === 'OCUPAR_VAGA'" /></label>
-        <label>Setor <input formControlName="setor" [readonly]="!!selectedVaga && editorMode === 'OCUPAR_VAGA'" /></label>
-        <label>Limite autorizado <input formControlName="limiteAutorizado" [readonly]="!!selectedVaga && editorMode === 'OCUPAR_VAGA'" /></label>
-        <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" [readonly]="!!selectedVaga && editorMode === 'OCUPAR_VAGA'" /></label>
+        <ng-container *ngIf="editorMode !== 'OCUPAR_VAGA' || !selectedVaga">
+          <label>Secretaria / órgão <input formControlName="secretariaOrgao" /></label>
+          <label>Setor <input formControlName="setor" /></label>
+          <label>Limite autorizado <input formControlName="limiteAutorizado" /></label>
+          <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
+        </ng-container>
         <label class="full">Link de consulta da placa <input type="text" inputmode="url" formControlName="linkConsulta" placeholder="https://... ou www.exemplo.com" /><small>Opcional. Quando informado, a placa abrirá este endereço em uma nova aba.</small></label>
-        <label class="full">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional" [readonly]="!!selectedVaga && editorMode === 'OCUPAR_VAGA'"></textarea></label>
+        <label class="full" *ngIf="editorMode !== 'OCUPAR_VAGA' || !selectedVaga">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional"></textarea></label>
         <button mat-flat-button class="primary-action full" [disabled]="salvando" type="submit">{{ salvando ? 'Salvando...' : (editorMode === 'OCUPAR_VAGA' ? 'Ocupar vaga' : 'Salvar dados') }}</button>
       </form>
     </ng-container>
