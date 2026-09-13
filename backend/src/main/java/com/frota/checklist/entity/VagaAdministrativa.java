@@ -2,12 +2,11 @@ package com.frota.checklist.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,31 +16,15 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "controle_alocacoes")
-public class AlocacaoVeiculo {
+@Table(name = "controle_vagas_administrativas")
+public class VagaAdministrativa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vaga_administrativa_id")
-    private VagaAdministrativa vagaAdministrativa;
-
     @Column(nullable = false, unique = true)
     private Integer numeroControle;
-
-    @Column(nullable = false, length = 10)
-    private String placa;
-
-    @Column(nullable = false, length = 180)
-    private String modelo;
-
-    @Column(length = 120)
-    private String marca;
-
-    @Column(nullable = false, length = 160)
-    private String responsavelNome;
 
     @Column(nullable = false, length = 160)
     private String secretariaOrgao;
@@ -56,13 +39,11 @@ public class AlocacaoVeiculo {
     private String documentoReferencia;
 
     @Column(length = 500)
-    private String linkConsulta;
-
-    @Column(length = 500)
     private String observacao;
 
-    @Column(nullable = false)
-    private Boolean ativa = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusVagaAdministrativa status = StatusVagaAdministrativa.LIVRE;
 
     @Column(nullable = false)
     private LocalDateTime criadaEm;
