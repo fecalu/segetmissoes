@@ -17,7 +17,7 @@
 
   <ng-container *ngIf="activeView === 'PAINEL'; else dailyMap">
   <div class="board-toolbar">
-    <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>Use o menu do cartão para registrar uma alteração. Arrastar o cartão é apenas um atalho.</p></div>
+    <div><h2>Veículos por situação <span class="total-count" *ngIf="updatedAt">{{ total }}</span></h2><p>{{ readOnly ? 'Consulta da situação atual da frota.' : 'Use o menu do cartão para registrar uma alteração. Arrastar o cartão é apenas um atalho.' }}</p></div>
     <label class="search-field"><app-icon name="search" /><input type="search" aria-label="Buscar veículo por placa, modelo ou motorista" placeholder="Placa, modelo ou motorista" [(ngModel)]="search"><button type="button" class="clear-search" *ngIf="search" aria-label="Limpar busca" (click)="search = ''"><app-icon name="close" /></button></label>
   </div>
   <p class="search-result" *ngIf="search" role="status">{{ matches }} {{ matches === 1 ? 'veículo encontrado' : 'veículos encontrados' }}. Os totais acima consideram toda a frota.</p>
@@ -30,14 +30,14 @@
       </header>
       <p class="column-description">{{ column.description }}</p>
       <div class="column-dropzone" cdkDropList [id]="column.id" [cdkDropListData]="visibleCards(column)" [cdkDropListConnectedTo]="ids" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="move.emit({ event: $event, category: column.id })">
-        <article class="fleet-vehicle" *ngFor="let card of visibleCards(column); trackBy: trackCard" cdkDrag [cdkDragData]="card.vehicle" [cdkDragDisabled]="loading || vehicleError || !card.allowedDestinations.length" [cdkDragStartDelay]="{touch: 300, mouse: 0}" (cdkDragStarted)="dragging.emit(true)" (cdkDragEnded)="dragging.emit(false)">
+        <article class="fleet-vehicle" *ngFor="let card of visibleCards(column); trackBy: trackCard" cdkDrag [cdkDragData]="card.vehicle" [cdkDragDisabled]="readOnly || loading || vehicleError || !card.allowedDestinations.length" [cdkDragStartDelay]="{touch: 300, mouse: 0}" (cdkDragStarted)="dragging.emit(true)" (cdkDragEnded)="dragging.emit(false)">
           <div class="vehicle-topline">
             <strong class="plate">{{ card.vehicle.placa }}</strong>
             <div class="vehicle-top-actions">
-              <button type="button" class="vehicle-settings-button" [attr.aria-label]="'Opções de ' + card.vehicle.placa" [attr.aria-expanded]="movingVehicleId === card.vehicle.id" title="Opções do veículo" (click)="toggleMove(card.vehicle.id)"><app-icon name="menu" /></button>
+              <button type="button" class="vehicle-settings-button" *ngIf="!readOnly" [attr.aria-label]="'Opções de ' + card.vehicle.placa" [attr.aria-expanded]="movingVehicleId === card.vehicle.id" title="Opções do veículo" (click)="toggleMove(card.vehicle.id)"><app-icon name="menu" /></button>
             </div>
           </div>
-          <p class="model">{{ card.vehicle.marca }} {{ card.vehicle.modelo }}</p>
+          <p class="model">{{ vehicleModel(card.vehicle) }}</p>
           <span class="vehicle-status" *ngIf="column.id !== 'DISPONIVEL'" [attr.data-status]="card.vehicle.statusAtual">{{ card.statusLabel }}</span>
           <div class="operational-location" *ngIf="column.id === 'DISPONIVEL'">
             <button
@@ -48,7 +48,7 @@
               [attr.aria-expanded]="locationVehicleId === card.vehicle.id"
               aria-label="Selecionar local onde o veículo está parado"
               title="Local onde o veículo está parado"
-              (click)="toggleLocation(card.vehicle.id)"
+              (click)="!readOnly && toggleLocation(card.vehicle.id)"
             >
               <span>{{ card.vehicle.localizacaoOperacional || 'Local' }}</span>
             </button>
@@ -85,7 +85,7 @@
             via admin<span *ngIf="card.activeMission?.administradorAberturaNome"> · {{ card.activeMission?.administradorAberturaNome }}</span>
           </span>
           <div class="vehicle-actions">
-            <button type="button" class="details-button primary-action" *ngIf="card.activeMission" (click)="editMission.emit(card.activeMission)">Editar dados</button>
+            <button type="button" class="details-button primary-action" *ngIf="!readOnly && card.activeMission" (click)="editMission.emit(card.activeMission)">Editar dados</button>
           </div>
           <div class="move-menu" *ngIf="movingVehicleId === card.vehicle.id" aria-label="Escolha a nova situação do veículo">
             <p>{{ card.allowedDestinations.length ? "Para onde deseja mover?" : "A alteração deste veículo precisa de um Gestor ou Administrador." }}</p>
@@ -109,7 +109,7 @@
         </div>
         <div class="daily-map-actions">
           <span>{{ dailyMapDateLabel() }}</span>
-          <button type="button" class="button button-primary" [disabled]="loadingDailyMap" (click)="createMission.emit()">Registrar saída</button>
+          <button type="button" class="button button-primary" *ngIf="!readOnly" [disabled]="loadingDailyMap" (click)="createMission.emit()">Registrar saída</button>
           <button type="button" class="button button-secondary" [disabled]="loadingDailyMap" (click)="viewChange.emit('MAPA')">Atualizar</button>
           <button type="button" class="button button-secondary" [disabled]="loadingDailyMap || !dailyMissions.length" (click)="printDailyReport.emit()">Imprimir mapa</button>
         </div>
@@ -130,13 +130,13 @@
               <th>Início</th>
               <th>Fim</th>
               <th>Status</th>
-              <th>Ações</th>
+              <th *ngIf="!readOnly">Ações</th>
             </tr>
           </thead>
           <tbody>
             <ng-container *ngFor="let group of dailyMissionGroups">
               <tr class="period-row">
-                <td colspan="9">
+                <td [attr.colspan]="readOnly ? 8 : 9">
                   <span>{{ group.title }}</span>
                   <strong>{{ group.missions.length }} {{ group.missions.length === 1 ? 'missão' : 'missões' }}</strong>
                 </td>
@@ -150,7 +150,7 @@
                 <td>{{ missionTime(mission.dataHoraInicio) }}</td>
                 <td [class.pending]="!mission.dataHoraFim">{{ missionTime(mission.dataHoraFim, mission.dataHoraInicio) }}</td>
                 <td><span class="map-status" [class.active]="mission.status === 'ATIVA'">{{ mission.status === 'ATIVA' ? 'Em andamento' : 'Finalizada' }}</span></td>
-                <td>
+                <td *ngIf="!readOnly">
                   <div class="map-row-actions">
                     <button type="button" (click)="editMission.emit(mission)">Editar missão</button>
                     <button type="button" *ngIf="mission.status === 'ATIVA' && mission.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="finishMission.emit(mission)">Registrar chegada</button>

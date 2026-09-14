@@ -78,6 +78,10 @@ export class LoginComponent implements OnInit {
             return;
           }
           this.authService.saveRememberedAccess('motorista', { login: normalizedLogin }, lembrarAcesso);
+          if (res.deveAlterarSenha) {
+            this.router.navigate(['/alterar-senha-inicial']);
+            return;
+          }
           this.router.navigate(['/inicio']);
         },
         error: (err: HttpErrorResponse) => {

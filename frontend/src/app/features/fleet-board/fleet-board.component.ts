@@ -33,6 +33,7 @@ export class FleetBoardComponent {
   @Input() loadingDailyMap = false;
   @Input() dailyMapError = false;
   @Input() operationalLocations: string[] = [];
+  @Input() readOnly = false;
   @Output() refresh = new EventEmitter<void>();
   @Output() history = new EventEmitter<Veiculo>();
   @Output() move = new EventEmitter<{ event: CdkDragDrop<FleetCard[]>; category: PainelCategoria }>();
@@ -95,11 +96,13 @@ export class FleetBoardComponent {
   }
 
   moveTo(vehicle: Veiculo, category: PainelCategoria): void {
+    if (this.readOnly) return;
     this.movingVehicleId = null;
     this.moveVehicle.emit({ vehicle, category });
   }
 
   setOperationalLocation(vehicle: Veiculo, location: string | null): void {
+    if (this.readOnly) return;
     this.locationVehicleId = null;
     this.movingVehicleId = null;
     this.locationChange.emit({ vehicle, location });
@@ -120,7 +123,11 @@ export class FleetBoardComponent {
 
   visibleCards(column: FleetColumn): FleetCard[] {
     const query = this.normalize(this.search);
-    return !query ? column.cards : column.cards.filter(card => this.normalize(`${card.vehicle.placa} ${card.vehicle.marca} ${card.vehicle.modelo} ${card.driver || ''}`).includes(query));
+    return !query ? column.cards : column.cards.filter(card => this.normalize(`${card.vehicle.placa} ${card.vehicle.marca || ''} ${card.vehicle.modelo} ${card.driver || ''}`).includes(query));
+  }
+
+  vehicleModel(vehicle: Pick<Veiculo, 'marca' | 'modelo'>): string {
+    return [vehicle.marca, vehicle.modelo].filter(Boolean).join(' ');
   }
 
   missionVehicle(mission: MissaoResponse): string {

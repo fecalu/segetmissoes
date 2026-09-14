@@ -78,7 +78,7 @@ export interface ResumoHistoricoVeiculo {
 export interface HistoricoVeiculoResponse {
   veiculoId: number;
   placa: string;
-  marca: string;
+  marca: string | null;
   modelo: string;
   statusAtual: StatusVeiculo;
   statusAtualRotulo: string;

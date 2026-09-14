@@ -110,6 +110,43 @@ export class AdminAllocationComponent implements OnInit {
       .map(grupo => ({ ...grupo, vagas: [...grupo.vagas].sort((a, b) => a.numeroControle - b.numeroControle) }));
   }
 
+  orgaosAdministrativos(): string[] {
+    return this.valoresUnicos([
+      ...this.vagas.map(vaga => vaga.secretariaOrgao),
+      ...this.alocacoes.map(alocacao => alocacao.secretariaOrgao)
+    ]);
+  }
+
+  setoresAdministrativos(form: 'vaga' | 'alocacao'): string[] {
+    const orgaoSelecionado = this.normalizarComparacao(
+      form === 'vaga'
+        ? this.vagaForm.controls.secretariaOrgao.value
+        : this.alocacaoForm.controls.secretariaOrgao.value
+    );
+    const pares = [
+      ...this.vagas.map(vaga => ({ orgao: vaga.secretariaOrgao, setor: vaga.setor })),
+      ...this.alocacoes.map(alocacao => ({ orgao: alocacao.secretariaOrgao, setor: alocacao.setor }))
+    ];
+    const setores = orgaoSelecionado
+      ? pares.filter(item => this.normalizarComparacao(item.orgao) === orgaoSelecionado).map(item => item.setor)
+      : pares.map(item => item.setor);
+    return this.valoresUnicos(setores);
+  }
+
+  orgaoNovo(form: 'vaga' | 'alocacao'): boolean {
+    const valor = form === 'vaga'
+      ? this.vagaForm.controls.secretariaOrgao.value
+      : this.alocacaoForm.controls.secretariaOrgao.value;
+    return this.valorNovo(valor, this.orgaosAdministrativos());
+  }
+
+  setorNovo(form: 'vaga' | 'alocacao'): boolean {
+    const valor = form === 'vaga'
+      ? this.vagaForm.controls.setor.value
+      : this.alocacaoForm.controls.setor.value;
+    return this.valorNovo(valor, this.setoresAdministrativos(form));
+  }
+
   carregar(): void {
     this.carregando = true;
     forkJoin({
@@ -359,6 +396,24 @@ export class AdminAllocationComponent implements OnInit {
   private nulo(value: string | null | undefined): string | null { return value?.trim() || null; }
   private mensagem(texto: string): void { this.snackBar.open(texto, 'Fechar', { duration: 4000 }); }
   private erroApi(error: { error?: { message?: string } }, padrao: string): string { return error?.error?.message || padrao; }
+  private valoresUnicos(valores: Array<string | null | undefined>): string[] {
+    const mapa = new Map<string, string>();
+    for (const valor of valores) {
+      const normalizado = this.normalizarComparacao(valor);
+      if (normalizado && !mapa.has(normalizado)) {
+        mapa.set(normalizado, (valor || '').trim());
+      }
+    }
+    return [...mapa.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+  private valorNovo(valor: string | null | undefined, opcoes: string[]): boolean {
+    const normalizado = this.normalizarComparacao(valor);
+    if (!normalizado) return false;
+    return !opcoes.some(opcao => this.normalizarComparacao(opcao) === normalizado);
+  }
+  private normalizarComparacao(valor: string | null | undefined): string {
+    return (valor || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+  }
   private resumoEvento(evento: HistoricoAlocacaoVeiculo, lado: 'ANTES' | 'DEPOIS'): string {
     const dadosAdministrativos = this.dadosAdministrativosEvento(evento);
     if (dadosAdministrativos) {

@@ -8,7 +8,16 @@ import { Perfil, PERFIL_LABELS } from '../../core/models/auth.model';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
-interface Usuario { id: number; nome: string; login: string; cpf: string; perfil: Perfil; acessoHabilitado: boolean; }
+interface Usuario {
+  id: number;
+  nome: string;
+  login: string;
+  cpf: string | null;
+  perfil: Perfil;
+  acessoHabilitado: boolean;
+  deveAlterarSenha: boolean;
+  cadastroCompleto: boolean;
+}
 interface EventoAcesso {
   id: number; autorNome: string; autorPerfil: Perfil; entidade: string; registroId: number;
   acao: string; campo: string | null; valorAnterior: string | null; valorNovo: string | null;
@@ -28,11 +37,12 @@ export class AdminUsersComponent {
   private readonly url = environment.apiBaseUrl + '/admin/usuarios';
   readonly auditOnly = inject(ActivatedRoute).snapshot.data['auditOnly'] === true;
   readonly labels = PERFIL_LABELS;
-  readonly perfis: Perfil[] = ['ADMIN', 'GESTOR', 'OPERADOR', 'MOTORISTA'];
+  readonly perfis: Perfil[] = ['ADMIN', 'GESTOR', 'OPERADOR', 'VISUALIZADOR', 'MOTORISTA'];
   readonly descriptions: Record<Perfil, string> = {
     ADMIN: 'Acesso completo, incluindo configurações e gestão de usuários.',
     GESTOR: 'Supervisão, correções, liberações e cadastros operacionais.',
     OPERADOR: 'Saídas, retornos e consultas da rotina. Sem poderes de correção ou liberação.',
+    VISUALIZADOR: 'Consulta painéis, relatórios e históricos. Não altera dados.',
     MOTORISTA: 'Missões e checklists pelo aplicativo do motorista.'
   };
   usuarios: Usuario[] = [];
@@ -51,7 +61,7 @@ export class AdminUsersComponent {
   readonly form = this.fb.nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(160)]],
     login: ['', [Validators.required, Validators.maxLength(100)]],
-    cpf: ['', [Validators.required, Validators.pattern(/^\d{11}$/)]],
+    cpf: ['', [Validators.pattern(/^\d{11}$/)]],
     senha: [''], perfil: ['OPERADOR' as Perfil, Validators.required]
   });
 
@@ -86,7 +96,13 @@ export class AdminUsersComponent {
     if ((!this.editing || raw.senha) && (raw.senha.length < 6 || raw.senha.length > 100)) {
       this.editorError = 'Informe uma senha entre 6 e 100 caracteres.'; return;
     }
-    const payload = { ...raw, nome: raw.nome.trim(), login: raw.login.trim(), senha: raw.senha || undefined };
+    const payload = {
+      ...raw,
+      nome: raw.nome.trim(),
+      login: raw.login.trim(),
+      cpf: raw.cpf.trim() || null,
+      senha: raw.senha || undefined
+    };
     this.saving = true; this.editorError = '';
     const request = this.editing ? this.http.put<Usuario>(this.url + '/' + this.editing.id, payload) : this.http.post<Usuario>(this.url, payload);
     request.pipe(finalize(() => this.saving = false)).subscribe({

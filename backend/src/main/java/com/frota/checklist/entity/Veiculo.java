@@ -32,8 +32,14 @@ public class Veiculo {
     @Column(nullable = false)
     private String modelo;
 
-    @Column(nullable = false)
+    @Column
     private String marca;
+
+    @Column(length = 14)
+    private String cnpj;
+
+    @Column(length = 20)
+    private String renavam;
 
     @Column(name = "desativado")
     private Boolean desativado = false;

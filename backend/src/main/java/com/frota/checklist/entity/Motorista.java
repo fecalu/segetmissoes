@@ -30,7 +30,7 @@ public class Motorista {
     @Column(nullable = false)
     private String senha;
 
-    @Column(nullable = false, unique = true, length = 11)
+    @Column(unique = true, length = 11)
     private String cpf;
 
     @Enumerated(EnumType.STRING)
@@ -42,4 +42,10 @@ public class Motorista {
 
     @Column(nullable = false)
     private long versaoAcesso = 0;
+
+    @Column(nullable = false)
+    private boolean deveAlterarSenha = false;
+
+    @Column(nullable = false)
+    private boolean cadastroCompleto = true;
 }

@@ -6,6 +6,8 @@ import com.frota.checklist.dto.MotoristaResponse;
 import com.frota.checklist.dto.RegisterMotoristaRequest;
 import com.frota.checklist.service.AuthService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,8 @@ public class AuthController {
             @org.springframework.security.core.annotation.AuthenticationPrincipal
             com.frota.checklist.security.CustomUserDetails usuario) {
         return new com.frota.checklist.dto.SessaoResponse(usuario.getMotoristaId(), usuario.getNome(),
-                usuario.getPerfil(), usuario.getPerfil().permissoes());
+                usuario.getPerfil(), usuario.getPerfil().permissoes(), usuario.isDeveAlterarSenha(),
+                usuario.isCadastroCompleto());
     }
 
     @PostMapping("/register")
@@ -38,4 +41,16 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
+
+    @PostMapping("/alterar-senha-inicial")
+    public ResponseEntity<LoginResponse> alterarSenhaInicial(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.frota.checklist.security.CustomUserDetails usuario,
+            @Valid @RequestBody AlterarSenhaInicialRequest request) {
+        return ResponseEntity.ok(authService.alterarSenhaInicial(usuario.getMotoristaId(), request.novaSenha()));
+    }
+
+    public record AlterarSenhaInicialRequest(
+            @NotBlank @Size(min = 8, max = 100) String novaSenha
+    ) {}
 }

@@ -392,7 +392,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.motoristaForm = this.fb.nonNullable.group({
       nome: ['', [Validators.required]],
       login: ['', [Validators.required]],
-      cpf: ['', [Validators.required, Validators.pattern(/^\d{11}$/)]],
+      cpf: ['', [Validators.pattern(/^\d{11}$/)]],
       senha: [''],
       perfil: ['MOTORISTA' as const, [Validators.required]]
     });
@@ -400,7 +400,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.veiculoForm = this.fb.nonNullable.group({
       placa: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9-]{7,8}$/)]],
       modelo: ['', [Validators.required]],
-      marca: ['', [Validators.required]]
+      cnpj: ['', [Validators.pattern(/^\d{14}$/)]],
+      renavam: ['', [Validators.pattern(/^\d{1,20}$/)]]
     });
 
     this.filtroForm = this.fb.nonNullable.group({
@@ -1071,7 +1072,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload = this.motoristaForm.getRawValue();
+    const raw = this.motoristaForm.getRawValue();
+    const payload = { ...raw, cpf: raw.cpf.trim() || null };
     if (!this.editingMotoristaId && !payload.senha) {
       this.snackBar.open('Senha obrigatoria ao criar motorista.', 'Fechar', { duration: 2500 });
       return;
@@ -1097,7 +1099,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.motoristaForm.patchValue({
       nome: motorista.nome,
       login: motorista.login,
-      cpf: motorista.cpf,
+      cpf: motorista.cpf || '',
       senha: '',
       perfil: 'MOTORISTA'
     });
@@ -1152,7 +1154,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const payload = {
       placa: raw.placa.toUpperCase(),
       modelo: raw.modelo,
-      marca: raw.marca
+      cnpj: this.onlyDigitsOrNull(raw.cnpj),
+      renavam: this.onlyDigitsOrNull(raw.renavam)
     };
 
     const request$ = this.editingVeiculoId
@@ -1175,13 +1178,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.veiculoForm.patchValue({
       placa: veiculo.placa,
       modelo: veiculo.modelo,
-      marca: veiculo.marca
+      cnpj: veiculo.cnpj ?? '',
+      renavam: veiculo.renavam ?? ''
     });
   }
 
   cancelarEdicaoVeiculo(): void {
     this.editingVeiculoId = null;
-    this.veiculoForm.reset({ placa: '', modelo: '', marca: '' });
+    this.veiculoForm.reset({ placa: '', modelo: '', cnpj: '', renavam: '' });
   }
 
   categoriaPermiteInclusao(categoria: PainelCategoria): boolean {
@@ -1555,7 +1559,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return base.filter(v =>
       v.placa.toLowerCase().includes(busca)
       || v.modelo.toLowerCase().includes(busca)
-      || v.marca.toLowerCase().includes(busca)
+      || (v.marca ?? '').toLowerCase().includes(busca)
     );
   }
 
@@ -3151,6 +3155,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       || status;
   }
 
+  veiculoDescricao(veiculo: Pick<Veiculo, 'marca' | 'modelo'>): string {
+    return [veiculo.marca, veiculo.modelo].filter(Boolean).join(' ');
+  }
+
   statusClass(status: StatusVeiculo): string {
     return `status-${status.toLowerCase()}`;
   }
@@ -3253,6 +3261,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private toNullIfBlank(value: string): string | null {
     const normalized = value.trim();
     return normalized ? normalized : null;
+  }
+
+  private onlyDigitsOrNull(value: string): string | null {
+    const digits = value.replace(/\D/g, '');
+    return digits ? digits : null;
   }
 
   private baixarArquivo(blob: Blob, nomeArquivo: string): void {

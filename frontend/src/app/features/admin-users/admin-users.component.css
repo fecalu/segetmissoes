@@ -19,6 +19,7 @@ th { padding: 13px 12px; color: #617487; font-weight: 600; background: #f4f7fa; 
 td { padding: 14px 12px; border-bottom: 1px solid #e9eff4; vertical-align: top; } tr:last-child td { border-bottom: 0; }
 .actions { display: flex; gap: 7px; flex-wrap: wrap; } .date { white-space: nowrap; }
 .role-label { display: inline-block; padding: 3px 8px; border-radius: 5px; background: #edf3f7; }
+.pending { width: max-content; color: #9a5b00; background: #fff5d8; border: 1px solid #f0d38a; border-radius: 999px; padding: 2px 8px; font-weight: 600; }
 .suspended { color: #9e3c38; } .error { color: #ab302c; } .success { color: #236245; }
 dialog { border: 1px solid #dce5ec; border-radius: 16px; padding: 26px; width: min(580px, calc(100vw - 32px)); box-sizing: border-box; color: inherit; max-height: calc(100dvh - 40px); overflow-y: auto; }
 dialog::backdrop { background: #12283b80; } .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .full { grid-column: 1 / -1; }

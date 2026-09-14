@@ -179,7 +179,14 @@ export class AdminService {
 
   listarMotoristasOpcoes(): Observable<Motorista[]> {
     return this.http.get<Array<Pick<Motorista, 'id' | 'nome' | 'perfil'>>>(this.motoristaUrl + '/opcoes').pipe(
-      map(opcoes => opcoes.map(opcao => ({ ...opcao, cpf: '', login: '', acessoHabilitado: true })))
+      map(opcoes => opcoes.map(opcao => ({
+        ...opcao,
+        cpf: null,
+        login: '',
+        acessoHabilitado: true,
+        deveAlterarSenha: false,
+        cadastroCompleto: true
+      })))
     );
   }
 
@@ -309,11 +316,11 @@ export class AdminService {
     return this.http.get<Veiculo[]>(this.veiculoUrl, { params });
   }
 
-  criarVeiculo(payload: { placa: string; modelo: string; marca: string }): Observable<Veiculo> {
+  criarVeiculo(payload: { placa: string; modelo: string; marca?: string | null; cnpj?: string | null; renavam?: string | null }): Observable<Veiculo> {
     return this.http.post<Veiculo>(this.veiculoUrl, payload);
   }
 
-  editarVeiculo(id: number, payload: { placa: string; modelo: string; marca: string }): Observable<Veiculo> {
+  editarVeiculo(id: number, payload: { placa: string; modelo: string; marca?: string | null; cnpj?: string | null; renavam?: string | null }): Observable<Veiculo> {
     return this.http.put<Veiculo>(`${this.veiculoUrl}/${id}`, payload);
   }
 

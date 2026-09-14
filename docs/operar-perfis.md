@@ -1,11 +1,11 @@
-# Operar e validar os quatro perfis
+# Operar e validar os cinco perfis
 
 ## Onde acessar
 
 1. Entre pela tela administrativa existente (`/admin/login`).
 2. Com uma conta ADMIN, abra **Sistema > Usuarios e acessos**.
 3. Use **Adicionar usuario** ou **Editar** para escolher Administrador, Gestor,
-   Operador ou Motorista.
+   Operador, Visualizador ou Motorista.
 4. **Suspender acesso** exige motivo, preserva historicos e invalida sessoes
    existentes. Reabilitar nao revalida tokens antigos.
 5. Consulte **Sistema > Auditoria de acessos** para os ultimos 200 eventos de
@@ -19,7 +19,9 @@ O Gestor supervisiona frota, cadastros operacionais e alocacoes. O Operador tem
 a rotina de saidas/retornos, consultas e relatorios. Nao pode liberar veiculos
 restritos, corrigir horarios ou encerrar excepcionalmente missoes do motorista.
 Em missoes finalizadas, so pode preencher campos administrativos vazios.
-Alocacoes continuam independentes da frota e sao somente leitura para Operador.
+O Visualizador consulta painéis, missoes, checklists, vistorias, alocacoes,
+relatorios e estatisticas, sem registrar ou alterar dados. Alocacoes continuam
+independentes da frota e sao somente leitura para Operador e Visualizador.
 
 ## Seguranca da sessao
 
@@ -43,9 +45,11 @@ Alocacoes continuam independentes da frota e sao somente leitura para Operador.
 ## Banco e atualizacao
 
 A migracao Flyway `V1__perfis_e_acessos.sql` amplia o CHECK da coluna `perfil`
-e adiciona `acesso_habilitado` e `versao_acesso`. Nao altera IDs, senhas ou o
-perfil de contas existentes. Perfis nulos/desconhecidos interrompem a migracao
-para revisao; nao sao promovidos silenciosamente.
+e adiciona `acesso_habilitado` e `versao_acesso`. A migracao
+`V6__perfil_visualizador.sql` inclui o perfil `VISUALIZADOR` no mesmo CHECK.
+Nao altera IDs, senhas ou o perfil de contas existentes. Perfis
+nulos/desconhecidos interrompem a migracao para revisao; nao sao promovidos
+silenciosamente.
 
 Instalacoes existentes recebem baseline 0 e depois V1. Em banco vazio, V1
 registra a versao e o Hibernate cria as entidades. Esta primeira entrega ainda
@@ -63,9 +67,10 @@ Antes de publicar:
    A configuracao de deploy versionada usa proxy; configuracoes externas ao
    repositorio precisam de verificacao no momento da publicacao.
 
-Nao voltar simplesmente ao backend antigo depois de criar contas GESTOR ou
-OPERADOR: o enum antigo nao reconhece esses valores. Planejar rollback com
-backup consistente e janela sem gravacoes, ou uma correcao compativel para frente.
+Nao voltar simplesmente ao backend antigo depois de criar contas GESTOR,
+OPERADOR ou VISUALIZADOR: o enum antigo nao reconhece esses valores. Planejar
+rollback com backup consistente e janela sem gravacoes, ou uma correcao
+compativel para frente.
 
 ## Demonstracao e primeiro administrador
 

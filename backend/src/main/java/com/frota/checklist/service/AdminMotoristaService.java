@@ -110,36 +110,42 @@ public class AdminMotoristaService {
     }
 
     private Motorista criarConta(AdminMotoristaRequest request, Motorista autor) {
-        validarCpf(request.cpf());
-        validarDuplicidadesParaCriacao(request.login().trim(), request.cpf());
+        String cpf = normalizarCpf(request.cpf());
+        validarCpf(cpf);
+        validarDuplicidadesParaCriacao(request.login().trim(), cpf);
         if (request.senha() == null || request.senha().isBlank()) throw new BusinessException("Informe uma senha para criar o acesso");
         Motorista alvo = new Motorista();
-        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(request.cpf());
+        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(cpf);
         alvo.setPerfil(request.perfil()); alvo.setSenha(passwordEncoder.encode(request.senha()));
+        alvo.setDeveAlterarSenha(true);
+        alvo.setCadastroCompleto(cadastroCompleto(cpf));
         Motorista salvo = motoristaRepository.save(alvo);
         auditoria.registrar(autor, "USUARIO", salvo.getId(), "CONTA_CRIADA", "perfil", null, salvo.getPerfil().name(), null);
         return salvo;
     }
 
     private Motorista editarConta(Motorista alvo, AdminMotoristaRequest request, Motorista autor) {
+        String cpf = normalizarCpf(request.cpf());
         // Existing demonstration CPFs must not prevent changing access permissions.
-        if (!Objects.equals(alvo.getCpf(), request.cpf())) validarCpf(request.cpf());
+        if (!Objects.equals(alvo.getCpf(), cpf)) validarCpf(cpf);
         if (motoristaRepository.existsByLoginAndIdNot(request.login().trim(), alvo.getId())) throw new BusinessException("Login ja utilizado");
-        if (motoristaRepository.existsByCpfAndIdNot(request.cpf(), alvo.getId())) throw new BusinessException("CPF ja utilizado");
+        if (cpf != null && motoristaRepository.existsByCpfAndIdNot(cpf, alvo.getId())) throw new BusinessException("CPF ja utilizado");
         protegerUltimoAdmin(alvo, request.perfil(), alvo.isAcessoHabilitado());
         if (alvo.getPerfil() != request.perfil() && missaoRepository.existsByMotoristaIdAndStatus(alvo.getId(), StatusMissao.ATIVA))
             throw new BusinessException("Finalize a missao ativa antes de mudar o perfil do motorista");
         registrarCampo(autor, alvo, "nome", alvo.getNome(), request.nome().trim());
         registrarCampo(autor, alvo, "login", alvo.getLogin(), request.login().trim());
-        registrarCampo(autor, alvo, "cpf", alvo.getCpf(), request.cpf());
+        registrarCampo(autor, alvo, "cpf", alvo.getCpf(), cpf);
         registrarCampo(autor, alvo, "perfil", alvo.getPerfil().name(), request.perfil().name());
         if (!Objects.equals(alvo.getLogin(), request.login().trim())) alvo.setVersaoAcesso(alvo.getVersaoAcesso()+1);
         if (request.senha() != null && !request.senha().isBlank()) {
             auditoria.registrar(autor, "USUARIO", alvo.getId(), "SENHA_REDEFINIDA", null, null, null, null);
             alvo.setSenha(passwordEncoder.encode(request.senha()));
+            alvo.setDeveAlterarSenha(true);
             alvo.setVersaoAcesso(alvo.getVersaoAcesso()+1);
         }
-        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(request.cpf()); alvo.setPerfil(request.perfil());
+        alvo.setNome(request.nome().trim()); alvo.setLogin(request.login().trim()); alvo.setCpf(cpf); alvo.setPerfil(request.perfil());
+        alvo.setCadastroCompleto(cadastroCompleto(cpf));
         return motoristaRepository.save(alvo);
     }
 
@@ -174,7 +180,7 @@ public class AdminMotoristaService {
 
     private boolean contemBusca(Motorista motorista, String filtro) {
         return motorista.getNome().toLowerCase(Locale.ROOT).contains(filtro)
-                || motorista.getCpf().contains(filtro)
+                || (motorista.getCpf() != null && motorista.getCpf().contains(filtro))
                 || motorista.getLogin().toLowerCase(Locale.ROOT).contains(filtro);
     }
 
@@ -182,15 +188,25 @@ public class AdminMotoristaService {
         if (motoristaRepository.existsByLogin(login)) {
             throw new BusinessException("Login ja cadastrado");
         }
-        if (motoristaRepository.existsByCpf(cpf)) {
+        if (cpf != null && motoristaRepository.existsByCpf(cpf)) {
             throw new BusinessException("CPF ja cadastrado");
         }
     }
 
     private void validarCpf(String cpf) {
-        if (cpf == null || !cpf.matches("\\d{11}") || todosDigitosIguais(cpf) || !digitosValidosCpf(cpf)) {
+        if (cpf == null) return;
+        if (!cpf.matches("\\d{11}") || todosDigitosIguais(cpf) || !digitosValidosCpf(cpf)) {
             throw new BusinessException("CPF invalido");
         }
+    }
+
+    private String normalizarCpf(String cpf) {
+        if (cpf == null || cpf.isBlank()) return null;
+        return cpf.replaceAll("\\D", "");
+    }
+
+    private boolean cadastroCompleto(String cpf) {
+        return cpf != null && !cpf.isBlank();
     }
 
     private boolean todosDigitosIguais(String cpf) {
@@ -227,7 +243,9 @@ public class AdminMotoristaService {
                 motorista.getLogin(),
                 motorista.getCpf(),
                 motorista.getPerfil(),
-                motorista.isAcessoHabilitado()
+                motorista.isAcessoHabilitado(),
+                motorista.isDeveAlterarSenha(),
+                motorista.isCadastroCompleto()
         );
     }
 }

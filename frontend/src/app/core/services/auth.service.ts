@@ -14,6 +14,8 @@ export class AuthService {
   readonly loggedMotoristaId = signal<number | null>(Number(localStorage.getItem('motoristaId')) || null);
   readonly perfil = signal<Perfil | null>(null);
   readonly permissoes = signal<Permissao[]>([]);
+  readonly deveAlterarSenha = signal<boolean>(localStorage.getItem('deveAlterarSenha') === 'true');
+  readonly cadastroCompleto = signal<boolean>(localStorage.getItem('cadastroCompleto') !== 'false');
   private sessionRequest?: Observable<SessaoResponse>;
 
   constructor(private readonly http: HttpClient, private readonly router: Router) {
@@ -36,9 +38,12 @@ export class AuthService {
           if (token !== this.getToken()) throw new Error('A sessao foi alterada durante a consulta');
           this.loggedName.set(res.nome); this.loggedMotoristaId.set(res.motoristaId);
           this.perfil.set(res.perfil); this.permissoes.set(res.permissoes);
+          this.deveAlterarSenha.set(res.deveAlterarSenha); this.cadastroCompleto.set(res.cadastroCompleto);
           localStorage.setItem('nomeMotorista', res.nome);
           localStorage.setItem('motoristaId', String(res.motoristaId));
           localStorage.setItem('perfil', res.perfil);
+          localStorage.setItem('deveAlterarSenha', String(res.deveAlterarSenha));
+          localStorage.setItem('cadastroCompleto', String(res.cadastroCompleto));
         }),
         finalize(() => this.sessionRequest = undefined),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -49,9 +54,18 @@ export class AuthService {
 
   logout(): void {
     const admin = this.isAdministrative();
-    for (const key of ['token', 'motoristaId', 'nomeMotorista', 'perfil']) localStorage.removeItem(key);
+    for (const key of ['token', 'motoristaId', 'nomeMotorista', 'perfil', 'deveAlterarSenha', 'cadastroCompleto']) localStorage.removeItem(key);
     this.loggedName.set(null); this.loggedMotoristaId.set(null); this.perfil.set(null); this.permissoes.set([]);
+    this.deveAlterarSenha.set(false); this.cadastroCompleto.set(true);
     this.router.navigate([admin ? '/admin/login' : '/login']);
+  }
+
+  alterarSenhaInicial(novaSenha: string): Observable<void> {
+    return this.http.post<LoginResponse>(this.baseUrl + '/alterar-senha-inicial', { novaSenha }).pipe(
+      tap(res => localStorage.setItem('token', res.token)),
+      switchMap(() => this.refreshSession()),
+      map(() => undefined)
+    );
   }
 
   isAuthenticated(): boolean { return !!this.getToken(); }
@@ -76,7 +90,7 @@ export class AuthService {
       'rotulos-status': 'CONFIGURACAO_GERIR',
       checklists: 'VISTORIA_CONSULTAR',
       'vistorias-completas': 'VISTORIA_CONSULTAR',
-      missoes: 'MISSAO_COMPLEMENTAR'
+      missoes: 'FROTA_CONSULTAR'
     };
     return this.can(permission[menu] || 'FROTA_CONSULTAR');
   }

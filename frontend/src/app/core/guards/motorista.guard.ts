@@ -9,7 +9,10 @@ export const motoristaGuard: CanActivateFn = () => {
   if (!auth.isAuthenticated()) return router.createUrlTree(['/login']);
   if (auth.canOpenDriverOffline()) return true;
   return auth.refreshSession().pipe(
-    map(() => auth.hasRole('MOTORISTA') || router.createUrlTree(['/login'])),
+    map(() => {
+      if (auth.deveAlterarSenha()) return router.createUrlTree(['/alterar-senha-inicial']);
+      return auth.hasRole('MOTORISTA') || router.createUrlTree(['/login']);
+    }),
     catchError(() => of(router.createUrlTree(['/login'])))
   );
 };

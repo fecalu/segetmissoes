@@ -158,7 +158,7 @@
               <strong>{{ veiculo.placa }}</strong>
               <span class="status-pill" [ngClass]="statusClass(veiculo.statusAtual)">{{ statusLabel(veiculo.statusAtual, veiculo.statusAtualRotulo) }}</span>
             </header>
-            <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>
+            <p>{{ veiculo.marca ? (veiculo.marca + ' ' + veiculo.modelo) : veiculo.modelo }}</p>
             <p *ngIf="exibeMotoristaAtual(veiculo)"><strong>Motorista:</strong> {{ veiculo.motoristaAtualNome }}</p>
             <p *ngIf="!exibeMotoristaAtual(veiculo)"><strong>Motorista:</strong> -</p>
           </article>

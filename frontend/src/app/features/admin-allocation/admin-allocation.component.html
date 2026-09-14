@@ -89,8 +89,24 @@
       <h2>{{ editorMode === 'CRIAR_VAGA' ? 'Criar vaga administrativa' : 'Atualizar dados da vaga' }}</h2>
       <p>A vaga representa a autorização do órgão/setor. Ela pode existir mesmo sem veículo alocado.</p>
       <form [formGroup]="vagaForm" (ngSubmit)="salvarVaga()" class="editor-form">
-        <label>Secretaria / órgão <input formControlName="secretariaOrgao" /></label>
-        <label>Setor <input formControlName="setor" /></label>
+        <label>
+          Secretaria / órgão
+          <input formControlName="secretariaOrgao" list="orgaos-administrativos-vaga" autocomplete="off" placeholder="Escolha um órgão já cadastrado" />
+          <datalist id="orgaos-administrativos-vaga">
+            <option *ngFor="let orgao of orgaosAdministrativos()" [value]="orgao"></option>
+          </datalist>
+          <small class="field-hint">Use um nome da lista para evitar duplicidade.</small>
+          <small class="field-warning" *ngIf="orgaoNovo('vaga')">Órgão novo. Confira se não é erro de digitação.</small>
+        </label>
+        <label>
+          Setor
+          <input formControlName="setor" list="setores-administrativos-vaga" autocomplete="off" placeholder="Escolha um setor do órgão" />
+          <datalist id="setores-administrativos-vaga">
+            <option *ngFor="let setor of setoresAdministrativos('vaga')" [value]="setor"></option>
+          </datalist>
+          <small class="field-hint">A lista prioriza setores do órgão selecionado.</small>
+          <small class="field-warning" *ngIf="setorNovo('vaga')">Setor novo para este órgão. Confira antes de salvar.</small>
+        </label>
         <label>Limite autorizado <input formControlName="limiteAutorizado" placeholder="Ex.: R$ 1.000,00 ou Não Renova" /></label>
         <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
         <label class="full">Observação <textarea formControlName="observacao" rows="3" placeholder="Opcional"></textarea></label>
@@ -127,8 +143,24 @@
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Marca <input formControlName="marca" placeholder="Opcional" /></label>
         <label *ngIf="editorMode === 'OCUPAR_VAGA'">Responsável atual <input formControlName="responsavelNome" placeholder="Nome do motorista responsável" /></label>
         <ng-container *ngIf="editorMode !== 'OCUPAR_VAGA' || !selectedVaga">
-          <label>Secretaria / órgão <input formControlName="secretariaOrgao" /></label>
-          <label>Setor <input formControlName="setor" /></label>
+          <label>
+            Secretaria / órgão
+            <input formControlName="secretariaOrgao" list="orgaos-administrativos-alocacao" autocomplete="off" placeholder="Escolha um órgão já cadastrado" />
+            <datalist id="orgaos-administrativos-alocacao">
+              <option *ngFor="let orgao of orgaosAdministrativos()" [value]="orgao"></option>
+            </datalist>
+            <small class="field-hint">Use um nome da lista para evitar duplicidade.</small>
+            <small class="field-warning" *ngIf="orgaoNovo('alocacao')">Órgão novo. Confira se não é erro de digitação.</small>
+          </label>
+          <label>
+            Setor
+            <input formControlName="setor" list="setores-administrativos-alocacao" autocomplete="off" placeholder="Escolha um setor do órgão" />
+            <datalist id="setores-administrativos-alocacao">
+              <option *ngFor="let setor of setoresAdministrativos('alocacao')" [value]="setor"></option>
+            </datalist>
+            <small class="field-hint">A lista prioriza setores do órgão selecionado.</small>
+            <small class="field-warning" *ngIf="setorNovo('alocacao')">Setor novo para este órgão. Confira antes de salvar.</small>
+          </label>
           <label>Limite autorizado <input formControlName="limiteAutorizado" /></label>
           <label>Documento de referência <input formControlName="documentoReferencia" placeholder="Opcional" /></label>
         </ng-container>

@@ -643,7 +643,7 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
       return '-';
     }
 
-    return `${veiculo.placa} - ${veiculo.marca} ${veiculo.modelo}`;
+    return `${veiculo.placa} - ${[veiculo.marca, veiculo.modelo].filter(Boolean).join(' ')}`;
   }
 
   veiculoSelecionadoAtual(): Veiculo | null {

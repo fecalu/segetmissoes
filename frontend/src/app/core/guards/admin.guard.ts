@@ -11,6 +11,7 @@ export const adminGuard: CanActivateFn = (route) => {
   const messages = inject(MatSnackBar);
   if (!auth.isAuthenticated()) return router.createUrlTree(['/admin/login']);
   return auth.refreshSession().pipe(map(() => {
+    if (auth.deveAlterarSenha()) return router.createUrlTree(['/alterar-senha-inicial']);
     if (!auth.isAdministrative()) return router.createUrlTree(['/login']);
     const permission = route.data['permission'] as Permissao | undefined;
     if ((permission && !auth.can(permission)) || !auth.canAccessMenu(route.queryParamMap.get('menu') || 'operacao')) {

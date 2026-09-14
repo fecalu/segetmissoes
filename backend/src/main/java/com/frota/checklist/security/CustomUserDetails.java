@@ -20,6 +20,8 @@ public class CustomUserDetails implements UserDetails {
     private final Perfil perfil;
     private final boolean acessoHabilitado;
     private final long versaoAcesso;
+    private final boolean deveAlterarSenha;
+    private final boolean cadastroCompleto;
 
     public CustomUserDetails(Motorista motorista) {
         this.motoristaId = motorista.getId();
@@ -29,6 +31,8 @@ public class CustomUserDetails implements UserDetails {
         this.perfil = motorista.getPerfil();
         this.acessoHabilitado = motorista.isAcessoHabilitado();
         this.versaoAcesso = motorista.getVersaoAcesso();
+        this.deveAlterarSenha = motorista.isDeveAlterarSenha();
+        this.cadastroCompleto = motorista.isCadastroCompleto();
     }
 
     @Override

@@ -11,7 +11,8 @@
   <p class="helper">O perfil define as permissões. Suspender o acesso mantém os registros e o histórico da pessoa.</p>
   <div class="table-scroll"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Acesso</th><th>Ações</th></tr></thead>
     <tbody><tr *ngFor="let usuario of filtrados">
-      <td><strong>{{ usuario.nome }}</strong><small *ngIf="usuario.id === auth.loggedMotoristaId()">Sua conta</small></td>
+      <td><strong>{{ usuario.nome }}</strong><small *ngIf="usuario.id === auth.loggedMotoristaId()">Sua conta</small>
+        <small class="pending" *ngIf="!usuario.cadastroCompleto || usuario.deveAlterarSenha">! Cadastro pendente</small></td>
       <td>{{ usuario.login }}</td><td><span class="role-label">{{ labels[usuario.perfil] }}</span></td>
       <td><span [class.suspended]="!usuario.acessoHabilitado">{{ usuario.acessoHabilitado ? 'Habilitado' : 'Suspenso' }}</span></td>
       <td><div class="actions"><button type="button" (click)="abrir(usuario)">Editar</button>
@@ -37,7 +38,7 @@
     <p class="helper">Escolha o perfil de acordo com as atividades da pessoa.</p>
     <div class="form-grid">
       <label>Nome<input formControlName="nome" autocomplete="name"><small class="error" *ngIf="form.controls.nome.touched && form.controls.nome.invalid">Informe o nome.</small></label>
-      <label>CPF<input formControlName="cpf" inputmode="numeric" maxlength="11"><small class="error" *ngIf="form.controls.cpf.touched && form.controls.cpf.invalid">Informe os 11 números do CPF.</small></label>
+      <label>CPF<input formControlName="cpf" inputmode="numeric" maxlength="11" placeholder="Opcional por enquanto"><small class="error" *ngIf="form.controls.cpf.touched && form.controls.cpf.invalid">Use 11 números ou deixe em branco.</small></label>
       <label>Login<input formControlName="login" autocomplete="off"><small class="error" *ngIf="form.controls.login.touched && form.controls.login.invalid">Informe o login.</small></label>
       <label>{{ editing ? 'Nova senha (opcional)' : 'Senha inicial' }}<input formControlName="senha" type="password" autocomplete="new-password"><small *ngIf="editing">Deixe vazio para manter a senha atual.</small></label>
       <label class="full">Perfil<select formControlName="perfil"><option *ngFor="let perfil of perfis" [value]="perfil">{{ labels[perfil] }}</option></select><small>{{ descriptions[form.controls.perfil.value] }}</small></label>

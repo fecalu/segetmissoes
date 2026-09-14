@@ -11,18 +11,19 @@ Nao houve publicacao em producao nesta entrega.
 Permitir que a equipe use a operacao diaria com uma interface simples, deixando
 correcoes, liberacoes e administracao do sistema com as pessoas apropriadas.
 
-Adotar quatro perfis, com um perfil por conta nesta primeira versao:
+Adotar cinco perfis, com um perfil por conta nesta versao:
 
 | Perfil | Codigo | Responsabilidade |
 | --- | --- | --- |
 | Administrador | `ADMIN` | Acesso administrativo completo, incluindo contas, perfis, configuracoes e exclusoes permitidas pelas regras atuais. |
 | Gestor | `GESTOR` | Supervisionar a frota, manter cadastros operacionais e alocacoes, corrigir registros e resolver excecoes. |
 | Operador | `OPERADOR` | Registrar saidas, retornos e dados da rotina, consultar a frota e seus registros. Nome explicativo na tela: Operador - operacoes basicas. |
+| Visualizador | `VISUALIZADOR` | Consultar painéis, missoes, checklists, vistorias, alocacoes, relatorios e estatisticas, sem alterar dados. |
 | Motorista | `MOTORISTA` | Continuar usando o fluxo de campo existente, com as validacoes de motorista, veiculo e missao. |
 
-O perfil de consulta separado fica fora desta primeira versao. Administrador,
-Gestor e Operador utilizam a entrada administrativa existente, com menus e acoes
-adequados ao perfil. Motorista continua com sua entrada atual.
+Administrador, Gestor, Operador e Visualizador utilizam a entrada administrativa
+existente, com menus e acoes adequados ao perfil. Motorista continua com sua
+entrada atual.
 
 Ter acesso completo ao administrativo nao dispensa as regras de negocio:
 nenhum perfil pode produzir duas missoes ativas para o mesmo veiculo ou motorista,
@@ -60,30 +61,30 @@ e `.github/workflows/ci.yml`.
 Sim significa que as regras do registro, as confirmacoes e a auditoria continuam
 valendo. As condicoes especificas do Operador sao detalhadas na secao seguinte.
 
-| Acao administrativa | Administrador | Gestor | Operador | Motorista |
-| --- | --- | --- | --- | --- |
-| Consultar quadro, missoes e historicos operacionais | Sim | Sim | Sim | Somente o fluxo de campo atual |
-| Registrar saida e retorno administrativos comuns | Sim | Sim | Sim, conforme origem e situacao | Pelo proprio fluxo |
-| Registrar viagem, uso externo e seu retorno | Sim | Sim | Sim, conforme situacao | Pelo proprio fluxo existente |
-| Preencher destino, setor e solicitante | Sim | Sim | Sim, com limites em registros finalizados | Nao |
-| Corrigir motorista, veiculo ou horarios ja registrados | Sim, com justificativa | Sim, com justificativa | Nao | Nao |
-| Criar contingencia ou encerrar excepcionalmente uma missao | Sim, com justificativa | Sim, com justificativa | Nao | Excecoes do proprio fluxo atual |
-| Corrigir somente a situacao entre Disponivel e Patio | Sim | Sim | Sim, com confirmacao e motivo | Nao |
-| Bloquear, desbloquear e autorizar liberacao apos oficina/manutencao | Sim | Sim | Nao | Nao |
-| Consultar checklists, fotos e vistorias no administrativo | Sim | Sim | Sim | Somente recursos autorizados do proprio fluxo |
-| Corrigir dados de contraparte de vistoria | Sim | Sim | Nao | Nao |
-| Cadastrar e editar veiculos | Sim | Sim | Nao | Nao |
-| Desativar e reativar veiculos | Sim | Sim, com justificativa | Nao | Nao |
-| Cadastrar e editar motoristas | Sim | Apenas contas MOTORISTA | Nao | Nao |
-| Definir ou redefinir credenciais de motorista | Sim | Apenas contas MOTORISTA | Nao | Nao |
-| Administrar contas ADMIN, GESTOR e OPERADOR; alterar perfis | Sim | Nao | Nao | Nao |
-| Excluir definitivamente cadastros | Sim, com protecoes | Nao | Nao | Nao |
-| Consultar alocacoes e seu historico | Sim | Sim | Sim | Nao |
-| Criar/editar alocacoes, trocar veiculo/responsavel e encerrar | Sim | Sim | Nao | Nao |
-| Exportar relatorios operacionais existentes | Sim | Sim | Sim | Nao |
-| Consultar estatisticas | Sim | Sim | Nao nesta versao | Nao |
-| Alterar rotulos e sugestoes globais | Sim | Nao | Nao | Nao |
-| Consultar auditoria de contas e permissoes | Sim | Nao | Nao | Nao |
+| Acao administrativa | Administrador | Gestor | Operador | Visualizador | Motorista |
+| --- | --- | --- | --- | --- | --- |
+| Consultar quadro, missoes e historicos operacionais | Sim | Sim | Sim | Sim | Somente o fluxo de campo atual |
+| Registrar saida e retorno administrativos comuns | Sim | Sim | Sim, conforme origem e situacao | Nao | Pelo proprio fluxo |
+| Registrar viagem, uso externo e seu retorno | Sim | Sim | Sim, conforme situacao | Nao | Pelo proprio fluxo existente |
+| Preencher destino, setor e solicitante | Sim | Sim | Sim, com limites em registros finalizados | Nao | Nao |
+| Corrigir motorista, veiculo ou horarios ja registrados | Sim, com justificativa | Sim, com justificativa | Nao | Nao | Nao |
+| Criar contingencia ou encerrar excepcionalmente uma missao | Sim, com justificativa | Sim, com justificativa | Nao | Nao | Excecoes do proprio fluxo atual |
+| Corrigir somente a situacao entre Disponivel e Patio | Sim | Sim | Sim, com confirmacao e motivo | Nao | Nao |
+| Bloquear, desbloquear e autorizar liberacao apos oficina/manutencao | Sim | Sim | Nao | Nao | Nao |
+| Consultar checklists, fotos e vistorias no administrativo | Sim | Sim | Sim | Sim | Somente recursos autorizados do proprio fluxo |
+| Corrigir dados de contraparte de vistoria | Sim | Sim | Nao | Nao | Nao |
+| Cadastrar e editar veiculos | Sim | Sim | Nao | Nao | Nao |
+| Desativar e reativar veiculos | Sim | Sim, com justificativa | Nao | Nao | Nao |
+| Cadastrar e editar motoristas | Sim | Apenas contas MOTORISTA | Nao | Nao | Nao |
+| Definir ou redefinir credenciais de motorista | Sim | Apenas contas MOTORISTA | Nao | Nao | Nao |
+| Administrar contas ADMIN, GESTOR, OPERADOR e VISUALIZADOR; alterar perfis | Sim | Nao | Nao | Nao | Nao |
+| Excluir definitivamente cadastros | Sim, com protecoes | Nao | Nao | Nao | Nao |
+| Consultar alocacoes e seu historico | Sim | Sim | Sim | Sim | Nao |
+| Criar/editar alocacoes, trocar veiculo/responsavel e encerrar | Sim | Sim | Nao | Nao | Nao |
+| Exportar relatorios operacionais existentes | Sim | Sim | Sim | Sim | Nao |
+| Consultar estatisticas | Sim | Sim | Nao nesta versao | Sim | Nao |
+| Alterar rotulos e sugestoes globais | Sim | Nao | Nao | Nao | Nao |
+| Consultar auditoria de contas e permissoes | Sim | Nao | Nao | Nao | Nao |
 
 As alocacoes continuam sendo um modulo independente: consultar ou editar uma
 alocacao nao inicia missao, nao modifica a situacao de um veiculo da operacao
@@ -139,12 +140,12 @@ como registrar retorno com destino bloqueado ou trocar o status diretamente.
 
 Manter a ordem atual das secoes e ocultar grupos sem itens permitidos.
 
-| Secao | Administrador | Gestor | Operador |
-| --- | --- | --- | --- |
-| Operacao diaria | Operacao da frota, Missoes, Vistorias | Os mesmos, com acoes autorizadas | Os mesmos, priorizando registrar saida e retorno |
-| Controle administrativo | Cadastros de veiculos/motoristas e Relatorios/Estatisticas | Os mesmos, restrito a cadastros operacionais | Relatorios operacionais |
-| Alocacoes | Consultar e administrar | Consultar e administrar | Consultar |
-| Sistema | Usuarios e acessos; Configuracoes; Auditoria de acessos | Oculto | Oculto |
+| Secao | Administrador | Gestor | Operador | Visualizador |
+| --- | --- | --- | --- | --- |
+| Operacao diaria | Operacao da frota, Missoes, Vistorias | Os mesmos, com acoes autorizadas | Os mesmos, priorizando registrar saida e retorno | Operacao da frota, Missoes e Vistorias em modo consulta |
+| Controle administrativo | Cadastros de veiculos/motoristas e Relatorios/Estatisticas | Os mesmos, restrito a cadastros operacionais | Relatorios operacionais | Relatorios e estatisticas |
+| Alocacoes | Consultar e administrar | Consultar e administrar | Consultar | Consultar |
+| Sistema | Usuarios e acessos; Configuracoes; Auditoria de acessos | Oculto | Oculto | Oculto |
 
 O cadastro de motoristas deixa de expor contas de outros perfis ao Gestor.
 "Usuarios e acessos" concentra a administracao de todas as contas pelo ADMIN.
@@ -162,7 +163,7 @@ mostrar uma mensagem clara e encaminhar para uma pagina permitida.
 ### Politica central de autorizacao
 
 Criar um catalogo de permissoes por acao no backend, atribuidas explicitamente
-aos quatro perfis. Exemplos: `FROTA_CONSULTAR`, `MISSAO_REGISTRAR`,
+aos cinco perfis. Exemplos: `FROTA_CONSULTAR`, `MISSAO_REGISTRAR`,
 `MISSAO_CORRIGIR`, `MISSAO_ENCERRAR_EXCECAO`, `VEICULO_LIBERAR`,
 `ALOCACAO_CONSULTAR`, `ALOCACAO_GERIR`, `MOTORISTA_GERIR`,
 `ACESSO_GERIR` e `CONFIGURACAO_GERIR`.
@@ -204,7 +205,7 @@ cadeia de seguranca para que uma negativa nao vire "Erro interno".
 
 - Preservar IDs, senhas existentes e referencias historicas da tabela
   `motoristas`. A separacao fisica entre usuario e motorista pode ser uma etapa
-  posterior; nao e requisito para introduzir os quatro perfis.
+  posterior; nao e requisito para introduzir os perfis administrativos.
 - Preservar todas as contas ADMIN atuais como ADMIN. Nenhuma promocao ou
   rebaixamento automatico. Valores de perfil nulos ou desconhecidos precisam
   de diagnostico antes da migracao e nunca recebem privilegio por padrao.
@@ -254,7 +255,7 @@ cadeia de seguranca para que uma negativa nao vire "Erro interno".
    caminho real no servidor/proxy e atender o frontend com acesso autenticado;
    impedir que uma URL estatica paralela continue publica. A disponibilidade
    de fotos antigas nao pode ser assumida apenas pela existencia da linha no banco.
-6. **Testar o conjunto local.** Contas de teste para os quatro perfis, testes de
+6. **Testar o conjunto local.** Contas de teste para os perfis administrativos, testes de
    API e verificacao dos fluxos na interface. Executar testes no CI sem pular
    a suite de autorizacao. Publicacao fica em uma etapa posterior.
 

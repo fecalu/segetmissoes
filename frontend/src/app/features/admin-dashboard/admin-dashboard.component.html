@@ -10,6 +10,7 @@
     [dailyMapDate]="dataMapaDiario"
     [loadingDailyMap]="loadingMapaDiario"
     [dailyMapError]="erroMapaDiario"
+    [readOnly]="!auth.can('FROTA_OPERAR')"
     (refresh)="atualizarPainelOperacional()"
     (history)="abrirHistoricoVeiculo($event)"
     (move)="onDropCategoria($event.event, $event.category)"
@@ -30,7 +31,8 @@
         <form [formGroup]="veiculoForm" (ngSubmit)="salvarVeiculo()" class="form-grid">
           <mat-form-field appearance="outline"><mat-label>Placa</mat-label><input matInput formControlName="placa" placeholder="ABC1D23"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Modelo</mat-label><input matInput formControlName="modelo"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Marca</mat-label><input matInput formControlName="marca"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>CNPJ</mat-label><input matInput formControlName="cnpj" placeholder="Somente números"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>RENAVAM</mat-label><input matInput formControlName="renavam" placeholder="Opcional"></mat-form-field>
           <div class="row-actions">
             <button mat-flat-button color="primary">{{ editingVeiculoId ? 'Atualizar' : 'Criar' }}</button>
             <button mat-stroked-button type="button" (click)="cancelarEdicaoVeiculo()">Limpar</button>
@@ -58,7 +60,8 @@
           <article class="table-row" *ngFor="let v of veiculosAtivos()">
             <div>
               <strong>{{ v.placa }}</strong>
-              <p>{{ v.marca }} {{ v.modelo }} - {{ statusLabel(v.statusAtual) }}</p>
+              <p>{{ v.modelo }} - {{ statusLabel(v.statusAtual) }}</p>
+              <small *ngIf="v.cnpj || v.renavam">CNPJ: {{ v.cnpj || '-' }} | RENAVAM: {{ v.renavam || '-' }}</small>
             </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="abrirHistoricoVeiculo(v)">Histórico</button>
@@ -73,7 +76,8 @@
           <article class="table-row" *ngFor="let v of veiculosDesativados()">
             <div>
               <strong>{{ v.placa }}</strong>
-              <p>{{ v.marca }} {{ v.modelo }} - BAIXADO/DESATIVADO</p>
+              <p>{{ v.modelo }} - BAIXADO/DESATIVADO</p>
+              <small *ngIf="v.cnpj || v.renavam">CNPJ: {{ v.cnpj || '-' }} | RENAVAM: {{ v.renavam || '-' }}</small>
             </div>
             <div class="inline-buttons">
               <button mat-stroked-button type="button" (click)="abrirHistoricoVeiculo(v)">Histórico</button>
@@ -95,7 +99,7 @@
         <form [formGroup]="motoristaForm" (ngSubmit)="salvarMotorista()" class="form-grid">
           <mat-form-field appearance="outline"><mat-label>Nome</mat-label><input matInput formControlName="nome"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Login</mat-label><input matInput formControlName="login"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>CPF</mat-label><input matInput formControlName="cpf"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>CPF</mat-label><input matInput formControlName="cpf" placeholder="Opcional por enquanto"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Senha</mat-label><input matInput type="password" formControlName="senha"></mat-form-field>
           <div class="row-actions">
             <button mat-flat-button color="primary">{{ editingMotoristaId ? 'Atualizar' : 'Criar' }}</button>
@@ -125,7 +129,7 @@
           <article class="table-row" *ngFor="let m of motoristas">
             <div>
               <strong>{{ m.nome }}</strong>
-              <p>{{ m.login }} · {{ m.cpf }}</p>
+              <p>{{ m.login }} · {{ m.cpf || 'CPF pendente' }}</p>
             </div>
             <div>
               <span class="acesso-badge" [class.badge-suspended]="!m.acessoHabilitado" [class.badge-active]="m.acessoHabilitado">
@@ -228,7 +232,7 @@
             <p class="panel-helper">Registre saídas, acompanhe o dia e complete os dados administrativos quando necessário.</p>
           </div>
           <div class="checklist-actions">
-            <button mat-flat-button color="primary" type="button" (click)="abrirNovaMissao()">
+            <button mat-flat-button color="primary" type="button" *ngIf="auth.can('MISSAO_REGISTRAR')" (click)="abrirNovaMissao()">
               + Registrar saída
             </button>
             <button mat-stroked-button type="button" (click)="toggleFiltrosMissoes()">
@@ -240,7 +244,7 @@
 
         <section class="filters-panel" *ngIf="filtrosMissoesAbertos">
           <form [formGroup]="missaoFiltroForm" class="filter-grid">
-            <mat-form-field appearance="outline"><mat-label>Busca (placa, motorista, marca, modelo)</mat-label><input matInput formControlName="busca"></mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Busca (placa, motorista ou modelo)</mat-label><input matInput formControlName="busca"></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Motorista</mat-label><mat-select formControlName="motoristaId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let m of motoristas" [value]="m.id">{{ m.nome }}</mat-option></mat-select></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>Veiculo</mat-label><mat-select formControlName="veiculoId"><mat-option [value]="0">Todos</mat-option><mat-option *ngFor="let v of veiculos" [value]="v.id">{{ v.placa }}</mat-option></mat-select></mat-form-field>
             <mat-form-field appearance="outline">
@@ -329,8 +333,8 @@
               </div>
             </div>
             <div class="inline-buttons">
-              <button mat-flat-button color="primary" type="button" (click)="abrirEdicaoMissao(m)">Editar missão</button>
-              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura === 'REGISTRO_ADMINISTRATIVO'" (click)="abrirRetornoAdministrativo(m.id)">Registrar retorno</button>
+              <button mat-flat-button color="primary" type="button" *ngIf="auth.can('MISSAO_COMPLEMENTAR') || auth.can('MISSAO_CORRIGIR')" (click)="abrirEdicaoMissao(m)">Editar missão</button>
+              <button mat-stroked-button type="button" *ngIf="m.status === 'ATIVA' && m.origemAbertura === 'REGISTRO_ADMINISTRATIVO' && auth.can('MISSAO_REGISTRAR')" (click)="abrirRetornoAdministrativo(m.id)">Registrar retorno</button>
               <button mat-stroked-button type="button" *ngIf="(m.status === 'ATIVA' && m.origemAbertura !== 'REGISTRO_ADMINISTRATIVO') && auth.can('MISSAO_ENCERRAR_EXCECAO')" (click)="abrirEncerramentoPendente(m.id)">Encerrar pendência</button>
               <button mat-stroked-button type="button" (click)="abrirAuditoriaMissao(m)">Auditoria</button>
             </div>
@@ -537,7 +541,7 @@
     <header>
       <div>
         <h3>{{ tituloDecisaoPatio() }}</h3>
-        <p class="history-card-subtitle">{{ veiculoDecisaoPatio.placa }} - {{ veiculoDecisaoPatio.marca }} {{ veiculoDecisaoPatio.modelo }}</p>
+        <p class="history-card-subtitle">{{ veiculoDecisaoPatio.placa }} - {{ veiculoDescricao(veiculoDecisaoPatio) }}</p>
       </div>
       <button mat-stroked-button type="button" (click)="fecharDecisaoPatio()">Fechar</button>
     </header>
@@ -574,7 +578,7 @@
     </p>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Buscar por placa, marca ou modelo</mat-label>
+      <mat-label>Buscar por placa ou modelo</mat-label>
       <input matInput [(ngModel)]="buscaInclusaoVeiculo" [ngModelOptions]="{standalone: true}">
     </mat-form-field>
 
@@ -588,7 +592,7 @@
       >
         <div class="inclusion-main">
           <strong>{{ v.placa }}</strong>
-          <p>{{ v.marca }} {{ v.modelo }}</p>
+          <p>{{ veiculoDescricao(v) }}</p>
         </div>
         <span class="status-pill" [ngClass]="statusClass(v.statusAtual)">{{ statusLabel(v.statusAtual) }}</span>
       </button>
@@ -671,7 +675,7 @@
         <mat-label>Veiculo</mat-label>
         <mat-select formControlName="veiculoId">
           <mat-option [value]="0">Selecione</mat-option>
-          <mat-option *ngFor="let v of veiculosElegiveisContingencia()" [value]="v.id">{{ v.placa }} - {{ v.marca }} {{ v.modelo }}</mat-option>
+          <mat-option *ngFor="let v of veiculosElegiveisContingencia()" [value]="v.id">{{ v.placa }} - {{ veiculoDescricao(v) }}</mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -901,7 +905,7 @@
         <mat-label>Veiculo</mat-label>
         <mat-select formControlName="veiculoId">
           <mat-option *ngFor="let veiculo of veiculosElegiveisEdicaoManual(missaoEdicaoManual)" [value]="veiculo.id">
-            {{ veiculo.placa }} - {{ veiculo.marca }} {{ veiculo.modelo }}
+            {{ veiculo.placa }} - {{ veiculoDescricao(veiculo) }}
           </mat-option>
         </mat-select>
       </mat-form-field>
@@ -1109,7 +1113,7 @@
     <header>
       <div>
         <h3>Registrar uso externo - {{ selectedVeiculoUsoExterno.placa }}</h3>
-        <p class="history-card-subtitle">{{ selectedVeiculoUsoExterno.marca }} {{ selectedVeiculoUsoExterno.modelo }}</p>
+        <p class="history-card-subtitle">{{ veiculoDescricao(selectedVeiculoUsoExterno) }}</p>
       </div>
       <button mat-stroked-button type="button" (click)="fecharRegistroUsoExterno()">Fechar</button>
     </header>
@@ -1159,7 +1163,7 @@
     <header>
       <div>
         <h3>Registrar retorno do uso externo - {{ selectedVeiculoRetornoUsoExterno.placa }}</h3>
-        <p class="history-card-subtitle">{{ selectedVeiculoRetornoUsoExterno.marca }} {{ selectedVeiculoRetornoUsoExterno.modelo }}</p>
+        <p class="history-card-subtitle">{{ veiculoDescricao(selectedVeiculoRetornoUsoExterno) }}</p>
       </div>
       <button mat-stroked-button type="button" (click)="fecharRetornoUsoExterno()">Fechar</button>
     </header>
@@ -1204,7 +1208,7 @@
     <header>
       <div>
         <h3>Histórico do veículo - {{ selectedVeiculoHistorico.placa }}</h3>
-        <p class="history-card-subtitle">{{ selectedVeiculoHistorico.marca }} {{ selectedVeiculoHistorico.modelo }}</p>
+        <p class="history-card-subtitle">{{ veiculoDescricao(selectedVeiculoHistorico) }}</p>
         <p class="history-card-subtitle">Use para consultar a vida operacional do veículo. Para alterações feitas por usuários, abra a aba Auditoria.</p>
       </div>
       <button mat-stroked-button type="button" (click)="fecharHistoricoVeiculo()">Fechar</button>

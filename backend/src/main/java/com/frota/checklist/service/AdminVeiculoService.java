@@ -94,7 +94,9 @@ public class AdminVeiculoService {
         Veiculo veiculo = new Veiculo();
         veiculo.setPlaca(placa);
         veiculo.setModelo(request.modelo().trim());
-        veiculo.setMarca(request.marca().trim());
+        veiculo.setMarca(normalizarTextoOpcional(request.marca()));
+        veiculo.setCnpj(normalizarCnpj(request.cnpj()));
+        veiculo.setRenavam(normalizarRenavam(request.renavam()));
         veiculo.setDesativado(false);
         veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
 
@@ -113,7 +115,9 @@ public class AdminVeiculoService {
 
         veiculo.setPlaca(placa);
         veiculo.setModelo(request.modelo().trim());
-        veiculo.setMarca(request.marca().trim());
+        veiculo.setMarca(normalizarTextoOpcional(request.marca()));
+        veiculo.setCnpj(normalizarCnpj(request.cnpj()));
+        veiculo.setRenavam(normalizarRenavam(request.renavam()));
 
         return toResponse(veiculoRepository.save(veiculo));
     }
@@ -562,6 +566,30 @@ public class AdminVeiculoService {
         return valor.trim();
     }
 
+    private String normalizarCnpj(String valor) {
+        String normalizado = normalizarDigitosOpcional(valor);
+        if (normalizado != null && normalizado.length() != 14) {
+            throw new BusinessException("CNPJ deve conter 14 digitos");
+        }
+        return normalizado;
+    }
+
+    private String normalizarRenavam(String valor) {
+        String normalizado = normalizarDigitosOpcional(valor);
+        if (normalizado != null && normalizado.length() > 20) {
+            throw new BusinessException("RENAVAM deve ter no maximo 20 digitos");
+        }
+        return normalizado;
+    }
+
+    private String normalizarDigitosOpcional(String valor) {
+        if (valor == null || valor.trim().isBlank()) {
+            return null;
+        }
+        String normalizado = valor.replaceAll("\\D", "");
+        return normalizado.isBlank() ? null : normalizado;
+    }
+
     private VeiculoResponse toResponse(Veiculo veiculo) {
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return toResponse(
@@ -603,6 +631,8 @@ public class AdminVeiculoService {
                 veiculo.getPlaca(),
                 veiculo.getModelo(),
                 veiculo.getMarca(),
+                veiculo.getCnpj(),
+                veiculo.getRenavam(),
                 veiculo.getLocalizacaoOperacional(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),

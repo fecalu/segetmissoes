@@ -34,7 +34,8 @@ public class AuthService {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         String token = jwtService.generateToken(userDetails);
 
-        return new LoginResponse(token, userDetails.getMotoristaId(), userDetails.getNome(), userDetails.getPerfil());
+        return new LoginResponse(token, userDetails.getMotoristaId(), userDetails.getNome(), userDetails.getPerfil(),
+                userDetails.isDeveAlterarSenha(), userDetails.isCadastroCompleto());
     }
 
     public MotoristaResponse register(RegisterMotoristaRequest request) {
@@ -53,6 +54,23 @@ public class AuthService {
         motorista.setPerfil(Perfil.MOTORISTA);
 
         Motorista saved = motoristaRepository.save(motorista);
-        return new MotoristaResponse(saved.getId(), saved.getNome(), saved.getLogin(), saved.getCpf(), saved.getPerfil(), saved.isAcessoHabilitado());
+        return new MotoristaResponse(saved.getId(), saved.getNome(), saved.getLogin(), saved.getCpf(), saved.getPerfil(),
+                saved.isAcessoHabilitado(), saved.isDeveAlterarSenha(), saved.isCadastroCompleto());
+    }
+
+    public LoginResponse alterarSenhaInicial(Long motoristaId, String novaSenha) {
+        if (novaSenha == null || novaSenha.length() < 8 || novaSenha.length() > 100) {
+            throw new BusinessException("Informe uma senha entre 8 e 100 caracteres");
+        }
+        Motorista motorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new BusinessException("Usuario nao encontrado"));
+        motorista.setSenha(passwordEncoder.encode(novaSenha));
+        motorista.setDeveAlterarSenha(false);
+        motorista.setVersaoAcesso(motorista.getVersaoAcesso() + 1);
+        Motorista salvo = motoristaRepository.save(motorista);
+        CustomUserDetails userDetails = new CustomUserDetails(salvo);
+        String token = jwtService.generateToken(userDetails);
+        return new LoginResponse(token, salvo.getId(), salvo.getNome(), salvo.getPerfil(),
+                salvo.isDeveAlterarSenha(), salvo.isCadastroCompleto());
     }
 }

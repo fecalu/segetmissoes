@@ -20,4 +20,22 @@ class PerfilTest {
         assertThatThrownBy(() -> Perfil.OPERADOR.permissoes().add(Permissao.ACESSO_GERIR))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
+
+    @Test void visualizadorSomenteConsultaEExporta() {
+        assertThat(Perfil.VISUALIZADOR.permissoes()).contains(
+                Permissao.FROTA_CONSULTAR,
+                Permissao.VISTORIA_CONSULTAR,
+                Permissao.ALOCACAO_CONSULTAR,
+                Permissao.RELATORIO_EXPORTAR,
+                Permissao.ESTATISTICA_CONSULTAR
+        ).doesNotContain(
+                Permissao.FROTA_OPERAR,
+                Permissao.MISSAO_REGISTRAR,
+                Permissao.MISSAO_COMPLEMENTAR,
+                Permissao.MISSAO_CORRIGIR,
+                Permissao.VEICULO_GERIR,
+                Permissao.ALOCACAO_GERIR,
+                Permissao.ACESSO_GERIR
+        );
+    }
 }

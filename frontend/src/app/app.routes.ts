@@ -14,10 +14,12 @@ import { AdminLayoutComponent } from './features/admin-layout/admin-layout.compo
 import { AdminReportsComponent } from './features/admin-reports/admin-reports.component';
 import { AdminAllocationComponent } from './features/admin-allocation/admin-allocation.component';
 import { AdminUsersComponent } from './features/admin-users/admin-users.component';
+import { InitialPasswordComponent } from './features/initial-password/initial-password.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'admin/login', component: AdminLoginComponent },
+  { path: 'alterar-senha-inicial', component: InitialPasswordComponent },
   { path: 'inicio', component: ProcessSelectorComponent, canActivate: [motoristaGuard] },
   { path: 'checklist', component: ChecklistComponent, canActivate: [motoristaGuard] },
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },

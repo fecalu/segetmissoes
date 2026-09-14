@@ -75,6 +75,10 @@ export class AdminLoginComponent implements OnInit {
             return;
           }
           this.authService.saveRememberedAccess('admin', { login: normalizedLogin }, lembrarAcesso);
+          if (res.deveAlterarSenha) {
+            this.router.navigate(['/alterar-senha-inicial']);
+            return;
+          }
           this.router.navigate(['/admin']);
         },
         error: (err: HttpErrorResponse) => {

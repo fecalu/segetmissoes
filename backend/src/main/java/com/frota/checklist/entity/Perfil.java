@@ -8,6 +8,7 @@ public enum Perfil {
     ADMIN,
     GESTOR,
     OPERADOR,
+    VISUALIZADOR,
     MOTORISTA;
 
     public Set<Permissao> permissoes() {
@@ -22,6 +23,9 @@ public enum Perfil {
             case OPERADOR -> Set.of(Permissao.FROTA_CONSULTAR, Permissao.FROTA_OPERAR,
                     Permissao.MISSAO_REGISTRAR, Permissao.MISSAO_COMPLEMENTAR,
                     Permissao.VISTORIA_CONSULTAR, Permissao.ALOCACAO_CONSULTAR, Permissao.RELATORIO_EXPORTAR);
+            case VISUALIZADOR -> Set.of(Permissao.FROTA_CONSULTAR, Permissao.VISTORIA_CONSULTAR,
+                    Permissao.ALOCACAO_CONSULTAR, Permissao.RELATORIO_EXPORTAR,
+                    Permissao.ESTATISTICA_CONSULTAR);
             case MOTORISTA -> Set.of();
         };
     }
