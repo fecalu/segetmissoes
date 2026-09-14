@@ -194,6 +194,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   novaMissaoModo: 'OPERACAO' | 'VIAGEM' | 'RETORNO' | 'PENDENTE' = 'OPERACAO';
   novaMissaoModoFixado = false;
   transicaoMissaoParaViagem: { missaoId: number; veiculo: Veiculo; motoristaId: number } | null = null;
+  transicaoUsoExternoParaMissao: { veiculo: Veiculo } | null = null;
   salvandoRegistroAdministrativo = false;
   salvandoRetornoAdministrativo = false;
   encerrandoMissaoPendente = false;
@@ -1238,7 +1239,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return this.missaoAtivaPorVeiculo(veiculo.id)?.origemAbertura === 'REGISTRO_ADMINISTRATIVO'
         && ['DISPONIVEL', 'PATIO', 'REALOCACAO'].includes(destino);
     }
-    if (origem === 'USO_EXTERNO') return destino === 'REALOCACAO';
+    if (origem === 'USO_EXTERNO') return destino === 'REALOCACAO' || destino === 'MISSAO';
     return ['DISPONIVEL', 'PATIO'].includes(origem) && ['DISPONIVEL', 'PATIO', 'MISSAO', 'VIAGEM', 'USO_EXTERNO'].includes(destino);
   }
 
@@ -1303,7 +1304,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     if (categoriaOrigem === 'USO_EXTERNO') {
-      if (categoriaDestino === 'MISSAO' || categoriaDestino === 'VIAGEM' || categoriaDestino === 'USO_EXTERNO') {
+      if (categoriaDestino === 'MISSAO') {
+        this.abrirTransicaoUsoExternoParaMissao(veiculo);
+        return;
+      }
+      if (categoriaDestino === 'VIAGEM' || categoriaDestino === 'USO_EXTERNO') {
         this.snackBar.open('Registre primeiro o recebimento do veículo antes de iniciar uma nova operação.', 'Fechar', { duration: 3600 });
         return;
       }
@@ -1414,6 +1419,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (transicao) {
       this.transicaoMissaoParaViagem = null;
       this.missoesTempoReal = this.missoesTempoReal.filter(item => item.id !== missaoId);
+    }
+    return transicao;
+  }
+
+  private abrirTransicaoUsoExternoParaMissao(veiculo: Veiculo): void {
+    this.abrirConfirmacao({
+      title: `Iniciar missão com ${veiculo.placa}`,
+      message: 'Este veículo está em uso externo. Primeiro registre o recebimento; em seguida, o sistema abrirá a missão.',
+      confirmText: 'Continuar'
+    }, () => {
+      this.transicaoUsoExternoParaMissao = { veiculo };
+      this.abrirRetornoUsoExternoParaMissao(veiculo);
+    });
+  }
+
+  private abrirRegistroMissaoAposRetornoUsoExterno(transicao: { veiculo: Veiculo }): void {
+    this.abrirNovaMissao('OPERACAO', true);
+    this.missaoContingenciaForm.patchValue({
+      veiculoId: transicao.veiculo.id,
+      dataHoraInicio: this.agoraDateTimeLocal()
+    });
+    if (this.motoristas.length === 0) {
+      this.carregarMotoristas();
+    }
+  }
+
+  private consumirTransicaoUsoExternoParaMissao(veiculoId: number): { veiculo: Veiculo } | null {
+    const transicao = this.transicaoUsoExternoParaMissao?.veiculo.id === veiculoId
+      ? this.transicaoUsoExternoParaMissao
+      : null;
+    if (transicao) {
+      this.transicaoUsoExternoParaMissao = null;
     }
     return transicao;
   }
@@ -1806,10 +1843,23 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private abrirRetornoUsoExternoParaMissao(veiculo: Veiculo): void {
+    this.selectedVeiculoRetornoUsoExterno = veiculo;
+    this.statusDestinoRetornoUsoExterno = null;
+    this.showRetornoUsoExternoModal = true;
+    this.retornoUsoExternoForm.reset({
+      nomeRecebidoDe: veiculo.usoExternoEntreguePara || '',
+      dataHoraRetorno: this.agoraDateTimeLocal(),
+      observacao: '',
+      justificativaSemVistoria: ''
+    });
+  }
+
   fecharRetornoUsoExterno(): void {
     this.showRetornoUsoExternoModal = false;
     this.selectedVeiculoRetornoUsoExterno = null;
     this.statusDestinoRetornoUsoExterno = null;
+    this.transicaoUsoExternoParaMissao = null;
     this.retornoUsoExternoForm.reset({
       nomeRecebidoDe: '',
       dataHoraRetorno: this.agoraDateTimeLocal(),
@@ -1841,13 +1891,21 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => (this.salvandoRetornoUsoExterno = false)))
       .subscribe({
         next: () => {
+          const transicaoMissao = this.consumirTransicaoUsoExternoParaMissao(this.selectedVeiculoRetornoUsoExterno!.id);
           const historicoAbertoParaMesmoVeiculo = this.selectedVeiculoHistorico?.id === this.selectedVeiculoRetornoUsoExterno?.id;
           const veiculoHistorico = this.selectedVeiculoHistorico;
-          this.snackBar.open('Retorno do uso externo registrado com sucesso.', 'Fechar', { duration: 2400 });
+          this.snackBar.open(
+            transicaoMissao ? 'Recebimento registrado. Complete os dados da missão.' : 'Retorno do uso externo registrado com sucesso.',
+            'Fechar',
+            { duration: 2400 }
+          );
           this.fecharRetornoUsoExterno();
           this.carregarVeiculos(this.veiculoBusca);
           if (historicoAbertoParaMesmoVeiculo && veiculoHistorico) {
             this.abrirHistoricoVeiculo(veiculoHistorico);
+          }
+          if (transicaoMissao) {
+            this.abrirRegistroMissaoAposRetornoUsoExterno(transicaoMissao);
           }
         },
         error: err => this.snackBar.open(err.error?.message || 'Falha ao registrar o retorno do uso externo.', 'Fechar', { duration: 3200 })
@@ -2457,7 +2515,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   missoesAtivas(): MissaoResponse[] {
-    return this.missoes.filter(m => m.status === 'ATIVA');
+    const porId = new Map<number, MissaoResponse>();
+    for (const missao of [...this.missoes, ...this.missoesTempoReal, ...this.missoesMapaDiario]) {
+      if (missao.status === 'ATIVA') {
+        porId.set(missao.id, missao);
+      }
+    }
+    return [...porId.values()].sort((a, b) => a.dataHoraInicio.localeCompare(b.dataHoraInicio));
   }
 
   missoesPendentesEncerramento(): MissaoResponse[] {
@@ -3157,6 +3221,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   veiculoDescricao(veiculo: Pick<Veiculo, 'marca' | 'modelo'>): string {
     return [veiculo.marca, veiculo.modelo].filter(Boolean).join(' ');
+  }
+
+  missaoVeiculoDescricao(missao: Pick<MissaoResponse, 'veiculoMarca' | 'veiculoModelo'>): string {
+    return [missao.veiculoMarca, missao.veiculoModelo].filter(Boolean).join(' ');
   }
 
   statusClass(status: StatusVeiculo): string {

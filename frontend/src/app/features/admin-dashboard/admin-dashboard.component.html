@@ -318,7 +318,7 @@
         <div class="table">
           <article class="table-row checklist-row missao-lista-row" [ngClass]="classeLinhaMissao(m)" *ngFor="let m of missoesOrdenadasPorInicio()">
             <div class="checklist-row-content">
-              <strong>{{ m.veiculoMarca }} {{ m.veiculoModelo }} - {{ m.veiculoPlaca }}</strong>
+              <strong>{{ missaoVeiculoDescricao(m) }} - {{ m.veiculoPlaca }}</strong>
               <p><strong>Motorista:</strong> {{ m.motoristaNome }} | <strong>{{ m.tipoDeslocamento === 'VIAGEM' ? 'Viagem' : 'Missao' }}:</strong> #{{ m.id }}</p>
               <p><strong>Inicio:</strong> {{ formatarDataHora(m.dataHoraInicio) }} | <strong>Fim:</strong> {{ m.dataHoraFim ? formatarDataHora(m.dataHoraFim) : '-' }}</p>
               <p>{{ resumoDadosAdministrativos(m) }}</p>
@@ -516,7 +516,7 @@
           <article class="table-row checklist-row missao-lista-row" [ngClass]="classeLinhaVistoria(v)" *ngFor="let v of vistoriasCompletasOrdenadas()">
             <div class="checklist-row-content">
               <strong>{{ tipoOperacaoVistoriaLabel(v.tipoOperacao) }} - {{ v.veiculoPlaca }}</strong>
-              <p><strong>Veículo:</strong> {{ v.veiculoMarca }} {{ v.veiculoModelo }} | <strong>Motorista:</strong> {{ v.motoristaNome }}</p>
+              <p><strong>Veículo:</strong> {{ missaoVeiculoDescricao(v) }} | <strong>Motorista:</strong> {{ v.motoristaNome }}</p>
               <p><strong>Registro:</strong> {{ formatarDataHora(v.dataHora) }} | <strong>Quilometragem:</strong> {{ v.quilometragem }}</p>
               <p><strong>Localização:</strong> {{ v.localizacao || '-' }}</p>
               <p><strong>{{ labelContraparteVistoria(v.tipoOperacao) }}:</strong> {{ v.nomeContraparte || '-' }}</p>
@@ -825,7 +825,7 @@
       <button mat-stroked-button type="button" (click)="fecharEdicaoDadosMissao()">Fechar</button>
     </header>
 
-    <p><strong>Veiculo:</strong> {{ selectedMissaoDadosAdmin.veiculoPlaca }} - {{ selectedMissaoDadosAdmin.veiculoMarca }} {{ selectedMissaoDadosAdmin.veiculoModelo }}</p>
+    <p><strong>Veiculo:</strong> {{ selectedMissaoDadosAdmin.veiculoPlaca }} - {{ missaoVeiculoDescricao(selectedMissaoDadosAdmin) }}</p>
     <p><strong>Motorista:</strong> {{ selectedMissaoDadosAdmin.motoristaNome }}</p>
     <p><strong>{{ selectedMissaoDadosAdmin.tipoDeslocamento === 'VIAGEM' ? 'Status da viagem:' : 'Status dos dados:' }}</strong> {{ labelStatusDocumentalMissao(selectedMissaoDadosAdmin) }}</p>
 
@@ -889,7 +889,7 @@
       <button mat-stroked-button type="button" (click)="fecharEdicaoManualMissao()">Fechar</button>
     </header>
 
-    <p><strong>Veiculo atual:</strong> {{ missaoEdicaoManual.veiculoPlaca }} - {{ missaoEdicaoManual.veiculoMarca }} {{ missaoEdicaoManual.veiculoModelo }}</p>
+    <p><strong>Veiculo atual:</strong> {{ missaoEdicaoManual.veiculoPlaca }} - {{ missaoVeiculoDescricao(missaoEdicaoManual) }}</p>
     <p><strong>Motorista atual:</strong> {{ missaoEdicaoManual.motoristaNome }}</p>
     <p><strong>Regra:</strong> este fluxo vale apenas para missoes registradas manualmente pela administracao.</p>
 
@@ -1002,7 +1002,7 @@
       <button mat-stroked-button type="button" (click)="fecharAuditoriaMissao()">Fechar</button>
     </header>
 
-    <p><strong>Veiculo:</strong> {{ selectedMissaoAuditoria.veiculoPlaca }} - {{ selectedMissaoAuditoria.veiculoMarca }} {{ selectedMissaoAuditoria.veiculoModelo }}</p>
+    <p><strong>Veiculo:</strong> {{ selectedMissaoAuditoria.veiculoPlaca }} - {{ missaoVeiculoDescricao(selectedMissaoAuditoria) }}</p>
     <p><strong>Motorista:</strong> {{ selectedMissaoAuditoria.motoristaNome }}</p>
 
     <p *ngIf="loadingAuditoriaMissao">Carregando auditoria...</p>

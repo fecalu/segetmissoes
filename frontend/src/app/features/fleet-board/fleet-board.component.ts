@@ -131,7 +131,7 @@ export class FleetBoardComponent {
   }
 
   missionVehicle(mission: MissaoResponse): string {
-    return `${mission.veiculoPlaca} - ${mission.veiculoMarca} ${mission.veiculoModelo}`.trim();
+    return `${mission.veiculoPlaca} - ${[mission.veiculoMarca, mission.veiculoModelo].filter(Boolean).join(' ')}`;
   }
 
   missionContext(value: string | null): string {

@@ -20,7 +20,7 @@ export interface MissaoResponse {
   motoristaNome: string;
   veiculoId: number;
   veiculoPlaca: string;
-  veiculoMarca: string;
+  veiculoMarca: string | null;
   veiculoModelo: string;
   checklistSaidaId: number | null;
   checklistChegadaId: number | null;
