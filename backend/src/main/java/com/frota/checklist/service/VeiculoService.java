@@ -76,6 +76,7 @@ public class VeiculoService {
                 veiculo.getCnpj(),
                 veiculo.getRenavam(),
                 veiculo.getLocalizacaoOperacional(),
+                veiculo.getImagemCaminho(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,

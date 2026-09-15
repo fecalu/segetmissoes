@@ -34,6 +34,7 @@ export interface Veiculo {
   cnpj: string | null;
   renavam: string | null;
   localizacaoOperacional: string | null;
+  imagemCaminho: string | null;
   desativado: boolean;
   statusAtual: StatusVeiculo;
   statusAutomatico: StatusVeiculo;

@@ -41,7 +41,7 @@ export class AdminMissionStatsComponent {
   ) {
     const hoje = this.hojeIso();
     this.form = this.fb.nonNullable.group({
-      dataInicial: [hoje, [Validators.required]],
+      dataInicial: [this.umMesAntesIso(), [Validators.required]],
       dataFinal: [hoje, [Validators.required]]
     });
     this.buscar();
@@ -112,5 +112,11 @@ export class AdminMissionStatsComponent {
 
   private hojeIso(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private umMesAntesIso(): string {
+    const data = new Date();
+    data.setMonth(data.getMonth() - 1);
+    return data.toISOString().slice(0, 10);
   }
 }

@@ -3,6 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
+import { ProtectedImageDirective } from '../../shared/ui/protected-image.directive';
 import { LocalOperacionalResponse } from '../../core/models/operational-location.model';
 import { Veiculo } from '../../core/models/veiculo.model';
 import { MissaoResponse } from '../../core/models/missao.model';
@@ -19,7 +20,7 @@ interface DailyMissionGroup {
 
 @Component({
   selector: 'app-fleet-board',
-  imports: [CommonModule, FormsModule, DragDropModule, AppIconComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, AppIconComponent, ProtectedImageDirective],
   templateUrl: './fleet-board.component.html',
   styleUrl: './fleet-board.component.css'
 })

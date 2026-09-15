@@ -1,0 +1,2 @@
+ALTER TABLE veiculos
+    ADD COLUMN IF NOT EXISTS imagem_caminho VARCHAR(500);

@@ -156,6 +156,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   editingMotoristaId: number | null = null;
   editingVeiculoId: number | null = null;
+  veiculoImagemSelecionada: File | null = null;
 
   motoristaBusca = '';
   veiculoBusca = '';
@@ -1253,18 +1254,37 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       : this.adminService.criarVeiculo(payload);
 
     request$.subscribe({
+      next: (veiculo) => this.finalizarSalvarVeiculo(veiculo),
+      error: (err) => this.snackBar.open(err.error?.message || 'Erro ao salvar veiculo.', 'Fechar', { duration: 2800 })
+    });
+  }
+
+  private finalizarSalvarVeiculo(veiculo: Veiculo): void {
+    if (!this.veiculoImagemSelecionada) {
+      this.snackBar.open('Veiculo salvo com sucesso.', 'Fechar', { duration: 2200 });
+      this.cancelarEdicaoVeiculo();
+      this.carregarVeiculos(this.veiculoBusca);
+      return;
+    }
+
+    this.adminService.atualizarImagemVeiculo(veiculo.id, this.veiculoImagemSelecionada).subscribe({
       next: () => {
-        this.snackBar.open('Veiculo salvo com sucesso.', 'Fechar', { duration: 2200 });
+        this.snackBar.open('Veiculo e imagem salvos com sucesso.', 'Fechar', { duration: 2400 });
         this.cancelarEdicaoVeiculo();
         this.carregarVeiculos(this.veiculoBusca);
       },
-      error: (err) => this.snackBar.open(err.error?.message || 'Erro ao salvar veiculo.', 'Fechar', { duration: 2800 })
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Veiculo salvo, mas a imagem nao foi enviada.', 'Fechar', { duration: 3600 });
+        this.cancelarEdicaoVeiculo();
+        this.carregarVeiculos(this.veiculoBusca);
+      }
     });
   }
 
   editarVeiculo(veiculo: Veiculo): void {
     this.activeMenu = 'veiculos';
     this.editingVeiculoId = veiculo.id;
+    this.veiculoImagemSelecionada = null;
     this.veiculoForm.patchValue({
       placa: veiculo.placa,
       modelo: veiculo.modelo,
@@ -1275,7 +1295,41 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   cancelarEdicaoVeiculo(): void {
     this.editingVeiculoId = null;
+    this.veiculoImagemSelecionada = null;
     this.veiculoForm.reset({ placa: '', modelo: '', cnpj: '', renavam: '' });
+  }
+
+  onVeiculoImagemSelecionada(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0] ?? null;
+    if (!arquivo) {
+      this.veiculoImagemSelecionada = null;
+      return;
+    }
+    if (arquivo.type !== 'image/png') {
+      this.veiculoImagemSelecionada = null;
+      input.value = '';
+      this.snackBar.open('Use uma imagem PNG, de preferência sem fundo.', 'Fechar', { duration: 3000 });
+      return;
+    }
+    this.veiculoImagemSelecionada = arquivo;
+  }
+
+  veiculoEmEdicao(): Veiculo | null {
+    return this.editingVeiculoId ? this.veiculos.find(v => v.id === this.editingVeiculoId) ?? null : null;
+  }
+
+  removerImagemVeiculo(): void {
+    const veiculo = this.veiculoEmEdicao();
+    if (!veiculo) return;
+    this.adminService.removerImagemVeiculo(veiculo.id).subscribe({
+      next: () => {
+        this.snackBar.open('Imagem removida do veiculo.', 'Fechar', { duration: 2200 });
+        this.veiculoImagemSelecionada = null;
+        this.carregarVeiculos(this.veiculoBusca);
+      },
+      error: (err) => this.snackBar.open(err.error?.message || 'Erro ao remover imagem.', 'Fechar', { duration: 2800 })
+    });
   }
 
   categoriaPermiteInclusao(categoria: PainelCategoria): boolean {

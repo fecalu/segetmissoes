@@ -12,6 +12,7 @@ public record VeiculoResponse(
         String cnpj,
         String renavam,
         String localizacaoOperacional,
+        String imagemCaminho,
         Boolean desativado,
         StatusVeiculo statusAtual,
         StatusVeiculo statusAutomatico,

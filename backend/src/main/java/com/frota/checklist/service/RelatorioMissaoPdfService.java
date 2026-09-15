@@ -221,23 +221,10 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarAssinatura(Document document) throws DocumentException {
-        Paragraph conferencia = new Paragraph("Conferência do relatório", font(10, Font.BOLD, TEXT));
-        conferencia.setSpacingBefore(18);
-        conferencia.setSpacingAfter(4);
-        document.add(conferencia);
-
-        Paragraph declaracao = new Paragraph(
-                "Declaro que conferi as informações apresentadas neste relatório e que estão de acordo com os registros do sistema.",
-                font(8.5f, Font.NORMAL, TEXT)
-        );
-        declaracao.setSpacingAfter(16);
-        document.add(declaracao);
-
-        PdfPTable assinatura = new PdfPTable(new float[]{1f, 1f});
+        PdfPTable assinatura = new PdfPTable(1);
         assinatura.setWidthPercentage(100);
-        assinatura.setSpacingBefore(4);
-        assinatura.addCell(celulaAssinatura("Responsável pela conferência"));
-        assinatura.addCell(celulaAssinatura("Data e assinatura"));
+        assinatura.setSpacingBefore(28);
+        assinatura.addCell(celulaAssinatura("Assinatura do responsável pela conferência"));
         document.add(assinatura);
     }
 

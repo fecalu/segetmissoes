@@ -327,6 +327,16 @@ export class AdminService {
     return this.http.put<Veiculo>(`${this.veiculoUrl}/${id}`, payload);
   }
 
+  atualizarImagemVeiculo(id: number, imagem: File): Observable<Veiculo> {
+    const formData = new FormData();
+    formData.append('imagem', imagem);
+    return this.http.post<Veiculo>(`${this.veiculoUrl}/${id}/imagem`, formData);
+  }
+
+  removerImagemVeiculo(id: number): Observable<Veiculo> {
+    return this.http.delete<Veiculo>(`${this.veiculoUrl}/${id}/imagem`);
+  }
+
   atualizarStatusAdministrativoVeiculo(id: number, statusAdministrativo: StatusAdministrativoVeiculo | null, justificativa?: string): Observable<Veiculo> {
     return this.http.patch<Veiculo>(`${this.veiculoUrl}/${id}/status-administrativo`, { statusAdministrativo, justificativa });
   }

@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +68,7 @@ public class AdminVeiculoService {
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
     private final MissaoService missaoService;
+    private final FileStorageService fileStorageService;
     private final PasswordEncoder passwordEncoder;
 
     public List<VeiculoResponse> listar(String buscaPlaca) {
@@ -119,6 +121,27 @@ public class AdminVeiculoService {
         veiculo.setCnpj(normalizarCnpj(request.cnpj()));
         veiculo.setRenavam(normalizarRenavam(request.renavam()));
 
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
+    public VeiculoResponse atualizarImagem(Long id, MultipartFile imagem) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+
+        String caminho = fileStorageService.salvarImagemVeiculo(imagem, veiculo.getId(), veiculo.getPlaca());
+        veiculo.setImagemCaminho(caminho);
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
+    public VeiculoResponse removerImagem(Long id) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+
+        veiculo.setImagemCaminho(null);
         return toResponse(veiculoRepository.save(veiculo));
     }
 
@@ -634,6 +657,7 @@ public class AdminVeiculoService {
                 veiculo.getCnpj(),
                 veiculo.getRenavam(),
                 veiculo.getLocalizacaoOperacional(),
+                veiculo.getImagemCaminho(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,

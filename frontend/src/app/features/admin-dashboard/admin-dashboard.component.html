@@ -33,6 +33,20 @@
           <mat-form-field appearance="outline"><mat-label>Modelo</mat-label><input matInput formControlName="modelo"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>CNPJ</mat-label><input matInput formControlName="cnpj" placeholder="Somente números"></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>RENAVAM</mat-label><input matInput formControlName="renavam" placeholder="Opcional"></mat-form-field>
+          <div class="vehicle-image-editor">
+            <div>
+              <strong>Imagem do veículo</strong>
+              <p>Opcional. Use PNG sem fundo para aparecer melhor no painel visual.</p>
+            </div>
+            <ng-container *ngIf="veiculoEmEdicao() as veiculoAtual">
+              <img *ngIf="veiculoAtual.imagemCaminho" [appProtectedImage]="veiculoAtual.imagemCaminho" [alt]="'Imagem de ' + veiculoAtual.placa">
+              <button mat-stroked-button type="button" *ngIf="veiculoAtual.imagemCaminho" (click)="removerImagemVeiculo()">Remover imagem</button>
+            </ng-container>
+            <label class="file-picker">
+              <input type="file" accept="image/png" (change)="onVeiculoImagemSelecionada($event)">
+              <span>{{ veiculoImagemSelecionada ? veiculoImagemSelecionada.name : 'Selecionar PNG' }}</span>
+            </label>
+          </div>
           <div class="row-actions">
             <button mat-flat-button color="primary">{{ editingVeiculoId ? 'Atualizar' : 'Criar' }}</button>
             <button mat-stroked-button type="button" (click)="cancelarEdicaoVeiculo()">Limpar</button>
@@ -126,12 +140,12 @@
         <div class="list-header"><strong>Motoristas cadastrados</strong><span *ngIf="loadingMotoristas">Carregando...</span></div>
         <p class="panel-helper">Esta área mantém o cadastro operacional do motorista. Bloqueio de acesso, perfis e exclusão de conta ficam em Usuários e Acessos.</p>
         <div class="table">
-          <article class="table-row" *ngFor="let m of motoristas">
-            <div>
+          <article class="table-row motorista-row" *ngFor="let m of motoristas">
+            <div class="motorista-info">
               <strong>{{ m.nome }}</strong>
               <p>{{ m.login }} · {{ m.cpf || 'CPF pendente' }}</p>
             </div>
-            <div>
+            <div class="motorista-access">
               <span class="acesso-badge" [class.badge-suspended]="!m.acessoHabilitado" [class.badge-active]="m.acessoHabilitado">
                 {{ m.acessoHabilitado ? 'Acesso ativo' : 'Acesso suspenso' }}
               </span>
