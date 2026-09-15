@@ -427,8 +427,8 @@ export class AdminService {
     return this.http.put<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/dados`, payload);
   }
 
-  trocarVeiculoAlocacao(id: number, placa: string, modelo: string, marca: string | null, motivo: string): Observable<AlocacaoVeiculo> {
-    return this.http.patch<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/veiculo`, { placa, modelo, marca, motivo });
+  trocarVeiculoAlocacao(id: number, placa: string, modelo: string, marca: string | null, linkConsulta: string | null, motivo: string): Observable<AlocacaoVeiculo> {
+    return this.http.patch<AlocacaoVeiculo>(`${this.alocacaoUrl}/${id}/veiculo`, { placa, modelo, marca, linkConsulta, motivo });
   }
 
   trocarResponsavelAlocacao(id: number, responsavelNome: string, motivo: string): Observable<AlocacaoVeiculo> {

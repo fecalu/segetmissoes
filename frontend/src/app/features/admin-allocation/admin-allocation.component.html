@@ -19,6 +19,9 @@
 
   <section class="toolbar" aria-label="Filtros de vagas administrativas">
     <label class="search-field"><app-icon name="search" /><input [(ngModel)]="busca" (keyup.enter)="carregar()" placeholder="Buscar por vaga, placa, responsável, órgão ou setor" /><button type="button" (click)="carregar()">Buscar</button></label>
+    <div class="group-bulk-actions" *ngIf="gruposVagas.length">
+      <button type="button" (click)="alternarTodosGrupos()">{{ todosGruposAbertos() ? 'Fechar tudo' : 'Abrir tudo' }}</button>
+    </div>
     <label class="show-closed"><input type="checkbox" [(ngModel)]="mostrarDesativadas" (change)="carregar()" /> Mostrar desativadas</label>
   </section>
 
@@ -40,11 +43,19 @@
       <tbody *ngFor="let grupo of gruposVagas">
         <tr class="group-row">
           <th colspan="8">
+            <button
+              type="button"
+              class="group-toggle"
+              [class.collapsed]="grupoRecolhido(grupo)"
+              [attr.aria-expanded]="!grupoRecolhido(grupo)"
+              [attr.aria-label]="grupoRecolhido(grupo) ? 'Abrir vagas do setor' : 'Fechar vagas do setor'"
+              (click)="alternarGrupo(grupo)"
+            ></button>
             <span>{{ grupo.orgao }}</span><span class="group-divider">/</span><strong>{{ grupo.setor }}</strong>
             <small>{{ grupo.vagas.length }} {{ grupo.vagas.length === 1 ? 'vaga' : 'vagas' }} neste grupo</small>
           </th>
         </tr>
-        <tr *ngFor="let vaga of grupo.vagas; let impar = odd" [class.closed]="vaga.status === 'DESATIVADA'" [class.free-row]="vaga.status === 'LIVRE'" [class.pale-row]="impar">
+        <tr *ngFor="let vaga of grupo.vagas; let impar = odd" [hidden]="grupoRecolhido(grupo)" [class.closed]="vaga.status === 'DESATIVADA'" [class.free-row]="vaga.status === 'LIVRE'" [class.pale-row]="impar">
           <td class="number">{{ vaga.numeroControle }}</td>
           <td><span class="status" [class.free]="vaga.status === 'LIVRE'" [class.inactive]="vaga.status === 'DESATIVADA'">{{ statusVagaLabel(vaga) }}</span></td>
           <td>
@@ -176,6 +187,7 @@
         <label>Nova placa <input formControlName="placa" placeholder="Ex.: ABC1D23" /></label>
         <label>Novo modelo <input formControlName="modelo" /></label>
         <label>Nova marca <input formControlName="marca" placeholder="Opcional" /></label>
+        <label>Link de consulta da nova placa <input type="text" inputmode="url" formControlName="linkConsulta" placeholder="Opcional. Ex.: https://..." /><small>Se ficar vazio, a nova placa ficará sem link.</small></label>
         <label>Motivo da troca <textarea formControlName="motivo" rows="3" placeholder="Ex.: veículo anterior enviado para oficina"></textarea></label>
         <button mat-flat-button class="primary-action" [disabled]="salvando" type="submit">Confirmar troca</button>
       </form>

@@ -50,6 +50,7 @@ export class AdminAllocationComponent implements OnInit {
   editorMode: EditorMode = null;
   selected: AlocacaoVeiculo | null = null;
   selectedVaga: VagaAdministrativa | null = null;
+  gruposRecolhidos = new Set<string>();
 
   readonly vagaForm = this.fb.group({
     secretariaOrgao: ['', [Validators.required, Validators.maxLength(160)]],
@@ -75,6 +76,7 @@ export class AdminAllocationComponent implements OnInit {
     placa: ['', [Validators.required, Validators.maxLength(10)]],
     modelo: ['', [Validators.required, Validators.maxLength(180)]],
     marca: ['', Validators.maxLength(120)],
+    linkConsulta: ['', Validators.maxLength(500)],
     motivo: ['', [Validators.required, Validators.maxLength(500)]]
   });
   readonly responsavelForm = this.fb.group({
@@ -108,6 +110,37 @@ export class AdminAllocationComponent implements OnInit {
     return [...grupos.values()]
       .sort((a, b) => a.orgao.localeCompare(b.orgao, 'pt-BR') || a.setor.localeCompare(b.setor, 'pt-BR'))
       .map(grupo => ({ ...grupo, vagas: [...grupo.vagas].sort((a, b) => a.numeroControle - b.numeroControle) }));
+  }
+
+  chaveGrupo(grupo: Pick<GrupoVaga, 'orgao' | 'setor'>): string {
+    return `${grupo.orgao}\u0000${grupo.setor}`.toLocaleLowerCase('pt-BR');
+  }
+
+  grupoRecolhido(grupo: GrupoVaga): boolean {
+    return this.gruposRecolhidos.has(this.chaveGrupo(grupo));
+  }
+
+  alternarGrupo(grupo: GrupoVaga): void {
+    const chave = this.chaveGrupo(grupo);
+    const recolhidos = new Set(this.gruposRecolhidos);
+    recolhidos.has(chave) ? recolhidos.delete(chave) : recolhidos.add(chave);
+    this.gruposRecolhidos = recolhidos;
+  }
+
+  abrirTodosGrupos(): void {
+    this.gruposRecolhidos = new Set();
+  }
+
+  fecharTodosGrupos(): void {
+    this.recolherTodosGrupos();
+  }
+
+  todosGruposAbertos(): boolean {
+    return this.gruposVagas.length > 0 && this.gruposRecolhidos.size === 0;
+  }
+
+  alternarTodosGrupos(): void {
+    this.todosGruposAbertos() ? this.fecharTodosGrupos() : this.abrirTodosGrupos();
   }
 
   orgaosAdministrativos(): string[] {
@@ -155,9 +188,17 @@ export class AdminAllocationComponent implements OnInit {
     })
       .pipe(finalize(() => this.carregando = false))
       .subscribe({
-        next: ({ vagas, alocacoes }) => { this.vagas = vagas; this.alocacoes = alocacoes; },
+        next: ({ vagas, alocacoes }) => {
+          this.vagas = vagas;
+          this.alocacoes = alocacoes;
+          this.recolherTodosGrupos();
+        },
         error: () => this.mensagem('Não foi possível carregar as vagas administrativas.')
       });
+  }
+
+  private recolherTodosGrupos(): void {
+    this.gruposRecolhidos = new Set(this.gruposVagas.map(grupo => this.chaveGrupo(grupo)));
   }
 
   abrirCriacaoVaga(): void {
@@ -226,7 +267,7 @@ export class AdminAllocationComponent implements OnInit {
   abrirTrocaVeiculo(alocacao: AlocacaoVeiculo): void {
     this.selected = alocacao;
     this.selectedVaga = this.vagas.find(vaga => vaga.id === alocacao.vagaAdministrativaId) || null;
-    this.veiculoForm.reset({ placa: '', modelo: '', marca: '', motivo: '' });
+    this.veiculoForm.reset({ placa: '', modelo: '', marca: '', linkConsulta: '', motivo: '' });
     this.editorMode = 'VEICULO';
   }
 
@@ -326,7 +367,7 @@ export class AdminAllocationComponent implements OnInit {
   salvarTrocaVeiculo(): void {
     if (this.veiculoForm.invalid) { this.veiculoForm.markAllAsTouched(); return; }
     const value = this.veiculoForm.getRawValue();
-    this.executar(() => this.adminService.trocarVeiculoAlocacao(this.selected!.id, value.placa!, value.modelo!, this.nulo(value.marca), value.motivo!), 'Veículo substituído e histórico atualizado.');
+    this.executar(() => this.adminService.trocarVeiculoAlocacao(this.selected!.id, value.placa!, value.modelo!, this.nulo(value.marca), this.linkConsulta(value.linkConsulta), value.motivo!), 'Veículo substituído e histórico atualizado.');
   }
 
   salvarTrocaResponsavel(): void {

@@ -37,6 +37,9 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; color: var(--allocation-ink); background: transparent; }
 .search-field button { border: 1px solid #cad8e3; border-radius: 8px; padding: 8px 12px; color: #24465f; background: #fff; font-size: .82rem; font-weight: 700; cursor: pointer; }
 .search-field button:hover { background: #e0edf3; }
+.group-bulk-actions { display: inline-flex; gap: 6px; flex-shrink: 0; }
+.group-bulk-actions button { min-height: 34px; border: 1px solid #cad8e3; border-radius: 8px; padding: 6px 10px; color: #38566b; background: #fff; font-size: .76rem; font-weight: 800; cursor: pointer; }
+.group-bulk-actions button:hover { border-color: #a7c0ce; background: #f1f7f9; }
 .show-closed { color: #536a7e; font-size: .88rem; white-space: nowrap; }
 
 .table-wrap { overflow: auto; border: 1px solid var(--allocation-line); border-radius: 12px; background: #fff; }
@@ -54,6 +57,37 @@ h1 { margin-bottom: 8px; font-size: clamp(1.8rem, 3vw, 2.45rem); letter-spacing:
 
 .group-row th { padding: 10px 12px; color: #28556c; background: var(--allocation-accent-soft); border-top: 1px solid #cfe0e9; border-bottom: 1px solid #cfe0e9; text-align: left; font-size: .78rem; letter-spacing: .01em; text-transform: none; }
 .group-row:first-child th { border-top: 0; }
+.group-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 8px 0 0;
+  padding: 0;
+  border: 1px solid #b9cfda;
+  border-radius: 6px;
+  background: #fff;
+  color: #28556c;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.group-toggle::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .14s ease;
+}
+.group-toggle.collapsed::before {
+  transform: translateX(-1px) rotate(-45deg);
+}
+.group-toggle:hover {
+  border-color: #7ea7bd;
+  background: #f7fbfd;
+}
 .group-row span { font-weight: 700; }
 .group-row .group-divider { margin: 0 7px; color: #7d9bad; }
 .group-row strong { color: #174d69; }

@@ -132,6 +132,7 @@ public class AdminAlocacaoVeiculoService {
         alocacao.setPlaca(novaPlaca);
         alocacao.setModelo(obrigatorio(request.modelo()));
         alocacao.setMarca(opcional(request.marca()));
+        alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
         sincronizarVaga(alocacao, StatusVagaAdministrativa.OCUPADA);
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.TROCA_VEICULO,
