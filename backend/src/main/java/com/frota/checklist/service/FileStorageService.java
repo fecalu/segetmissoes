@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +22,8 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Set<String> EXTENSOES_PERMITIDAS = Set.of("jpg", "jpeg", "png", "webp");
+    private static final int VEICULO_THUMB_WIDTH = 180;
+    private static final int VEICULO_THUMB_HEIGHT = 80;
 
     @Value("${app.upload.base-dir}")
     private String uploadBaseDir;
@@ -71,7 +77,12 @@ public class FileStorageService {
 
         try {
             Files.createDirectories(targetDir);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            BufferedImage original = ImageIO.read(file.getInputStream());
+            if (original == null) {
+                throw new BusinessException("Imagem do veiculo invalida");
+            }
+            BufferedImage miniatura = gerarMiniaturaVeiculo(original);
+            ImageIO.write(miniatura, "png", target.toFile());
         } catch (IOException e) {
             throw new BusinessException("Falha ao salvar imagem do veiculo");
         }
@@ -103,6 +114,30 @@ public class FileStorageService {
         if (!"png".equals(ext.toLowerCase(Locale.ROOT))) {
             throw new BusinessException("Formato invalido para " + nomeCampo + ". Use PNG");
         }
+    }
+
+    private BufferedImage gerarMiniaturaVeiculo(BufferedImage original) {
+        double escala = Math.min(
+                (double) VEICULO_THUMB_WIDTH / original.getWidth(),
+                (double) VEICULO_THUMB_HEIGHT / original.getHeight()
+        );
+        escala = Math.min(escala, 1.0d);
+        int largura = Math.max(1, (int) Math.round(original.getWidth() * escala));
+        int altura = Math.max(1, (int) Math.round(original.getHeight() * escala));
+
+        BufferedImage miniatura = new BufferedImage(VEICULO_THUMB_WIDTH, VEICULO_THUMB_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = miniatura.createGraphics();
+        try {
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int x = (VEICULO_THUMB_WIDTH - largura) / 2;
+            int y = (VEICULO_THUMB_HEIGHT - altura) / 2;
+            graphics.drawImage(original, x, y, largura, altura, null);
+        } finally {
+            graphics.dispose();
+        }
+        return miniatura;
     }
 
     private String extrairExtensao(String fileName) {
