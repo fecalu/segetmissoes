@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
-import { EstatisticasMissoesResponse, MissaoMotoristaStats } from '../../core/models/estatisticas-missoes.model';
+import { EstatisticasGrupoMissoes, EstatisticasMissoesResponse, MissaoMotoristaStats } from '../../core/models/estatisticas-missoes.model';
 import { AdminService } from '../../core/services/admin.service';
 
 @Component({
@@ -77,26 +77,33 @@ export class AdminMissionStatsComponent {
       });
   }
 
-  maxMissoes(): number {
-    if (!this.stats?.rankingPorMissoes.length) {
+  grupos(): EstatisticasGrupoMissoes[] {
+    if (!this.stats) {
+      return [];
+    }
+    return [this.stats.missoesUrbanas, this.stats.viagens];
+  }
+
+  maxMissoes(grupo: EstatisticasGrupoMissoes): number {
+    if (!grupo.rankingPorMissoes.length) {
       return 1;
     }
-    return Math.max(...this.stats.rankingPorMissoes.map(item => item.quantidadeMissoes), 1);
+    return Math.max(...grupo.rankingPorMissoes.map(item => item.quantidadeMissoes), 1);
   }
 
-  maxHoras(): number {
-    if (!this.stats?.rankingPorTempo.length) {
+  maxHoras(grupo: EstatisticasGrupoMissoes): number {
+    if (!grupo.rankingPorTempo.length) {
       return 1;
     }
-    return Math.max(...this.stats.rankingPorTempo.map(item => item.tempoTotalHoras), 1);
+    return Math.max(...grupo.rankingPorTempo.map(item => item.tempoTotalHoras), 1);
   }
 
-  barraMissoes(item: MissaoMotoristaStats): string {
-    return `${(item.quantidadeMissoes / this.maxMissoes()) * 100}%`;
+  barraMissoes(item: MissaoMotoristaStats, grupo: EstatisticasGrupoMissoes): string {
+    return `${(item.quantidadeMissoes / this.maxMissoes(grupo)) * 100}%`;
   }
 
-  barraHoras(item: MissaoMotoristaStats): string {
-    return `${(item.tempoTotalHoras / this.maxHoras()) * 100}%`;
+  barraHoras(item: MissaoMotoristaStats, grupo: EstatisticasGrupoMissoes): string {
+    return `${(item.tempoTotalHoras / this.maxHoras(grupo)) * 100}%`;
   }
 
   formatHoras(horas: number): string {
