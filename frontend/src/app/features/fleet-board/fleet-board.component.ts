@@ -3,6 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
+import { LocalOperacionalResponse } from '../../core/models/operational-location.model';
 import { Veiculo } from '../../core/models/veiculo.model';
 import { MissaoResponse } from '../../core/models/missao.model';
 import { FleetCard, FleetColumn, PainelCategoria } from './fleet-board.model';
@@ -32,7 +33,7 @@ export class FleetBoardComponent {
   @Input() dailyMapDate = '';
   @Input() loadingDailyMap = false;
   @Input() dailyMapError = false;
-  @Input() operationalLocations: string[] = [];
+  @Input() operationalLocations: LocalOperacionalResponse[] = [];
   @Input() readOnly = false;
   @Output() refresh = new EventEmitter<void>();
   @Output() history = new EventEmitter<Veiculo>();
@@ -108,9 +109,9 @@ export class FleetBoardComponent {
     this.locationChange.emit({ vehicle, location });
   }
 
-  locationColorClass(location: string | null): string {
-    const normalized = this.normalize(location || 'sem-local');
-    return `location-${normalized || 'sem-local'}`;
+  locationColor(location: string | null): string {
+    const found = this.operationalLocations.find(item => item.nome === location);
+    return found?.cor || '#edf1f6';
   }
 
   moveDestinations(source: PainelCategoria, card: FleetCard): FleetColumn[] {

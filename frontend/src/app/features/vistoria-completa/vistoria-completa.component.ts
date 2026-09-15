@@ -129,6 +129,7 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
   numeroVistoriaLocal = '';
   ultimaVistoria: VistoriaCompletaResponse | null = null;
   veiculoIdConfirmadoParaEncerrarMissao: number | null = null;
+  origemAdmin = false;
 
   previews: Record<FotoPontoKey, string | null> = {
     frente: null,
@@ -194,6 +195,8 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
     if (operacao === 'CHEGADA') {
       this.operacao = 'CHEGADA';
     }
+    this.origemAdmin = this.route.snapshot.queryParamMap.get('origem') === 'admin'
+      && this.authService.can('VISTORIA_REGISTRAR');
 
     this.carregarVeiculos();
     this.carregarRotulosStatus();
@@ -211,6 +214,14 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
 
   getDriverName(): string {
     return this.authService.loggedName() || 'Motorista';
+  }
+
+  responsavelLabel(): string {
+    return this.origemAdmin ? 'Responsavel pelo registro' : 'Motorista';
+  }
+
+  textoVoltar(): string {
+    return this.origemAdmin ? 'Voltar para vistorias' : 'Voltar ao inicio';
   }
 
   progressoPercentual(): number {
@@ -748,6 +759,10 @@ export class VistoriaCompletaComponent implements OnInit, AfterViewChecked, OnDe
   }
 
   voltarInicio(): void {
+    if (this.origemAdmin) {
+      this.router.navigate(['/admin'], { queryParams: { menu: 'vistorias-completas' } });
+      return;
+    }
     this.router.navigate(['/inicio']);
   }
 

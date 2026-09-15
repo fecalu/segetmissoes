@@ -2,6 +2,7 @@
 import { LoginComponent } from './features/login/login.component';
 import { ChecklistComponent } from './features/checklist/checklist.component';
 import { motoristaGuard } from './core/guards/motorista.guard';
+import { vistoriaGuard } from './core/guards/vistoria.guard';
 import { AdminLoginComponent } from './features/admin-login/admin-login.component';
 import { AdminDashboardComponent } from './features/admin-dashboard/admin-dashboard.component';
 import { adminGuard } from './core/guards/admin.guard';
@@ -23,7 +24,7 @@ export const routes: Routes = [
   { path: 'inicio', component: ProcessSelectorComponent, canActivate: [motoristaGuard] },
   { path: 'checklist', component: ChecklistComponent, canActivate: [motoristaGuard] },
   { path: 'checklist/excecao', component: MissaoExcecaoComponent, canActivate: [motoristaGuard] },
-  { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [motoristaGuard] },
+  { path: 'vistoria-completa', component: VistoriaCompletaComponent, canActivate: [vistoriaGuard] },
   { path: 'admin', component: AdminLayoutComponent, canActivate: [adminGuard], canActivateChild: [adminGuard], children: [
     { path: 'checklists/relatorio', component: AdminReportComponent, data: { permission: 'RELATORIO_EXPORTAR' } },
     { path: 'estatisticas/missoes', component: AdminMissionStatsComponent, data: { permission: 'ESTATISTICA_CONSULTAR' } },

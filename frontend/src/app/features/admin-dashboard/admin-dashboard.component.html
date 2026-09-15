@@ -149,82 +149,157 @@
       <mat-card class="panel-card">
         <div class="checklist-topline">
           <div>
-            <h3>Rotulos e sugestoes operacionais</h3>
-            <p class="panel-helper">Edite os nomes dos status dos veiculos e mantenha listas de sugestoes para destino, setor solicitante, quem solicitou e justificativas do registro manual.</p>
+            <h3>Configurações operacionais</h3>
+            <p class="panel-helper">Centralize nomes exibidos, locais rápidos dos veículos e sugestões usadas nos registros administrativos.</p>
           </div>
           <div class="checklist-actions">
             <button mat-stroked-button type="button" (click)="carregarRotulosStatus()">Atualizar</button>
-            <button mat-flat-button color="primary" type="button" [disabled]="salvandoRotulosStatus" (click)="salvarRotulosStatus()">
-              {{ salvandoRotulosStatus ? 'Salvando...' : 'Salvar alteracoes' }}
-            </button>
           </div>
         </div>
 
-        <div class="list-header"><strong>Configuracao de rotulos</strong><span *ngIf="loadingRotulosStatus">Carregando...</span></div>
-        <div class="table">
-          <article class="table-row table-row-edit" *ngFor="let item of rotulosStatusEditor">
-            <div class="status-config-left">
-              <strong>{{ item.status }}</strong>
-              <p>Padrao: {{ item.rotuloPadrao }}</p>
+        <div class="config-nav" role="tablist" aria-label="Áreas de configuração">
+          <button type="button" [class.active]="configuracaoSection === 'ROTULOS'" (click)="configuracaoSection = 'ROTULOS'">Rótulos de status</button>
+          <button type="button" [class.active]="configuracaoSection === 'LOCAIS'" (click)="configuracaoSection = 'LOCAIS'">Locais dos veículos</button>
+          <button type="button" [class.active]="configuracaoSection === 'SUGESTOES'" (click)="configuracaoSection = 'SUGESTOES'">Sugestões</button>
+        </div>
+
+        <section class="config-section" *ngIf="configuracaoSection === 'ROTULOS'">
+          <div class="config-section-head">
+            <div>
+              <strong>Rótulos de status</strong>
+              <p>Define como cada situação aparece nos cards e painéis.</p>
             </div>
-            <mat-form-field appearance="outline" class="status-config-input">
-              <mat-label>Nome exibido</mat-label>
-              <input matInput maxlength="80" [(ngModel)]="item.rotulo" [ngModelOptions]="{standalone: true}">
+            <button mat-flat-button color="primary" type="button" [disabled]="salvandoRotulosStatus" (click)="salvarRotulosStatus()">
+              {{ salvandoRotulosStatus ? 'Salvando...' : 'Salvar rótulos' }}
+            </button>
+          </div>
+          <div class="list-header"><strong>Status configuráveis</strong><span *ngIf="loadingRotulosStatus">Carregando...</span></div>
+          <div class="table">
+            <article class="table-row table-row-edit" *ngFor="let item of rotulosStatusEditor">
+              <div class="status-config-left">
+                <strong>{{ item.status }}</strong>
+                <p>Padrão: {{ item.rotuloPadrao }}</p>
+              </div>
+              <mat-form-field appearance="outline" class="status-config-input">
+                <mat-label>Nome exibido</mat-label>
+                <input matInput maxlength="80" [(ngModel)]="item.rotulo" [ngModelOptions]="{standalone: true}">
+              </mat-form-field>
+              <button mat-stroked-button type="button" (click)="restaurarRotuloPadrao(item)">Padrão</button>
+            </article>
+            <p class="empty-column" *ngIf="!loadingRotulosStatus && rotulosStatusEditor.length === 0">Nenhum rótulo encontrado.</p>
+          </div>
+        </section>
+
+        <section class="config-section" *ngIf="configuracaoSection === 'LOCAIS'">
+          <div class="config-section-head">
+            <div>
+              <strong>Locais rápidos dos veículos</strong>
+              <p>Opções exibidas na gaveta dos cards disponíveis, como Ilha, Lateral ou Igreja da Sé.</p>
+            </div>
+            <button mat-flat-button color="primary" type="button" [disabled]="salvandoLocaisOperacionais" (click)="salvarLocaisOperacionais()">
+              {{ salvandoLocaisOperacionais ? 'Salvando...' : 'Salvar locais' }}
+            </button>
+          </div>
+
+          <div class="location-config-add">
+            <mat-form-field appearance="outline">
+              <mat-label>Novo local</mat-label>
+              <input matInput maxlength="80" [(ngModel)]="novoLocalOperacional.nome" [ngModelOptions]="{standalone: true}" (keydown.enter)="adicionarLocalOperacional(); $event.preventDefault()">
             </mat-form-field>
-            <button mat-stroked-button type="button" (click)="restaurarRotuloPadrao(item)">Padrao</button>
-          </article>
-          <p class="empty-column" *ngIf="!loadingRotulosStatus && rotulosStatusEditor.length === 0">Nenhum rotulo encontrado.</p>
-        </div>
+            <label class="color-field">
+              <span>Cor</span>
+              <input type="color" [(ngModel)]="novoLocalOperacional.cor" [ngModelOptions]="{standalone: true}">
+            </label>
+            <button mat-stroked-button type="button" (click)="adicionarLocalOperacional()">Adicionar</button>
+          </div>
 
-        <div class="list-header">
-          <strong>Sugestoes para missoes</strong>
-          <span *ngIf="loadingSugestoesMissao">Carregando...</span>
-        </div>
-        <div class="sugestoes-missao-grid">
-          <section class="sugestao-missao-card" *ngFor="let campo of camposSugestaoMissao">
-            <div class="sugestao-missao-head">
-              <strong>{{ campo.titulo }}</strong>
-              <span>{{ sugestoesMissaoEditor[campo.key].length }} sugestoes</span>
+          <div class="location-config-list">
+            <article class="location-config-row" *ngFor="let local of locaisOperacionaisEditor; let i = index">
+              <span class="location-preview" [style.background]="local.cor"></span>
+              <mat-form-field appearance="outline" class="location-name-input">
+                <mat-label>Nome</mat-label>
+                <input matInput maxlength="80" [(ngModel)]="local.nome" [ngModelOptions]="{standalone: true}">
+              </mat-form-field>
+              <label class="color-field compact">
+                <span>Cor</span>
+                <input type="color" [(ngModel)]="local.cor" [ngModelOptions]="{standalone: true}">
+              </label>
+              <mat-form-field appearance="outline" class="location-active-input">
+                <mat-label>Situação</mat-label>
+                <mat-select [(ngModel)]="local.ativo" [ngModelOptions]="{standalone: true}">
+                  <mat-option [value]="true">Ativo</mat-option>
+                  <mat-option [value]="false">Oculto</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <div class="location-row-actions">
+                <button mat-stroked-button type="button" [disabled]="i === 0" (click)="moverLocalOperacional(i, -1)">Subir</button>
+                <button mat-stroked-button type="button" [disabled]="i === locaisOperacionaisEditor.length - 1" (click)="moverLocalOperacional(i, 1)">Descer</button>
+                <button mat-stroked-button type="button" (click)="removerLocalOperacional(i)">Remover</button>
+              </div>
+            </article>
+            <p class="empty-column" *ngIf="!loadingLocaisOperacionais && locaisOperacionaisEditor.length === 0">Nenhum local cadastrado.</p>
+          </div>
+        </section>
+
+        <section class="config-section" *ngIf="configuracaoSection === 'SUGESTOES'">
+          <div class="config-section-head">
+            <div>
+              <strong>Sugestões para missões</strong>
+              <p>Listas usadas nos campos de destino, setor, solicitante e justificativas administrativas.</p>
             </div>
+            <button mat-flat-button color="primary" type="button" [disabled]="salvandoSugestoesMissao" (click)="salvarSugestoesMissao()">
+              {{ salvandoSugestoesMissao ? 'Salvando...' : 'Salvar sugestões' }}
+            </button>
+          </div>
+          <div class="list-header">
+            <strong>Campos com autocomplete</strong>
+            <span *ngIf="loadingSugestoesMissao">Carregando...</span>
+          </div>
+          <div class="sugestoes-missao-grid">
+            <section class="sugestao-missao-card" *ngFor="let campo of camposSugestaoMissao">
+              <div class="sugestao-missao-head">
+                <strong>{{ campo.titulo }}</strong>
+                <span>{{ sugestoesMissaoEditor[campo.key].length }} sugestões</span>
+              </div>
 
-            <div class="sugestao-missao-add">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>{{ campo.placeholder }}</mat-label>
-                <textarea
-                  *ngIf="campo.key === 'justificativasRegistroManual'; else inputSugestaoMissao"
-                  matInput
-                  rows="3"
-                  maxlength="700"
-                  [(ngModel)]="novaSugestaoMissao[campo.key]"
-                  [ngModelOptions]="{standalone: true}"
-                ></textarea>
-                <ng-template #inputSugestaoMissao>
-                  <input
+              <div class="sugestao-missao-add">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>{{ campo.placeholder }}</mat-label>
+                  <textarea
+                    *ngIf="campo.key === 'justificativasRegistroManual'; else inputSugestaoMissao"
                     matInput
+                    rows="3"
+                    maxlength="700"
                     [(ngModel)]="novaSugestaoMissao[campo.key]"
                     [ngModelOptions]="{standalone: true}"
-                    (keydown.enter)="adicionarSugestaoMissao(campo.key); $event.preventDefault()"
-                  >
-                </ng-template>
-                <mat-hint align="end" *ngIf="campo.key === 'justificativasRegistroManual'">
-                  {{ novaSugestaoMissao[campo.key].length }}/700
-                </mat-hint>
-              </mat-form-field>
-              <button mat-stroked-button type="button" (click)="adicionarSugestaoMissao(campo.key)">Adicionar</button>
-            </div>
+                  ></textarea>
+                  <ng-template #inputSugestaoMissao>
+                    <input
+                      matInput
+                      [(ngModel)]="novaSugestaoMissao[campo.key]"
+                      [ngModelOptions]="{standalone: true}"
+                      (keydown.enter)="adicionarSugestaoMissao(campo.key); $event.preventDefault()"
+                    >
+                  </ng-template>
+                  <mat-hint align="end" *ngIf="campo.key === 'justificativasRegistroManual'">
+                    {{ novaSugestaoMissao[campo.key].length }}/700
+                  </mat-hint>
+                </mat-form-field>
+                <button mat-stroked-button type="button" (click)="adicionarSugestaoMissao(campo.key)">Adicionar</button>
+              </div>
 
-            <div class="sugestao-missao-lista">
-              <article class="sugestao-missao-item" *ngFor="let valor of sugestoesMissaoEditor[campo.key]">
-                <span>{{ valor }}</span>
-                <button mat-stroked-button type="button" (click)="removerSugestaoMissao(campo.key, valor)">Remover</button>
-              </article>
-              <p class="empty-column" *ngIf="sugestoesMissaoEditor[campo.key].length === 0">Nenhuma sugestao cadastrada.</p>
-            </div>
-          </section>
-        </div>
+              <div class="sugestao-missao-lista">
+                <article class="sugestao-missao-item" *ngFor="let valor of sugestoesMissaoEditor[campo.key]">
+                  <span>{{ valor }}</span>
+                  <button mat-stroked-button type="button" (click)="removerSugestaoMissao(campo.key, valor)">Remover</button>
+                </article>
+                <p class="empty-column" *ngIf="sugestoesMissaoEditor[campo.key].length === 0">Nenhuma sugestão cadastrada.</p>
+              </div>
+            </section>
+          </div>
+        </section>
       </mat-card>
     </section>
-
     <section class="content" *ngIf="activeMenu === 'missoes'">
       <mat-card class="panel-card">
         <div class="checklist-topline">
@@ -458,6 +533,12 @@
             <p class="panel-helper">Consulta das vistorias detalhadas usadas quando o veículo é entregue para uso externo ou recebido de volta.</p>
           </div>
           <div class="checklist-actions">
+            <button *ngIf="auth.can('VISTORIA_REGISTRAR')" mat-flat-button color="primary" type="button" (click)="abrirNovaVistoriaCompleta('SAIDA')">
+              Nova vistoria de entrega
+            </button>
+            <button *ngIf="auth.can('VISTORIA_REGISTRAR')" mat-stroked-button type="button" (click)="abrirNovaVistoriaCompleta('CHEGADA')">
+              Nova vistoria de recebimento
+            </button>
             <button mat-stroked-button type="button" (click)="toggleFiltrosVistorias()">
               {{ filtrosVistoriasAbertos ? 'Ocultar filtros' : 'Filtros' }}
             </button>

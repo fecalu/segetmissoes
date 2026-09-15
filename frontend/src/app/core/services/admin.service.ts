@@ -14,6 +14,7 @@ import {
 } from '../models/missao.model';
 import { SalvarSugestoesCamposMissaoRequest, SugestoesCamposMissaoResponse } from '../models/missao-suggestion.model';
 import { Motorista, MotoristaAdminPayload } from '../models/motorista.model';
+import { LocalOperacionalResponse, SalvarLocaisOperacionaisRequest } from '../models/operational-location.model';
 import { RotuloStatusVeiculoResponse, SalvarRotulosStatusVeiculoRequest } from '../models/status-label.model';
 import { HistoricoStatusVeiculo, StatusAdministrativoVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../models/veiculo.model';
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../models/vistoria-completa.model';
@@ -160,6 +161,7 @@ export class AdminService {
   private readonly veiculoUrl = `${environment.apiBaseUrl}/admin/veiculos`;
   private readonly configuracaoRotuloStatusVeiculoUrl = `${environment.apiBaseUrl}/admin/configuracoes/rotulos-status-veiculo`;
   private readonly configuracaoSugestoesMissaoUrl = `${environment.apiBaseUrl}/admin/configuracoes/sugestoes-missao`;
+  private readonly configuracaoLocaisOperacionaisUrl = `${environment.apiBaseUrl}/admin/configuracoes/locais-operacionais`;
   private readonly relatorioChecklistUrl = `${environment.apiBaseUrl}/admin/relatorios/checklists/pdf`;
   private readonly relatorioMissaoUrl = `${environment.apiBaseUrl}/admin/relatorios/missoes/pdf`;
   private readonly estatisticasMissoesUrl = `${environment.apiBaseUrl}/admin/estatisticas/missoes`;
@@ -390,6 +392,14 @@ export class AdminService {
 
   salvarSugestoesCamposMissao(payload: SalvarSugestoesCamposMissaoRequest): Observable<SugestoesCamposMissaoResponse> {
     return this.http.put<SugestoesCamposMissaoResponse>(this.configuracaoSugestoesMissaoUrl, payload);
+  }
+
+  listarLocaisOperacionais(): Observable<LocalOperacionalResponse[]> {
+    return this.http.get<LocalOperacionalResponse[]>(this.configuracaoLocaisOperacionaisUrl);
+  }
+
+  salvarLocaisOperacionais(payload: SalvarLocaisOperacionaisRequest): Observable<LocalOperacionalResponse[]> {
+    return this.http.put<LocalOperacionalResponse[]>(this.configuracaoLocaisOperacionaisUrl, payload);
   }
 
   listarAlocacoes(busca?: string, incluirEncerradas = false): Observable<AlocacaoVeiculo[]> {

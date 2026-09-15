@@ -1127,3 +1127,145 @@
   }
 
 }
+
+.config-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px;
+  border: 1px solid #dce5fb;
+  border-radius: 999px;
+  background: #f6f9ff;
+  margin: 8px 0 14px;
+}
+
+.config-nav button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #52627f;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.config-nav button.active {
+  background: #17345f;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(23, 52, 95, 0.16);
+}
+
+.config-section {
+  display: grid;
+  gap: 10px;
+}
+
+.config-section-head {
+  align-items: center;
+  background: linear-gradient(135deg, #f8fbff, #eef5ff);
+  border: 1px solid #dce5fb;
+  border-radius: 14px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.config-section-head strong {
+  color: #17345f;
+}
+
+.config-section-head p {
+  color: #5b6688;
+  font-size: 0.84rem;
+  margin: 4px 0 0;
+}
+
+.location-config-add,
+.location-config-row {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dce5fb;
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.location-config-add {
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+}
+
+.location-config-list {
+  display: grid;
+  gap: 8px;
+}
+
+.location-config-row {
+  grid-template-columns: auto minmax(180px, 1fr) auto minmax(120px, 140px) auto;
+}
+
+.location-preview {
+  border: 1px solid rgba(23, 52, 95, 0.12);
+  border-radius: 999px;
+  display: inline-block;
+  height: 18px;
+  width: 44px;
+}
+
+.location-name-input,
+.location-active-input {
+  width: 100%;
+}
+
+.color-field {
+  align-items: center;
+  border: 1px solid #dce5fb;
+  border-radius: 12px;
+  color: #52627f;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 10px;
+}
+
+.color-field input {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  height: 28px;
+  padding: 0;
+  width: 42px;
+}
+
+.location-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.location-row-actions button,
+.location-config-add button {
+  min-height: 38px;
+  font-weight: 800;
+}
+
+@media (max-width: 920px) {
+  .location-config-add,
+  .location-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .config-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .location-row-actions {
+    justify-content: flex-start;
+  }
+}

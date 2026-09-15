@@ -4,9 +4,9 @@
       <div>
         <p class="eyebrow">Uso externo</p>
         <h2>{{ operationTitle() }}</h2>
-        <p class="topbar-copy">Motorista: {{ getDriverName() }}</p>
+        <p class="topbar-copy">{{ responsavelLabel() }}: {{ getDriverName() }}</p>
       </div>
-      <button mat-stroked-button type="button" (click)="voltarInicio()">Voltar ao inicio</button>
+      <button mat-stroked-button type="button" (click)="voltarInicio()">{{ textoVoltar() }}</button>
     </header>
 
     <div class="progress-wrap">
@@ -39,7 +39,7 @@
       <button mat-flat-button color="primary" class="big-btn" type="button" (click)="novaVistoria()">
         {{ operacao === 'SAIDA' ? 'Nova entrega' : 'Novo recebimento' }}
       </button>
-      <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">Voltar para escolha de processo</button>
+      <button mat-stroked-button class="big-btn" type="button" (click)="voltarInicio()">{{ textoVoltar() }}</button>
     </section>
 
     <form *ngIf="!loading && !showSuccess" [formGroup]="form" class="wizard">

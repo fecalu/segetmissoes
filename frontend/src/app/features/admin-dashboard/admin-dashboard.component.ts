@@ -36,6 +36,7 @@ import {
 import { SugestoesCamposMissaoResponse } from '../../core/models/missao-suggestion.model';
 import { MissaoExcecaoResponse, MotivoExcecaoMissao, StatusExcecaoMissao } from '../../core/models/missao-excecao.model';
 import { Motorista } from '../../core/models/motorista.model';
+import { LocalOperacionalResponse } from '../../core/models/operational-location.model';
 import { RotuloStatusVeiculoResponse } from '../../core/models/status-label.model';
 import { StatusAdministrativoVeiculo, StatusVeiculo, TipoUsoExternoVeiculo, Veiculo } from '../../core/models/veiculo.model';
 import { ResultadoVistoriaCompleta, VistoriaCompletaResponse } from '../../core/models/vistoria-completa.model';
@@ -68,6 +69,7 @@ type CampoSugestaoMissaoEditor = 'destinos' | 'setoresSolicitantes' | 'solicitan
 type FiltroHistoricoVeiculo = '' | 'MISSOES' | 'CHECKLISTS' | 'SEM_CHECKLIST' | 'VIAGENS' | 'USO_EXTERNO' | 'VISTORIAS' | 'STATUS';
 type ModoHistoricoVeiculo = 'OPERACIONAL' | 'AUDITORIA';
 type ModoOperacaoFrota = 'PAINEL' | 'MAPA';
+type ConfiguracaoSection = 'ROTULOS' | 'LOCAIS' | 'SUGESTOES';
 
 interface ConsultaChecklistItem {
   idExibicao: string;
@@ -143,8 +145,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loadingHistoricoVeiculo = false;
   loadingRotulosStatus = false;
   loadingSugestoesMissao = false;
+  loadingLocaisOperacionais = false;
   gerandoRelatorioMissoes = false;
   salvandoRotulosStatus = false;
+  salvandoSugestoesMissao = false;
+  salvandoLocaisOperacionais = false;
   salvandoContraparteVistoria = false;
   salvandoHorarioMissao = false;
   salvandoEdicaoMissaoManual = false;
@@ -176,6 +181,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   historicoVeiculo: HistoricoVeiculoResponse | null = null;
   eventoHistoricoSelecionado: EventoHistoricoVeiculo | null = null;
   rotulosStatusEditor: RotuloStatusVeiculoResponse[] = [];
+  locaisOperacionaisEditor: LocalOperacionalResponse[] = [];
+  localizacoesOperacionais: LocalOperacionalResponse[] = [];
+  novoLocalOperacional = { nome: '', cor: '#edf1f6' };
+  configuracaoSection: ConfiguracaoSection = 'ROTULOS';
   sugestoesMissaoEditor: SugestoesCamposMissaoResponse = {
     destinos: [],
     setoresSolicitantes: [],
@@ -239,7 +248,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { id: 'USO_EXTERNO', titulo: 'Em uso externo', descricao: 'Oficina, serviços ou uso fora do setor' },
     { id: 'BLOQUEADO', titulo: 'Bloqueados', descricao: 'Sem liberação para uso' }
   ];
-  readonly localizacoesOperacionais = ['Ilha', 'Lateral', 'Escadaria', 'Montanha Russa', 'Igreja da Sé', 'Outro'];
   readonly tiposUsoExterno: Array<{ value: TipoUsoExternoVeiculo; label: string }> = [
     { value: 'OFICINA', label: 'Oficina' },
     { value: 'LOCADORA', label: 'Locadora' },
@@ -745,6 +753,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/checklists/relatorio']);
   }
 
+  abrirNovaVistoriaCompleta(operacao: 'SAIDA' | 'CHEGADA'): void {
+    this.router.navigate(['/vistoria-completa'], { queryParams: { operacao, origem: 'admin' } });
+  }
+
   exportarRelatorioMissoesPdf(): void {
     if (!this.dataRelatorioMissoes) {
       this.snackBar.open('Selecione a data do relatorio.', 'Fechar', { duration: 2500 });
@@ -950,29 +962,33 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   carregarRotulosStatus(showError = true): void {
     this.loadingRotulosStatus = true;
     this.loadingSugestoesMissao = true;
+    this.loadingLocaisOperacionais = true;
     forkJoin({
       rotulos: this.adminService.listarRotulosStatusVeiculo(),
-      sugestoes: this.adminService.listarSugestoesCamposMissao()
+      sugestoes: this.adminService.listarSugestoesCamposMissao(),
+      locais: this.adminService.listarLocaisOperacionais()
     })
       .pipe(finalize(() => {
         this.loadingRotulosStatus = false;
         this.loadingSugestoesMissao = false;
+        this.loadingLocaisOperacionais = false;
       }))
       .subscribe({
-        next: ({ rotulos, sugestoes }) => {
+        next: ({ rotulos, sugestoes, locais }) => {
           this.aplicarRotulosStatus(rotulos);
           this.aplicarSugestoesMissao(sugestoes);
+          this.aplicarLocaisOperacionais(locais);
         },
         error: () => {
           if (showError) {
-            this.snackBar.open('Falha ao carregar rotulos e sugestoes.', 'Fechar', { duration: 2800 });
+            this.snackBar.open('Falha ao carregar configuracoes.', 'Fechar', { duration: 2800 });
           }
         }
       });
   }
 
   salvarRotulosStatus(): void {
-    if (this.rotulosStatusEditor.length === 0 && this.totalSugestoesMissao() === 0) {
+    if (this.rotulosStatusEditor.length === 0) {
       return;
     }
 
@@ -989,18 +1005,91 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.salvandoRotulosStatus = true;
-    forkJoin({
-      rotulos: this.adminService.salvarRotulosStatusVeiculo(payload),
-      sugestoes: this.adminService.salvarSugestoesCamposMissao(this.sugestoesMissaoEditor)
-    })
+    this.adminService.salvarRotulosStatusVeiculo(payload)
       .pipe(finalize(() => (this.salvandoRotulosStatus = false)))
       .subscribe({
-        next: ({ rotulos, sugestoes }) => {
+        next: (rotulos) => {
           this.aplicarRotulosStatus(rotulos);
-          this.aplicarSugestoesMissao(sugestoes);
-          this.snackBar.open('Rotulos e sugestoes atualizados.', 'Fechar', { duration: 2200 });
+          this.snackBar.open('Rotulos atualizados.', 'Fechar', { duration: 2200 });
         },
         error: (err) => this.snackBar.open(err.error?.message || 'Falha ao salvar configuracoes.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  salvarLocaisOperacionais(): void {
+    const locais = this.locaisOperacionaisEditor.map((item, index) => ({
+      ...item,
+      nome: item.nome.trim(),
+      cor: item.cor || '#edf1f6',
+      ordemExibicao: index + 1
+    }));
+
+    if (locais.some(item => !item.nome)) {
+      this.snackBar.open('Todos os locais devem ter nome.', 'Fechar', { duration: 2600 });
+      return;
+    }
+
+    this.salvandoLocaisOperacionais = true;
+    this.adminService.salvarLocaisOperacionais({ locais })
+      .pipe(finalize(() => (this.salvandoLocaisOperacionais = false)))
+      .subscribe({
+        next: locaisAtualizados => {
+          this.aplicarLocaisOperacionais(locaisAtualizados);
+          this.snackBar.open('Locais dos veiculos atualizados.', 'Fechar', { duration: 2200 });
+        },
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao salvar locais.', 'Fechar', { duration: 3200 })
+      });
+  }
+
+  adicionarLocalOperacional(): void {
+    const nome = this.novoLocalOperacional.nome.trim();
+    if (!nome) {
+      return;
+    }
+    const jaExiste = this.locaisOperacionaisEditor.some(item => item.nome.trim().toUpperCase() === nome.toUpperCase());
+    if (jaExiste) {
+      this.snackBar.open('Local ja cadastrado.', 'Fechar', { duration: 2200 });
+      return;
+    }
+    this.locaisOperacionaisEditor = [
+      ...this.locaisOperacionaisEditor,
+      {
+        id: null,
+        nome,
+        cor: this.novoLocalOperacional.cor || '#edf1f6',
+        ordemExibicao: this.locaisOperacionaisEditor.length + 1,
+        ativo: true
+      }
+    ];
+    this.novoLocalOperacional = { nome: '', cor: '#edf1f6' };
+  }
+
+  removerLocalOperacional(index: number): void {
+    this.locaisOperacionaisEditor = this.locaisOperacionaisEditor
+      .filter((_, itemIndex) => itemIndex !== index)
+      .map((item, itemIndex) => ({ ...item, ordemExibicao: itemIndex + 1 }));
+  }
+
+  moverLocalOperacional(index: number, direction: -1 | 1): void {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= this.locaisOperacionaisEditor.length) {
+      return;
+    }
+    const locais = [...this.locaisOperacionaisEditor];
+    [locais[index], locais[nextIndex]] = [locais[nextIndex], locais[index]];
+    this.locaisOperacionaisEditor = locais.map((item, itemIndex) => ({ ...item, ordemExibicao: itemIndex + 1 }));
+  }
+
+  salvarSugestoesMissao(): void {
+    this.salvandoSugestoesMissao = true;
+    this.adminService.salvarSugestoesCamposMissao(this.sugestoesMissaoEditor)
+      .pipe(finalize(() => (this.salvandoSugestoesMissao = false)))
+      .subscribe({
+        next: sugestoes => {
+          this.aplicarSugestoesMissao(sugestoes);
+          this.snackBar.open('Sugestoes atualizadas.', 'Fechar', { duration: 2200 });
+        },
+        error: (err) => this.snackBar.open(err.error?.message || 'Falha ao salvar sugestoes.', 'Fechar', { duration: 3200 })
       });
   }
 
@@ -3425,11 +3514,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.buscarVistoriasCompletas();
       return;
     }
-    if (menu === 'rotulos-status' && (force || this.rotulosStatusEditor.length === 0) && !this.loadingRotulosStatus) {
+    if (menu === 'rotulos-status' && (force || this.rotulosStatusEditor.length === 0 || this.localizacoesOperacionais.length === 0) && !this.loadingRotulosStatus) {
       this.carregarRotulosStatus();
       return;
     }
     if (menu === 'operacao' && (force || this.veiculos.length === 0) && !this.loadingVeiculos) {
+      if ((force || this.localizacoesOperacionais.length === 0) && !this.loadingLocaisOperacionais) {
+        this.carregarRotulosStatus(false);
+      }
       this.carregarVeiculos(this.veiculoBusca);
       this.carregarMissoesTempoReal(false);
       return;
@@ -3449,6 +3541,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       solicitantes: '',
       justificativasRegistroManual: ''
     };
+  }
+
+  private aplicarLocaisOperacionais(locais: LocalOperacionalResponse[]): void {
+    const ordenados = [...locais].sort((a, b) => a.ordemExibicao - b.ordemExibicao || a.nome.localeCompare(b.nome, 'pt-BR'));
+    this.locaisOperacionaisEditor = ordenados.map(item => ({ ...item }));
+    this.localizacoesOperacionais = ordenados.filter(item => item.ativo);
   }
 
   private tamanhoMaximoSugestaoMissao(campo: CampoSugestaoMissaoEditor): number {

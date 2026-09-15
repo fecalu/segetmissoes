@@ -44,7 +44,7 @@
               type="button"
               class="location-pill"
               [class.empty]="!card.vehicle.localizacaoOperacional"
-              [ngClass]="locationColorClass(card.vehicle.localizacaoOperacional)"
+              [style.background]="locationColor(card.vehicle.localizacaoOperacional)"
               [attr.aria-expanded]="locationVehicleId === card.vehicle.id"
               aria-label="Selecionar local onde o veículo está parado"
               title="Local onde o veículo está parado"
@@ -56,10 +56,10 @@
               <button
                 type="button"
                 *ngFor="let location of operationalLocations"
-                [ngClass]="locationColorClass(location)"
-                [class.selected]="card.vehicle.localizacaoOperacional === location"
-                (click)="setOperationalLocation(card.vehicle, location)"
-              >{{ location }}</button>
+                [style.background]="location.cor"
+                [class.selected]="card.vehicle.localizacaoOperacional === location.nome"
+                (click)="setOperationalLocation(card.vehicle, location.nome)"
+              >{{ location.nome }}</button>
               <button type="button" class="clear-location" *ngIf="card.vehicle.localizacaoOperacional" (click)="setOperationalLocation(card.vehicle, null)">Limpar</button>
             </div>
           </div>
