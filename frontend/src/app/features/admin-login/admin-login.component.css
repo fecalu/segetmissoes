@@ -32,17 +32,14 @@
   align-items: center;
   justify-content: center;
   width: fit-content;
-  padding: 2px 6px;
+  padding: 0;
   margin: 0 auto 10px;
-  background: #fff;
-  border: 1px solid #dce6f2;
-  border-radius: 10px;
 }
 
 .gov-logo {
   width: auto;
-  max-width: 285px;
-  max-height: 112px;
+  max-width: 132px;
+  max-height: 132px;
   height: auto;
 }
 
@@ -54,6 +51,26 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.access-label {
+  align-items: center;
+  align-self: flex-start;
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.access-label mat-icon {
+  font-size: 17px;
+  height: 17px;
+  width: 17px;
+}
+
+.admin-access {
+  background: #e9f1ff;
+  color: #1f4f9b;
 }
 
 .brand-copy h1 {

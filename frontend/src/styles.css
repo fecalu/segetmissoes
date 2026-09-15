@@ -85,7 +85,7 @@ html, body {
 }
 
 .app-splash img {
-  width: min(78vw, 280px);
+  width: min(46vw, 170px);
   height: auto;
 }
 

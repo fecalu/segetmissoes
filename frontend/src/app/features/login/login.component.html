@@ -3,7 +3,7 @@
     <mat-card class="login-card">
       <header class="brand-header">
         <div class="logo-frame">
-          <img src="/gov.png" alt="Logo Governo do Maranhao" class="gov-logo">
+          <img src="/gov.png" alt="Brasão do Estado do Maranhão" class="gov-logo">
         </div>
 
         <div class="brand-copy">
@@ -15,6 +15,10 @@
 
       <section class="form-area">
         <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="off">
+          <p class="access-label driver-access">
+            <mat-icon fontSet="material-symbols-rounded">directions_car</mat-icon>
+            Área do Motorista
+          </p>
           <h2>Entrar no sistema</h2>
           <p class="tip">Digite seu login e sua senha para continuar.</p>
 

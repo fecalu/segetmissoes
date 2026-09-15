@@ -3,7 +3,7 @@
     <mat-card class="login-card">
       <header class="brand-header">
         <div class="logo-frame">
-          <img src="/gov.png" alt="Logo Governo do Maranhão" class="gov-logo">
+          <img src="/gov.png" alt="Brasão do Estado do Maranhão" class="gov-logo">
         </div>
 
         <div class="brand-copy">
@@ -15,7 +15,10 @@
 
       <section class="form-area">
         <form [formGroup]="form" (ngSubmit)="submit()" class="form" autocomplete="off">
-          <p class="access-label">Área administrativa</p>
+          <p class="access-label admin-access">
+            <mat-icon fontSet="material-symbols-rounded">settings</mat-icon>
+            Área administrativa
+          </p>
           <h2>Entrar no sistema</h2>
           <p class="tip">Acesso para administradores, gestores e operadores.</p>
 

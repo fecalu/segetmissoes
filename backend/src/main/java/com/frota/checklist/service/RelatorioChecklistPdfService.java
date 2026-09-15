@@ -118,9 +118,11 @@ public class RelatorioChecklistPdfService {
         PdfPCell logoCell = new PdfPCell();
         logoCell.setBorder(Rectangle.NO_BORDER);
         logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
         Image logo = carregarLogo();
         if (logo != null) {
-            logo.scaleToFit(130, 56);
+            logo.scaleToFit(58, 58);
+            logo.setAlignment(Element.ALIGN_CENTER);
             logoCell.addElement(logo);
         }
         top.addCell(logoCell);

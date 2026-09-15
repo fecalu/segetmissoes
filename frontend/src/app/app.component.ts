@@ -7,7 +7,7 @@ import { RouterOutlet } from '@angular/router';
   imports: [CommonModule, RouterOutlet],
   template: `
     <section class="app-splash" *ngIf="showSplash">
-      <img src="gov.png" alt="Logo SEGET">
+      <img src="gov.png" alt="Brasão do Estado do Maranhão">
       <h1>SEGET</h1>
       <p>Servicos Gerais e Transportes</p>
     </section>
