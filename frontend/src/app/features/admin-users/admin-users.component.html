@@ -9,11 +9,12 @@
   <div class="table-toolbar"><label for="user-search">Buscar pessoa ou perfil<input id="user-search" type="search" [(ngModel)]="busca" placeholder="Nome, login ou perfil"></label>
     <button type="button" (click)="carregar()" [disabled]="loading">Atualizar</button></div>
   <p class="helper">O perfil define as permissões. Suspender o acesso mantém os registros e o histórico da pessoa.</p>
-  <div class="table-scroll"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Acesso</th><th>Ações</th></tr></thead>
+  <div class="table-scroll"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Atuação</th><th>Acesso</th><th>Ações</th></tr></thead>
     <tbody><tr *ngFor="let usuario of filtrados">
       <td><strong>{{ usuario.nome }}</strong><small *ngIf="usuario.id === auth.loggedMotoristaId()">Sua conta</small>
         <small class="pending" *ngIf="!usuario.cadastroCompleto || usuario.deveAlterarSenha">! Cadastro pendente</small></td>
       <td>{{ usuario.login }}</td><td><span class="role-label">{{ labels[usuario.perfil] }}</span></td>
+      <td><span class="role-label" *ngIf="usuario.motoristaOperacional">Motorista</span><span *ngIf="!usuario.motoristaOperacional">-</span></td>
       <td><span [class.suspended]="!usuario.acessoHabilitado">{{ usuario.acessoHabilitado ? 'Habilitado' : 'Suspenso' }}</span></td>
       <td><div class="actions"><button type="button" (click)="abrir(usuario)">Editar</button>
         <button type="button" (click)="abrirAcesso(usuario)">{{ usuario.acessoHabilitado ? 'Suspender acesso' : 'Habilitar acesso' }}</button>
@@ -42,6 +43,7 @@
       <label>Login<input formControlName="login" autocomplete="off"><small class="error" *ngIf="form.controls.login.touched && form.controls.login.invalid">Informe o login.</small></label>
       <label>{{ editing ? 'Nova senha (opcional)' : 'Senha inicial' }}<input formControlName="senha" type="password" autocomplete="new-password"><small *ngIf="editing">Deixe vazio para manter a senha atual.</small></label>
       <label class="full">Perfil<select formControlName="perfil"><option *ngFor="let perfil of perfis" [value]="perfil">{{ labels[perfil] }}</option></select><small>{{ descriptions[form.controls.perfil.value] }}</small></label>
+      <label class="full checkbox-line"><input type="checkbox" formControlName="motoristaOperacional"> Também atua como motorista <small>A pessoa aparecerá nas listas de motorista e poderá usar a tela do motorista.</small></label>
     </div>
     <p *ngIf="editorError" class="error" role="alert">{{ editorError }}</p>
     <footer><button type="button" [disabled]="saving" (click)="editor.close()">Cancelar</button><button class="primary" [disabled]="saving" type="submit">{{ saving ? 'Salvando...' : 'Salvar acesso' }}</button></footer>

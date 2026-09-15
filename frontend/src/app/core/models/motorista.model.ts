@@ -9,6 +9,7 @@ export interface Motorista {
   acessoHabilitado: boolean;
   deveAlterarSenha: boolean;
   cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }
 
 export interface MotoristaAdminPayload {
@@ -17,4 +18,5 @@ export interface MotoristaAdminPayload {
   cpf?: string | null;
   senha?: string;
   perfil: Perfil;
+  motoristaOperacional?: boolean;
 }

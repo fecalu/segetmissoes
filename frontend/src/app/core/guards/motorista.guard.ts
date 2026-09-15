@@ -11,7 +11,7 @@ export const motoristaGuard: CanActivateFn = () => {
   return auth.refreshSession().pipe(
     map(() => {
       if (auth.deveAlterarSenha()) return router.createUrlTree(['/alterar-senha-inicial']);
-      return auth.hasRole('MOTORISTA') || router.createUrlTree(['/login']);
+      return auth.canActAsDriver() || router.createUrlTree(['/login']);
     }),
     catchError(() => of(router.createUrlTree(['/login'])))
   );

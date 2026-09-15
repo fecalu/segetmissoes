@@ -69,6 +69,7 @@ public class OfficialUsersInitializer implements CommandLineRunner {
         motorista.setSenha(encodedPassword);
         motorista.setCpf(null);
         motorista.setPerfil(user.perfil());
+        motorista.setMotoristaOperacional(user.perfil() == Perfil.MOTORISTA);
         motorista.setAcessoHabilitado(true);
         motorista.setDeveAlterarSenha(true);
         motorista.setCadastroCompleto(false);

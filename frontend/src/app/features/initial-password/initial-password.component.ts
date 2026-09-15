@@ -58,7 +58,7 @@ export class InitialPasswordComponent {
       .subscribe({
         next: () => {
           this.snackBar.open('Senha atualizada.', 'Fechar', { duration: 2500 });
-          this.router.navigate([this.auth.perfil() === 'MOTORISTA' ? '/inicio' : '/admin']);
+          this.router.navigate([this.auth.canActAsDriver() && !this.auth.isAdministrative() ? '/inicio' : '/admin']);
         },
         error: err => this.error = err.error?.message || 'Não foi possível alterar a senha.'
       });

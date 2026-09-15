@@ -110,7 +110,6 @@
         <div class="daily-map-actions">
           <span>{{ dailyMapDateLabel() }}</span>
           <button type="button" class="button button-primary" *ngIf="!readOnly" [disabled]="loadingDailyMap" (click)="createMission.emit()">Registrar saída</button>
-          <button type="button" class="button button-secondary" [disabled]="loadingDailyMap" (click)="viewChange.emit('MAPA')">Atualizar</button>
           <button type="button" class="button button-secondary" [disabled]="loadingDailyMap || !dailyMissions.length" (click)="printDailyReport.emit()">Imprimir mapa</button>
         </div>
       </header>

@@ -29,7 +29,7 @@ public class AuthController {
             com.frota.checklist.security.CustomUserDetails usuario) {
         return new com.frota.checklist.dto.SessaoResponse(usuario.getMotoristaId(), usuario.getNome(),
                 usuario.getPerfil(), usuario.getPerfil().permissoes(), usuario.isDeveAlterarSenha(),
-                usuario.isCadastroCompleto());
+                usuario.isCadastroCompleto(), usuario.isMotoristaOperacional());
     }
 
     @PostMapping("/register")

@@ -8,6 +8,7 @@ public record LoginResponse(
         String nome,
         Perfil perfil,
         boolean deveAlterarSenha,
-        boolean cadastroCompleto
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {
 }

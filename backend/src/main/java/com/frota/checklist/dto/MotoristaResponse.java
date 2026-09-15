@@ -10,6 +10,7 @@ public record MotoristaResponse(
         Perfil perfil,
         boolean acessoHabilitado,
         boolean deveAlterarSenha,
-        boolean cadastroCompleto
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {
 }

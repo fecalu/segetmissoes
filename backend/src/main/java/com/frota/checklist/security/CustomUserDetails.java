@@ -22,6 +22,7 @@ public class CustomUserDetails implements UserDetails {
     private final long versaoAcesso;
     private final boolean deveAlterarSenha;
     private final boolean cadastroCompleto;
+    private final boolean motoristaOperacional;
 
     public CustomUserDetails(Motorista motorista) {
         this.motoristaId = motorista.getId();
@@ -33,6 +34,7 @@ public class CustomUserDetails implements UserDetails {
         this.versaoAcesso = motorista.getVersaoAcesso();
         this.deveAlterarSenha = motorista.isDeveAlterarSenha();
         this.cadastroCompleto = motorista.isCadastroCompleto();
+        this.motoristaOperacional = motorista.isMotoristaOperacional();
     }
 
     @Override
@@ -40,6 +42,9 @@ public class CustomUserDetails implements UserDetails {
         if (perfil == null || !acessoHabilitado) return List.of();
         var authorities = new java.util.ArrayList<GrantedAuthority>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + perfil.name()));
+        if (motoristaOperacional && perfil != Perfil.MOTORISTA) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_MOTORISTA"));
+        }
         perfil.permissoes().forEach(p -> authorities.add(new SimpleGrantedAuthority(p.name())));
         return authorities;
     }

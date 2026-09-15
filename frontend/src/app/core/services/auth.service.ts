@@ -16,6 +16,7 @@ export class AuthService {
   readonly permissoes = signal<Permissao[]>([]);
   readonly deveAlterarSenha = signal<boolean>(localStorage.getItem('deveAlterarSenha') === 'true');
   readonly cadastroCompleto = signal<boolean>(localStorage.getItem('cadastroCompleto') !== 'false');
+  readonly motoristaOperacional = signal<boolean>(localStorage.getItem('motoristaOperacional') === 'true');
   private sessionRequest?: Observable<SessaoResponse>;
 
   constructor(private readonly http: HttpClient, private readonly router: Router) {
@@ -39,11 +40,13 @@ export class AuthService {
           this.loggedName.set(res.nome); this.loggedMotoristaId.set(res.motoristaId);
           this.perfil.set(res.perfil); this.permissoes.set(res.permissoes);
           this.deveAlterarSenha.set(res.deveAlterarSenha); this.cadastroCompleto.set(res.cadastroCompleto);
+          this.motoristaOperacional.set(res.motoristaOperacional);
           localStorage.setItem('nomeMotorista', res.nome);
           localStorage.setItem('motoristaId', String(res.motoristaId));
           localStorage.setItem('perfil', res.perfil);
           localStorage.setItem('deveAlterarSenha', String(res.deveAlterarSenha));
           localStorage.setItem('cadastroCompleto', String(res.cadastroCompleto));
+          localStorage.setItem('motoristaOperacional', String(res.motoristaOperacional));
         }),
         finalize(() => this.sessionRequest = undefined),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -54,9 +57,10 @@ export class AuthService {
 
   logout(): void {
     const admin = this.isAdministrative();
-    for (const key of ['token', 'motoristaId', 'nomeMotorista', 'perfil', 'deveAlterarSenha', 'cadastroCompleto']) localStorage.removeItem(key);
+    for (const key of ['token', 'motoristaId', 'nomeMotorista', 'perfil', 'deveAlterarSenha', 'cadastroCompleto', 'motoristaOperacional']) localStorage.removeItem(key);
     this.loggedName.set(null); this.loggedMotoristaId.set(null); this.perfil.set(null); this.permissoes.set([]);
     this.deveAlterarSenha.set(false); this.cadastroCompleto.set(true);
+    this.motoristaOperacional.set(false);
     this.router.navigate([admin ? '/admin/login' : '/login']);
   }
 
@@ -70,7 +74,7 @@ export class AuthService {
 
   isAuthenticated(): boolean { return !!this.getToken(); }
   canOpenDriverOffline(): boolean {
-    if (navigator.onLine || localStorage.getItem('perfil') !== 'MOTORISTA') return false;
+    if (navigator.onLine || localStorage.getItem('motoristaOperacional') !== 'true') return false;
     try {
       const payload = JSON.parse(atob((this.getToken() || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
       // Cached driver screens only; server authorization remains mandatory when online.
@@ -79,6 +83,7 @@ export class AuthService {
   }
   getToken(): string | null { return localStorage.getItem('token'); }
   hasRole(role: Perfil): boolean { return this.perfil() === role; }
+  canActAsDriver(): boolean { return this.motoristaOperacional(); }
   can(permission: Permissao): boolean { return this.permissoes().includes(permission); }
   isAdministrative(): boolean { return this.can('FROTA_CONSULTAR'); }
   get perfilLabel(): string { return this.perfil() ? PERFIL_LABELS[this.perfil()!] : ''; }

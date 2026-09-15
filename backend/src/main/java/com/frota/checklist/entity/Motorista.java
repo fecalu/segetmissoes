@@ -48,4 +48,7 @@ public class Motorista {
 
     @Column(nullable = false)
     private boolean cadastroCompleto = true;
+
+    @Column(nullable = false)
+    private boolean motoristaOperacional = false;
 }

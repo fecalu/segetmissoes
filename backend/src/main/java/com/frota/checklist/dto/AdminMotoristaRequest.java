@@ -10,6 +10,7 @@ public record AdminMotoristaRequest(
         @NotBlank String login,
         String cpf,
         @Size(min = 6, max = 100) String senha,
-        @NotNull Perfil perfil
+        @NotNull Perfil perfil,
+        Boolean motoristaOperacional
 ) {
 }

@@ -17,6 +17,7 @@ interface Usuario {
   acessoHabilitado: boolean;
   deveAlterarSenha: boolean;
   cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }
 interface EventoAcesso {
   id: number; autorNome: string; autorPerfil: Perfil; entidade: string; registroId: number;
@@ -62,13 +63,15 @@ export class AdminUsersComponent {
     nome: ['', [Validators.required, Validators.maxLength(160)]],
     login: ['', [Validators.required, Validators.maxLength(100)]],
     cpf: ['', [Validators.pattern(/^\d{11}$/)]],
-    senha: [''], perfil: ['OPERADOR' as Perfil, Validators.required]
+    senha: [''],
+    perfil: ['OPERADOR' as Perfil, Validators.required],
+    motoristaOperacional: [false]
   });
 
   constructor() { this.carregar(); }
   get filtrados(): Usuario[] {
     const busca = this.busca.trim().toLocaleLowerCase('pt-BR');
-    return this.usuarios.filter(u => `${u.nome} ${u.login} ${this.labels[u.perfil]}`.toLocaleLowerCase('pt-BR').includes(busca));
+    return this.usuarios.filter(u => `${u.nome} ${u.login} ${this.labels[u.perfil]} ${u.motoristaOperacional ? 'motorista' : ''}`.toLocaleLowerCase('pt-BR').includes(busca));
   }
 
   carregar(): void {
@@ -86,7 +89,14 @@ export class AdminUsersComponent {
 
   abrir(usuario: Usuario | null = null): void {
     this.editing = usuario; this.editorError = '';
-    this.form.reset({ nome: usuario?.nome || '', login: usuario?.login || '', cpf: usuario?.cpf || '', senha: '', perfil: usuario?.perfil || 'OPERADOR' });
+    this.form.reset({
+      nome: usuario?.nome || '',
+      login: usuario?.login || '',
+      cpf: usuario?.cpf || '',
+      senha: '',
+      perfil: usuario?.perfil || 'OPERADOR',
+      motoristaOperacional: usuario?.motoristaOperacional || usuario?.perfil === 'MOTORISTA' || false
+    });
     this.editor?.nativeElement.showModal();
   }
 
@@ -101,7 +111,8 @@ export class AdminUsersComponent {
       nome: raw.nome.trim(),
       login: raw.login.trim(),
       cpf: raw.cpf.trim() || null,
-      senha: raw.senha || undefined
+      senha: raw.senha || undefined,
+      motoristaOperacional: raw.motoristaOperacional || raw.perfil === 'MOTORISTA'
     };
     this.saving = true; this.editorError = '';
     const request = this.editing ? this.http.put<Usuario>(this.url + '/' + this.editing.id, payload) : this.http.post<Usuario>(this.url, payload);

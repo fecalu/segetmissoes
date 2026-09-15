@@ -35,7 +35,7 @@ public class AuthService {
         String token = jwtService.generateToken(userDetails);
 
         return new LoginResponse(token, userDetails.getMotoristaId(), userDetails.getNome(), userDetails.getPerfil(),
-                userDetails.isDeveAlterarSenha(), userDetails.isCadastroCompleto());
+                userDetails.isDeveAlterarSenha(), userDetails.isCadastroCompleto(), userDetails.isMotoristaOperacional());
     }
 
     public MotoristaResponse register(RegisterMotoristaRequest request) {
@@ -52,10 +52,12 @@ public class AuthService {
         motorista.setSenha(passwordEncoder.encode(request.senha()));
         motorista.setCpf(request.cpf());
         motorista.setPerfil(Perfil.MOTORISTA);
+        motorista.setMotoristaOperacional(true);
 
         Motorista saved = motoristaRepository.save(motorista);
         return new MotoristaResponse(saved.getId(), saved.getNome(), saved.getLogin(), saved.getCpf(), saved.getPerfil(),
-                saved.isAcessoHabilitado(), saved.isDeveAlterarSenha(), saved.isCadastroCompleto());
+                saved.isAcessoHabilitado(), saved.isDeveAlterarSenha(), saved.isCadastroCompleto(),
+                saved.isMotoristaOperacional());
     }
 
     public LoginResponse alterarSenhaInicial(Long motoristaId, String novaSenha) {
@@ -71,6 +73,6 @@ public class AuthService {
         CustomUserDetails userDetails = new CustomUserDetails(salvo);
         String token = jwtService.generateToken(userDetails);
         return new LoginResponse(token, salvo.getId(), salvo.getNome(), salvo.getPerfil(),
-                salvo.isDeveAlterarSenha(), salvo.isCadastroCompleto());
+                salvo.isDeveAlterarSenha(), salvo.isCadastroCompleto(), salvo.isMotoristaOperacional());
     }
 }

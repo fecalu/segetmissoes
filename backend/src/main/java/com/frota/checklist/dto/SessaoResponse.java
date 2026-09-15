@@ -10,5 +10,6 @@ public record SessaoResponse(
         Perfil perfil,
         Set<Permissao> permissoes,
         boolean deveAlterarSenha,
-        boolean cadastroCompleto
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {}

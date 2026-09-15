@@ -137,7 +137,8 @@
               </span>
             </div>
             <div class="inline-buttons">
-              <button mat-stroked-button type="button" (click)="editarMotorista(m)">Editar</button>
+              <button mat-stroked-button type="button" *ngIf="m.perfil === 'MOTORISTA'" (click)="editarMotorista(m)">Editar</button>
+              <span class="panel-helper" *ngIf="m.perfil !== 'MOTORISTA'">Editar em Usuários e Acessos</span>
             </div>
           </article>
         </div>

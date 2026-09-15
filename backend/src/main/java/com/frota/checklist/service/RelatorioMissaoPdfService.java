@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -174,11 +175,11 @@ public class RelatorioMissaoPdfService {
             for (Missao missao : missoes) {
                 adicionarBodyTabela(
                         tabela,
-                        missao.getVeiculo().getPlaca()
-                                + " - "
-                                + missao.getVeiculo().getMarca()
-                                + " "
-                                + missao.getVeiculo().getModelo()
+                        descricaoVeiculo(
+                                missao.getVeiculo().getPlaca(),
+                                missao.getVeiculo().getMarca(),
+                                missao.getVeiculo().getModelo()
+                        )
                 );
                 adicionarBodyTabela(tabela, missao.getMotorista().getNome());
                 adicionarBodyTabela(tabela, valorOuTraco(missao.getLocalDestino()));
@@ -253,6 +254,21 @@ public class RelatorioMissaoPdfService {
             return "-";
         }
         return value;
+    }
+
+    private String descricaoVeiculo(String placa, String marca, String modelo) {
+        List<String> partes = new ArrayList<>();
+        if (marca != null && !marca.isBlank()) {
+            partes.add(marca.trim());
+        }
+        if (modelo != null && !modelo.isBlank()) {
+            partes.add(modelo.trim());
+        }
+        String descricao = String.join(" ", partes);
+        if (descricao.isBlank()) {
+            return valorOuTraco(placa);
+        }
+        return valorOuTraco(placa) + " - " + descricao;
     }
 
     private Image carregarLogo() {

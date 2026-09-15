@@ -2475,7 +2475,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   motoristasElegiveisMissao(): Motorista[] {
-    return this.motoristas.filter(m => m.perfil === 'MOTORISTA');
+    return this.motoristas.filter(m => m.motoristaOperacional);
   }
 
   veiculosElegiveisContingencia(): Veiculo[] {

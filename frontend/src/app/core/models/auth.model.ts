@@ -22,6 +22,7 @@ export interface SessaoResponse {
   permissoes: Permissao[];
   deveAlterarSenha: boolean;
   cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }
 
 export interface LoginResponse {
@@ -31,4 +32,5 @@ export interface LoginResponse {
   perfil: Perfil;
   deveAlterarSenha: boolean;
   cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }

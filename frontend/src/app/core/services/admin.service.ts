@@ -185,7 +185,8 @@ export class AdminService {
         login: '',
         acessoHabilitado: true,
         deveAlterarSenha: false,
-        cadastroCompleto: true
+        cadastroCompleto: true,
+        motoristaOperacional: true
       })))
     );
   }

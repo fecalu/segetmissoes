@@ -70,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
         Motorista usuario = new Motorista();
         usuario.setLogin(login); usuario.setNome(nome); usuario.setCpf(cpf);
         usuario.setSenha(passwordEncoder.encode(senha)); usuario.setPerfil(perfil);
+        usuario.setMotoristaOperacional(perfil == Perfil.MOTORISTA);
         motoristaRepository.save(usuario);
     }
 }

@@ -10,11 +10,12 @@ public record UsuarioResponse(
         Perfil perfil,
         boolean acessoHabilitado,
         boolean deveAlterarSenha,
-        boolean cadastroCompleto
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {
     public static UsuarioResponse from(Motorista usuario) {
         return new UsuarioResponse(usuario.getId(), usuario.getNome(), usuario.getLogin(), usuario.getCpf(),
                 usuario.getPerfil(), usuario.isAcessoHabilitado(), usuario.isDeveAlterarSenha(),
-                usuario.isCadastroCompleto());
+                usuario.isCadastroCompleto(), usuario.isMotoristaOperacional());
     }
 }
