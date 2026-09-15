@@ -283,7 +283,7 @@ public class AdminVeiculoService {
             justificativaAbertura = "Viagem registrada manualmente pela administracao.";
         }
 
-        if (motoristaViagem.getPerfil() != Perfil.MOTORISTA) throw new BusinessException("Selecione um motorista valido");
+        if (!motoristaViagem.isAcessoHabilitado() || !motoristaViagem.isMotoristaOperacional()) throw new BusinessException("Selecione um motorista valido");
         missaoService.abrirRegistroAdministrativo(
                 administrador,
                 motoristaViagem,

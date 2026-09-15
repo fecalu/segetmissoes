@@ -9,7 +9,6 @@ import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
-import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
@@ -401,9 +400,7 @@ public class AdminMissaoService {
         if (permiteReatribuicao && !missao.getMotorista().getId().equals(motoristaId)) {
             Motorista novoMotorista = motoristaRepository.findById(motoristaId)
                     .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-            if (novoMotorista.getPerfil() != Perfil.MOTORISTA) {
-                throw new BusinessException("Selecione um motorista valido para a missao");
-            }
+            validarMotoristaOperacional(novoMotorista);
             missaoService.buscarMissaoAtivaPorMotorista(novoMotorista.getId())
                     .filter(ativa -> !ativa.getId().equals(missao.getId()))
                     .ifPresent(ativa -> {
@@ -600,9 +597,7 @@ public class AdminMissaoService {
 
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-        if (motorista.getPerfil() != Perfil.MOTORISTA) {
-            throw new BusinessException("Selecione um motorista valido para a missao");
-        }
+        validarMotoristaOperacional(motorista);
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
@@ -900,5 +895,11 @@ public class AdminMissaoService {
                 cb.isNotNull(root.get(campo)),
                 cb.notEqual(cb.trim(root.<String>get(campo)), "")
         );
+    }
+
+    private void validarMotoristaOperacional(Motorista motorista) {
+        if (!motorista.isAcessoHabilitado() || !motorista.isMotoristaOperacional()) {
+            throw new BusinessException("Selecione um motorista valido para a missao");
+        }
     }
 }
