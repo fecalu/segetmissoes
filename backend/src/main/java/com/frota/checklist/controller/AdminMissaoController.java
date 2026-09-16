@@ -5,6 +5,7 @@ import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
 import com.frota.checklist.dto.CriarRegistroAdministrativoMissaoRequest;
+import com.frota.checklist.dto.DesfazerMissaoAdminRequest;
 import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
 import com.frota.checklist.dto.MissaoResponse;
@@ -132,6 +133,19 @@ public class AdminMissaoController {
                 userDetails.getMotoristaId(),
                 request.dataHoraFim(),
                 request.statusAdministrativoDestino()
+        ));
+    }
+
+    @PatchMapping("/{id}/desfazer")
+    public ResponseEntity<MissaoResponse> desfazerRegistroAdministrativo(
+            @PathVariable Long id,
+            @Valid @RequestBody DesfazerMissaoAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.desfazerRegistroAdministrativo(
+                id,
+                userDetails.getMotoristaId(),
+                request.justificativa()
         ));
     }
 

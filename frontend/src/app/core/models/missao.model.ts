@@ -1,6 +1,6 @@
 import { MotivoExcecaoMissao } from './missao-excecao.model';
 
-export type StatusMissao = 'ATIVA' | 'FINALIZADA';
+export type StatusMissao = 'ATIVA' | 'FINALIZADA' | 'CANCELADA';
 export type StatusDocumentalMissao = 'PENDENTE_DADOS_ADMIN' | 'DADOS_ADMIN_COMPLETOS';
 export type OrigemAberturaMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'REGISTRO_ADMINISTRATIVO' | 'CONTINGENCIA_ADMIN';
 export type OrigemEncerramentoMissao = 'CHECKLIST' | 'SEM_CHECKLIST' | 'ADMINISTRATIVO';
@@ -48,6 +48,7 @@ export type AcaoAuditoriaMissao =
   | 'ENCERRAMENTO_REGISTRO_ADMINISTRATIVO'
   | 'ENCERRAMENTO_PENDENTE_ADMIN'
   | 'ENCERRAMENTO_ADMINISTRATIVO'
+  | 'CANCELAMENTO_REGISTRO_ADMINISTRATIVO'
   | 'ATUALIZACAO_DADOS_ADMINISTRATIVOS';
 
 export interface AuditoriaMissaoResponse {

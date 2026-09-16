@@ -283,7 +283,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private readonly statusLabelsCustomizados: Partial<Record<StatusVeiculo, string>> = {};
   private readonly statusMissaoLabels: Record<StatusMissao, string> = {
     ATIVA: 'EM ANDAMENTO',
-    FINALIZADA: 'FINALIZADA'
+    FINALIZADA: 'FINALIZADA',
+    CANCELADA: 'CANCELADA'
   };
   private readonly statusDocumentalMissaoLabels: Record<StatusDocumentalMissao, string> = {
     PENDENTE_DADOS_ADMIN: 'DADOS PENDENTES',
@@ -744,6 +745,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           manual: missao?.origemAbertura === 'CONTINGENCIA_ADMIN' || missao?.origemAbertura === 'REGISTRO_ADMINISTRATIVO',
           moving: this.veiculoComDeslocamentoAutomatico(vehicle),
           allowedDestinations: this.categoriasPainel.filter(c => this.podeMoverVeiculo(vehicle, c.id)).map(c => c.id),
+          canUndoMission: this.podeDesfazerMissao(missao),
           details: detalhes
         };
       })
@@ -921,6 +923,35 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         },
         error: (err) => this.snackBar.open(err.error?.message || 'Falha ao registrar o retorno.', 'Fechar', { duration: 3200 })
       });
+  }
+
+  abrirDesfazerMissao(missao: MissaoResponse): void {
+    if (!this.podeDesfazerMissao(missao)) {
+      this.snackBar.open('Esta saída não pode ser desfeita por este fluxo.', 'Fechar', { duration: 2800 });
+      return;
+    }
+
+    const modelo = [missao.veiculoMarca, missao.veiculoModelo].filter(Boolean).join(' ');
+    const veiculo = `${missao.veiculoPlaca}${modelo ? ' - ' + modelo : ''}`;
+    this.pedirMotivo(
+      'Desfazer saída',
+      `Use apenas quando a saída foi registrada por engano. A missão #${missao.id} será cancelada e o veículo ${veiculo} voltará para Disponíveis.`,
+      justificativa => this.desfazerMissao(missao, justificativa),
+      4
+    );
+  }
+
+  private desfazerMissao(missao: MissaoResponse, justificativa: string): void {
+    this.adminService.desfazerMissao(missao.id, { justificativa }).subscribe({
+      next: () => {
+        this.snackBar.open('Saída desfeita com sucesso.', 'Fechar', { duration: 2400 });
+        this.buscarMissoes();
+        this.carregarMissoesTempoReal(false);
+        this.carregarMapaDiario(false);
+        this.carregarVeiculos(this.veiculoBusca);
+      },
+      error: err => this.snackBar.open(err.error?.message || 'Falha ao desfazer a saída.', 'Fechar', { duration: 3200 })
+    });
   }
 
   encerrarMissaoPendente(): void {
@@ -1623,8 +1654,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private pedirMotivo(title: string, message: string, confirmar: (motivo: string) => void): void {
-    this.dialog.open(JustificativaDialogComponent, { width: '480px', maxWidth: '95vw', data: { title, message } })
+  private pedirMotivo(title: string, message: string, confirmar: (motivo: string) => void, minLength = 10): void {
+    this.dialog.open(JustificativaDialogComponent, { width: '480px', maxWidth: '95vw', data: { title, message, minLength } })
       .afterClosed().subscribe((motivo?: string) => { if (motivo) confirmar(motivo); });
   }
 
@@ -2680,15 +2711,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   missoesPendentesDadosAdmin(): MissaoResponse[] {
-    return this.missoes.filter(m => m.statusDocumental === 'PENDENTE_DADOS_ADMIN');
+    return this.missoes.filter(m => m.status !== 'CANCELADA' && m.statusDocumental === 'PENDENTE_DADOS_ADMIN');
   }
 
   missoesContingencia(): MissaoResponse[] {
-    return this.missoes.filter(m => m.origemAbertura === 'CONTINGENCIA_ADMIN');
+    return this.missoes.filter(m => m.status !== 'CANCELADA' && m.origemAbertura === 'CONTINGENCIA_ADMIN');
   }
 
   missoesOrdenadasPorInicio(): MissaoResponse[] {
-    return [...this.missoes].sort((a, b) => b.dataHoraInicio.localeCompare(a.dataHoraInicio));
+    return this.missoes
+      .filter(missao => missao.status !== 'CANCELADA')
+      .sort((a, b) => b.dataHoraInicio.localeCompare(a.dataHoraInicio));
   }
 
   statusMissaoLabel(status: StatusMissao): string {
@@ -2700,6 +2733,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   classeLinhaMissao(missao: MissaoResponse): string {
+    if (missao.status === 'CANCELADA') {
+      return 'missao-row-cancelada';
+    }
     if (missao.statusDocumental === 'PENDENTE_DADOS_ADMIN') {
       return 'missao-row-pendente';
     }
@@ -2744,6 +2780,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   exibeCamposUrbanosMissao(missao: MissaoResponse | null | undefined): boolean {
     return true;
+  }
+
+  podeDesfazerMissao(missao: MissaoResponse | null | undefined): boolean {
+    return !!missao
+      && this.auth.can('MISSAO_REGISTRAR')
+      && missao.status === 'ATIVA'
+      && missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO';
   }
 
   origemAberturaMissaoLabel(origem: OrigemAberturaMissao): string {
@@ -3228,6 +3271,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       ENCERRAMENTO_REGISTRO_ADMINISTRATIVO: 'FIM: REGISTRADO PELO ADMIN',
       ENCERRAMENTO_PENDENTE_ADMIN: 'FIM: PELO ADMIN (MISSAO EM ABERTO)',
       ENCERRAMENTO_ADMINISTRATIVO: 'FIM: PELO ADMIN',
+      CANCELAMENTO_REGISTRO_ADMINISTRATIVO: 'SAIDA DESFEITA',
       ATUALIZACAO_DADOS_ADMINISTRATIVOS: 'DADOS DA MISSAO ATUALIZADOS'
     };
     return labels[acao];

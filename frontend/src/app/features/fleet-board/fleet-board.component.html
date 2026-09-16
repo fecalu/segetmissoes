@@ -87,12 +87,13 @@
           <span class="manual-note" *ngIf="card.manual">
             via admin<span *ngIf="card.activeMission?.administradorAberturaNome"> · {{ card.activeMission?.administradorAberturaNome }}</span>
           </span>
-          <div class="vehicle-actions">
-            <button type="button" class="details-button primary-action" *ngIf="!readOnly && card.activeMission" (click)="editMission.emit(card.activeMission)">Editar dados</button>
-          </div>
           <div class="move-menu" *ngIf="movingVehicleId === card.vehicle.id" aria-label="Escolha a nova situação do veículo">
-            <p>{{ card.allowedDestinations.length ? "Para onde deseja mover?" : "A alteração deste veículo precisa de um Gestor ou Administrador." }}</p>
+            <p>Ações do veículo</p>
+            <button type="button" *ngIf="card.activeMission" (click)="editMissionData(card.activeMission)">Editar dados</button>
+            <button type="button" class="danger-action" *ngIf="card.canUndoMission" (click)="undoAdministrativeMission(card.activeMission)">Desfazer saída</button>
+            <p *ngIf="card.allowedDestinations.length">{{ "Mover para" }}</p>
             <button type="button" *ngFor="let destination of moveDestinations(column.id, card)" (click)="moveTo(card.vehicle, destination.id)">{{ destination.title }}</button>
+            <p *ngIf="!card.allowedDestinations.length && !card.activeMission">A alteração deste veículo precisa de um Gestor ou Administrador.</p>
           </div>
           <footer class="vehicle-footer"><button type="button" class="history-button" [attr.aria-label]="'Ver histórico de ' + card.vehicle.placa" (click)="history.emit(card.vehicle)"><app-icon name="history" />Histórico</button><span *ngIf="card.moving" class="automatic-label">Em andamento</span></footer>
         </article>

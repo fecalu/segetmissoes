@@ -4,6 +4,7 @@ import com.frota.checklist.security.AutorizacaoService;
 import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.MissaoResponse;
+import com.frota.checklist.entity.AcaoAuditoriaMissao;
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
@@ -83,6 +84,8 @@ public class AdminMissaoService {
             }
             if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
+            } else {
+                predicates.add(cb.notEqual(root.get("status"), StatusMissao.CANCELADA));
             }
             if (origemAbertura != null) {
                 predicates.add(cb.equal(root.get("origemAbertura"), origemAbertura));
@@ -667,6 +670,51 @@ public class AdminMissaoService {
         aplicarDestinoAdministrativoDeRetorno(finalizada, destinoNormalizado, administradorId);
 
         return toResponse(finalizada);
+    }
+
+    @Transactional
+    public MissaoResponse desfazerRegistroAdministrativo(
+            Long missaoId,
+            Long administradorId,
+            String justificativa
+    ) {
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_REGISTRAR);
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
+            throw new BusinessException("Somente saidas registradas pelo administrativo podem ser desfeitas por este fluxo");
+        }
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            throw new BusinessException("Somente missoes em andamento podem ser desfeitas");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 4) {
+            throw new BusinessException("Informe uma justificativa com pelo menos 4 caracteres");
+        }
+
+        missao.setStatus(StatusMissao.CANCELADA);
+        missao.setDataHoraFim(null);
+        missao.setOrigemEncerramento(null);
+
+        Veiculo veiculo = missao.getVeiculo();
+        veiculo.setStatusAdministrativo(null);
+        veiculo.setLocalizacaoOperacional(null);
+        veiculoRepository.save(veiculo);
+
+        Missao salva = missaoRepository.save(missao);
+        missaoAuditoriaService.registrar(
+                salva,
+                AcaoAuditoriaMissao.CANCELAMENTO_REGISTRO_ADMINISTRATIVO,
+                StatusMissao.ATIVA,
+                StatusMissao.CANCELADA,
+                administrador,
+                "Saida administrativa desfeita. Justificativa: %s".formatted(justificativaNormalizada)
+        );
+        return toResponse(salva);
     }
 
     @Transactional

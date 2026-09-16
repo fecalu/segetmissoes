@@ -42,6 +42,7 @@ public interface MissaoRepository extends JpaRepository<Missao, Long>, JpaSpecif
             select m
             from Missao m
             where m.dataHoraInicio between :inicio and :fim
+              and m.status <> com.frota.checklist.entity.StatusMissao.CANCELADA
             order by m.dataHoraInicio asc
             """)
     List<Missao> buscarParaRelatorio(

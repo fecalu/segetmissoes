@@ -112,6 +112,8 @@ h3 { font-size: 13px; font-weight: 600; margin: 0; line-height: 1.4; }
 .move-menu p { grid-column: 1 / -1; margin: 0 0 1px; color: #52657e; font-size: 11px; font-weight: 600; }
 .move-menu button { min-height: 32px; border: 1px solid #cad8e3; border-radius: 8px; background: #fff; color: #24465f; font: 600 11px 'Barlow', sans-serif; cursor: pointer; padding: 5px 8px; text-align: left; }
 .move-menu button:hover:not(:disabled) { border-color: #7f9fc9; background: #edf4ff; color: #245a9d; }
+.move-menu button.danger-action { color: #9b3340; border-color: #edc9d0; background: #fff8f8; }
+.move-menu button.danger-action:hover:not(:disabled) { color: #842634; border-color: #dca5af; background: #fff1f2; }
 .move-menu button:disabled { cursor: default; opacity: .45; }
 .vehicle-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; border-top: 1px solid #f0f3f7; padding-top: 4px; gap: 8px; }
 .history-button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 0; background: transparent; font: 11px 'Barlow', sans-serif; color: #5d708b; padding: 4px 0; cursor: pointer; }

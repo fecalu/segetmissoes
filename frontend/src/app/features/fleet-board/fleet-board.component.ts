@@ -46,6 +46,7 @@ export class FleetBoardComponent {
   @Output() viewChange = new EventEmitter<OperacaoView>();
   @Output() editMission = new EventEmitter<MissaoResponse>();
   @Output() finishMission = new EventEmitter<MissaoResponse>();
+  @Output() undoMission = new EventEmitter<MissaoResponse>();
   @Output() createMission = new EventEmitter<void>();
   @Output() printDailyReport = new EventEmitter<void>();
   search = '';
@@ -101,6 +102,18 @@ export class FleetBoardComponent {
     if (this.readOnly) return;
     this.movingVehicleId = null;
     this.moveVehicle.emit({ vehicle, category });
+  }
+
+  editMissionData(mission: MissaoResponse | null): void {
+    if (!mission) return;
+    this.movingVehicleId = null;
+    this.editMission.emit(mission);
+  }
+
+  undoAdministrativeMission(mission: MissaoResponse | null): void {
+    if (!mission) return;
+    this.movingVehicleId = null;
+    this.undoMission.emit(mission);
   }
 
   setOperationalLocation(vehicle: Veiculo, location: string | null): void {

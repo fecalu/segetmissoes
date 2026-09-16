@@ -135,6 +135,10 @@ export interface EncerrarMissaoPendentePayload {
   statusAdministrativoDestino: StatusAdministrativoVeiculo | null;
 }
 
+export interface DesfazerMissaoPayload {
+  justificativa: string;
+}
+
 export interface AjustarHorarioMissaoPayload {
   dataHoraInicio: string;
   dataHoraFim: string | null;
@@ -269,6 +273,13 @@ export class AdminService {
     payload: EncerrarMissaoPendentePayload
   ): Observable<MissaoResponse> {
     return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/encerrar-pendente`, payload);
+  }
+
+  desfazerMissao(
+    missaoId: number,
+    payload: DesfazerMissaoPayload
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/desfazer`, payload);
   }
 
   ajustarHorarioMissao(

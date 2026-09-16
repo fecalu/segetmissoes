@@ -219,7 +219,8 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                 add constraint missoes_status_check
                 check (status in (
                     'ATIVA',
-                    'FINALIZADA'
+                    'FINALIZADA',
+                    'CANCELADA'
                 ))
                 """);
 
@@ -296,6 +297,7 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'ENCERRAMENTO_REGISTRO_ADMINISTRATIVO',
                     'ENCERRAMENTO_PENDENTE_ADMIN',
                     'ENCERRAMENTO_ADMINISTRATIVO',
+                    'CANCELAMENTO_REGISTRO_ADMINISTRATIVO',
                     'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
                 ))
                 """);
