@@ -136,6 +136,7 @@ public class MissaoService {
         Missao missao = new Missao();
         missao.setMotorista(motorista);
         missao.setVeiculo(veiculo);
+        registrarOrigemAdministrativaDoVeiculo(missao, veiculo);
         liberarVeiculoParaMissao(veiculo);
         missao.setStatus(StatusMissao.ATIVA);
         missao.setDataHoraInicio(dataHoraInicio == null ? LocalDateTime.now() : dataHoraInicio);
@@ -507,6 +508,11 @@ public class MissaoService {
             veiculo.setStatusAdministrativo(null);
         }
         veiculo.setLocalizacaoOperacional(null);
+    }
+
+    private void registrarOrigemAdministrativaDoVeiculo(Missao missao, Veiculo veiculo) {
+        missao.setStatusAdministrativoAnterior(StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo()));
+        missao.setLocalizacaoOperacionalAnterior(trimToNull(veiculo.getLocalizacaoOperacional()));
     }
 
     private void registrarEncerramentoSemChecklistNoVeiculo(

@@ -139,6 +139,13 @@ export interface DesfazerMissaoPayload {
   justificativa: string;
 }
 
+export interface CorrigirSaidaMissaoPayload {
+  motoristaId: number;
+  veiculoId: number;
+  justificativa: string;
+  confirmarTroca: boolean;
+}
+
 export interface AjustarHorarioMissaoPayload {
   dataHoraInicio: string;
   dataHoraFim: string | null;
@@ -280,6 +287,13 @@ export class AdminService {
     payload: DesfazerMissaoPayload
   ): Observable<MissaoResponse> {
     return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/desfazer`, payload);
+  }
+
+  corrigirSaidaMissao(
+    missaoId: number,
+    payload: CorrigirSaidaMissaoPayload
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/corrigir-saida`, payload);
   }
 
   ajustarHorarioMissao(

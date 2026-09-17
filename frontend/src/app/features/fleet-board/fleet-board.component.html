@@ -90,7 +90,7 @@
           <div class="move-menu" *ngIf="movingVehicleId === card.vehicle.id" aria-label="Escolha a nova situação do veículo">
             <p>Ações do veículo</p>
             <button type="button" *ngIf="card.activeMission" (click)="editMissionData(card.activeMission)">Editar dados</button>
-            <button type="button" class="danger-action" *ngIf="card.canUndoMission" (click)="undoAdministrativeMission(card.activeMission)">Desfazer saída</button>
+            <button type="button" class="danger-action" *ngIf="card.canUndoMission" (click)="correctAdministrativeMission(card.activeMission)">Corrigir saída</button>
             <p *ngIf="card.allowedDestinations.length">{{ "Mover para" }}</p>
             <button type="button" *ngFor="let destination of moveDestinations(column.id, card)" (click)="moveTo(card.vehicle, destination.id)">{{ destination.title }}</button>
             <p *ngIf="!card.allowedDestinations.length && !card.activeMission">A alteração deste veículo precisa de um Gestor ou Administrador.</p>

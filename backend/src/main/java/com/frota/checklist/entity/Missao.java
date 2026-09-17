@@ -107,6 +107,13 @@ public class Missao {
     @Column(name = "status_documental", length = 40)
     private StatusDocumentalMissao statusDocumental;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_administrativo_anterior", length = 30)
+    private StatusVeiculo statusAdministrativoAnterior;
+
+    @Column(name = "localizacao_operacional_anterior", length = 80)
+    private String localizacaoOperacionalAnterior;
+
     @PrePersist
     public void prePersist() {
         if (status == null) {

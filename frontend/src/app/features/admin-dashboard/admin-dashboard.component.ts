@@ -1,5 +1,10 @@
 import { AuthService } from '../../core/services/auth.service';
 import { JustificativaDialogComponent } from '../../shared/dialogs/justificativa-dialog.component';
+import { CorrigirSaidaDialogComponent, CorrigirSaidaOpcao } from '../../shared/dialogs/corrigir-saida-dialog.component';
+import {
+  CorrigirSaidaDadosDialogComponent,
+  CorrigirSaidaDadosDialogResult
+} from '../../shared/dialogs/corrigir-saida-dados-dialog.component';
 import { ProtectedImageDirective } from '../../shared/ui/protected-image.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
@@ -44,6 +49,7 @@ import {
   AdminService,
   AjustarHorarioMissaoPayload,
   AtualizarContraparteVistoriaCompletaPayload,
+  CorrigirSaidaMissaoPayload,
   CriarRegistroAdministrativoMissaoPayload,
   EditarMissaoManualPayload,
   EncerrarMissaoPendentePayload,
@@ -927,15 +933,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   abrirDesfazerMissao(missao: MissaoResponse): void {
     if (!this.podeDesfazerMissao(missao)) {
-      this.snackBar.open('Esta saída não pode ser desfeita por este fluxo.', 'Fechar', { duration: 2800 });
+      this.snackBar.open('Esta saída não pode ser corrigida por este fluxo.', 'Fechar', { duration: 2800 });
       return;
     }
 
+    this.dialog.open<CorrigirSaidaDialogComponent, { placa: string; missaoId: number }, CorrigirSaidaOpcao>(
+      CorrigirSaidaDialogComponent,
+      {
+        width: 'min(92vw, 500px)',
+        data: {
+          placa: missao.veiculoPlaca,
+          missaoId: missao.id
+        }
+      }
+    )
+      .afterClosed()
+      .subscribe(opcao => {
+        if (opcao === 'ENGANO') {
+          this.confirmarDesfazerSaidaRegistradaPorEngano(missao);
+          return;
+        }
+        if (opcao === 'DADOS_ERRADOS') {
+          this.abrirCorrecaoDadosSaida(missao);
+        }
+      });
+  }
+
+  private confirmarDesfazerSaidaRegistradaPorEngano(missao: MissaoResponse): void {
     const modelo = [missao.veiculoMarca, missao.veiculoModelo].filter(Boolean).join(' ');
     const veiculo = `${missao.veiculoPlaca}${modelo ? ' - ' + modelo : ''}`;
     this.pedirMotivo(
-      'Desfazer saída',
-      `Use apenas quando a saída foi registrada por engano. A missão #${missao.id} será cancelada e o veículo ${veiculo} voltará para Disponíveis.`,
+      'Saída registrada por engano',
+      `Use apenas quando a saída foi registrada por engano. A missão #${missao.id} será cancelada e o veículo ${veiculo} voltará para a situação anterior à saída.`,
       justificativa => this.desfazerMissao(missao, justificativa),
       4
     );
@@ -951,6 +980,95 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.carregarVeiculos(this.veiculoBusca);
       },
       error: err => this.snackBar.open(err.error?.message || 'Falha ao desfazer a saída.', 'Fechar', { duration: 3200 })
+    });
+  }
+
+  private abrirCorrecaoDadosSaida(missao: MissaoResponse): void {
+    if (!this.auth.can('MISSAO_CORRIGIR')) {
+      this.snackBar.open('Seu perfil não permite corrigir motorista ou veículo.', 'Fechar', { duration: 3000 });
+      return;
+    }
+
+    this.dialog.open<CorrigirSaidaDadosDialogComponent, {
+      missao: MissaoResponse;
+      motoristas: Motorista[];
+      veiculos: Veiculo[];
+    }, CorrigirSaidaDadosDialogResult>(
+      CorrigirSaidaDadosDialogComponent,
+      {
+        width: 'min(94vw, 600px)',
+        data: {
+          missao,
+          motoristas: this.motoristasElegiveisMissao().sort((a, b) => a.nome.localeCompare(b.nome)),
+          veiculos: this.veiculosAtivos().sort((a, b) => a.placa.localeCompare(b.placa))
+        }
+      }
+    )
+      .afterClosed()
+      .subscribe(resultado => {
+        if (resultado) {
+          this.prepararCorrecaoDadosSaida(missao, resultado);
+        }
+      });
+  }
+
+  private prepararCorrecaoDadosSaida(missao: MissaoResponse, resultado: CorrigirSaidaDadosDialogResult): void {
+    const conflitos = this.detectarConflitosCorrecaoSaida(missao, resultado);
+    if (conflitos.length > 1) {
+      this.snackBar.open('A correção envolve mais de uma missão. Corrija motorista ou veículo separadamente.', 'Fechar', { duration: 4200 });
+      return;
+    }
+
+    if (conflitos.length === 1) {
+      const conflito = conflitos[0];
+      if (conflito.origemAbertura !== 'REGISTRO_ADMINISTRATIVO') {
+        this.snackBar.open('A outra missão não foi registrada pelo administrativo. Não é possível trocar por este fluxo.', 'Fechar', { duration: 4200 });
+        return;
+      }
+      this.abrirConfirmacao({
+        title: 'Trocar entre missões?',
+        message: `O dado escolhido já está na missão #${conflito.id}. O sistema vai trocar os dados entre as duas missões para preservar o histórico.`,
+        confirmText: 'Trocar'
+      }, () => this.salvarCorrecaoDadosSaida(missao, resultado, true));
+      return;
+    }
+
+    this.salvarCorrecaoDadosSaida(missao, resultado, false);
+  }
+
+  private detectarConflitosCorrecaoSaida(
+    missao: MissaoResponse,
+    resultado: CorrigirSaidaDadosDialogResult
+  ): MissaoResponse[] {
+    const conflitos = new Map<number, MissaoResponse>();
+    const missoesAtivas = this.missoesAtivas().filter(ativa => ativa.id !== missao.id);
+    const conflitoMotorista = missoesAtivas.find(ativa => ativa.motoristaId === resultado.motoristaId);
+    const conflitoVeiculo = missoesAtivas.find(ativa => ativa.veiculoId === resultado.veiculoId);
+    if (conflitoMotorista) conflitos.set(conflitoMotorista.id, conflitoMotorista);
+    if (conflitoVeiculo) conflitos.set(conflitoVeiculo.id, conflitoVeiculo);
+    return [...conflitos.values()];
+  }
+
+  private salvarCorrecaoDadosSaida(
+    missao: MissaoResponse,
+    resultado: CorrigirSaidaDadosDialogResult,
+    confirmarTroca: boolean
+  ): void {
+    const payload: CorrigirSaidaMissaoPayload = {
+      motoristaId: resultado.motoristaId,
+      veiculoId: resultado.veiculoId,
+      justificativa: resultado.justificativa,
+      confirmarTroca
+    };
+    this.adminService.corrigirSaidaMissao(missao.id, payload).subscribe({
+      next: () => {
+        this.snackBar.open(confirmarTroca ? 'Troca entre missões realizada.' : 'Saída corrigida com sucesso.', 'Fechar', { duration: 2600 });
+        this.buscarMissoes();
+        this.carregarMissoesTempoReal(false);
+        this.carregarMapaDiario(false);
+        this.carregarVeiculos(this.veiculoBusca);
+      },
+      error: err => this.snackBar.open(err.error?.message || 'Falha ao corrigir a saída.', 'Fechar', { duration: 4200 })
     });
   }
 

@@ -5,6 +5,7 @@ import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
 import com.frota.checklist.dto.CriarRegistroAdministrativoMissaoRequest;
+import com.frota.checklist.dto.CorrigirSaidaMissaoAdminRequest;
 import com.frota.checklist.dto.DesfazerMissaoAdminRequest;
 import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
@@ -146,6 +147,22 @@ public class AdminMissaoController {
                 id,
                 userDetails.getMotoristaId(),
                 request.justificativa()
+        ));
+    }
+
+    @PatchMapping("/{id}/corrigir-saida")
+    public ResponseEntity<MissaoResponse> corrigirSaidaAdministrativa(
+            @PathVariable Long id,
+            @Valid @RequestBody CorrigirSaidaMissaoAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.corrigirSaidaAdministrativa(
+                id,
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.veiculoId(),
+                request.justificativa(),
+                Boolean.TRUE.equals(request.confirmarTroca())
         ));
     }
 

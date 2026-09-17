@@ -110,7 +110,7 @@ export class FleetBoardComponent {
     this.editMission.emit(mission);
   }
 
-  undoAdministrativeMission(mission: MissaoResponse | null): void {
+  correctAdministrativeMission(mission: MissaoResponse | null): void {
     if (!mission) return;
     this.movingVehicleId = null;
     this.undoMission.emit(mission);

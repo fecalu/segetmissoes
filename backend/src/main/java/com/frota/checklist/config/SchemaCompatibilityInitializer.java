@@ -207,12 +207,22 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
     }
 
     private void atualizarConstraintsMissoes() {
+        executarSilencioso("""
+                alter table missoes
+                add column if not exists status_administrativo_anterior varchar(30)
+                """);
+        executarSilencioso("""
+                alter table missoes
+                add column if not exists localizacao_operacional_anterior varchar(80)
+                """);
+
         executarSilencioso("alter table missoes drop constraint if exists missoes_status_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_origem_abertura_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_origem_encerramento_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_tipo_deslocamento_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_status_documental_check");
         executarSilencioso("alter table missoes drop constraint if exists missoes_motivo_contingencia_check");
+        executarSilencioso("alter table missoes drop constraint if exists missoes_status_administrativo_anterior_check");
 
         executarSilencioso("""
                 alter table missoes
@@ -277,6 +287,20 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'BATERIA_DESCARREGADA',
                     'APP_INDISPONIVEL',
                     'OUTROS'
+                ))
+                """);
+
+        executarSilencioso("""
+                alter table missoes
+                add constraint missoes_status_administrativo_anterior_check
+                check (status_administrativo_anterior is null or status_administrativo_anterior in (
+                    'NO_PATIO',
+                    'AGUARDANDO_REALOCACAO',
+                    'EM_USO_EXTERNO',
+                    'OFICINA',
+                    'EM_VIAGEM',
+                    'MANUTENCAO',
+                    'BLOQUEADO'
                 ))
                 """);
     }
