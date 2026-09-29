@@ -15,6 +15,7 @@ public record CriarAlocacaoVeiculoRequest(
         @NotBlank @Size(max = 60) String limiteAutorizado,
         @Size(max = 180) String documentoReferencia,
         @Size(max = 500) String linkConsulta,
-        @Size(max = 500) String observacao
+        @Size(max = 500) String observacao,
+        Long vagaAdministrativaId
 ) {
 }

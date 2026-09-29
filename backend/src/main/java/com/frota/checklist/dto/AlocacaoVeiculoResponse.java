@@ -17,6 +17,8 @@ public record AlocacaoVeiculoResponse(
         String observacao,
         Boolean ativa,
         LocalDateTime criadaEm,
-        LocalDateTime encerradaEm
+        LocalDateTime encerradaEm,
+        Long vagaAdministrativaId,
+        String statusVaga
 ) {
 }

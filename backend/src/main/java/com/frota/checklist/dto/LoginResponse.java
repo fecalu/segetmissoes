@@ -6,6 +6,9 @@ public record LoginResponse(
         String token,
         Long motoristaId,
         String nome,
-        Perfil perfil
+        Perfil perfil,
+        boolean deveAlterarSenha,
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {
 }

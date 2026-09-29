@@ -37,6 +37,8 @@ class PerfisIntegrationTest {
         properties.add("spring.datasource.url", () -> System.getenv("RBAC_TEST_DB_URL"));
         properties.add("spring.datasource.username", () -> System.getenv("RBAC_TEST_DB_USER"));
         properties.add("spring.datasource.password", () -> System.getenv("RBAC_TEST_DB_PASSWORD"));
+        properties.add("spring.flyway.locations", () -> "classpath:db/test-baseline,classpath:db/migration");
+        properties.add("app.official-users-seed-enabled", () -> "false");
     }
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -47,6 +49,7 @@ class PerfisIntegrationTest {
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
     @Autowired JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired DataInitializer initializer;
     final Map<Perfil, Motorista> contas = new EnumMap<>(Perfil.class);
 
@@ -55,6 +58,7 @@ class PerfisIntegrationTest {
             Motorista u = new Motorista();
             u.setLogin("teste-" + perfil); u.setNome("Teste " + perfil); u.setCpf(String.format("%011d", perfil.ordinal() + 1));
             u.setPerfil(perfil); u.setSenha(encoder.encode("SenhaSoParaTestes123"));
+            u.setMotoristaOperacional(perfil == Perfil.MOTORISTA);
             contas.put(perfil, usuarios.saveAndFlush(u));
         }
     }
@@ -69,6 +73,20 @@ class PerfisIntegrationTest {
         mvc.perform(get("/api/admin/motoristas").with(principal)).andExpect(status().is(perfil == Perfil.ADMIN || perfil == Perfil.GESTOR ? 200 : 403));
         mvc.perform(get("/api/admin/motoristas/opcoes").with(principal)).andExpect(status().is(perfil == Perfil.MOTORISTA ? 403 : 200));
         mvc.perform(get("/api/admin/rota-nao-cadastrada").with(principal)).andExpect(status().isForbidden());
+    }
+
+    @Test void consultaMissoesReconheceCanceladasPersistidas() throws Exception {
+        Missao cancelada = missao(OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO, StatusMissao.CANCELADA);
+        Long id = cancelada.getId();
+        entityManager.clear();
+
+        executar(get("/api/admin/missoes").param("status", "CANCELADA"), Perfil.GESTOR, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(id))
+                .andExpect(jsonPath("$[0].status").value("CANCELADA"));
+        executar(get("/api/admin/missoes"), Perfil.GESTOR, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test void endpointsSensiveisBloqueiamOperadorAntesDoController() throws Exception {
@@ -210,7 +228,7 @@ class PerfisIntegrationTest {
     }
 
     @Test void migracaoPreservaContaAoExpandirRestricaoAntiga() throws Exception {
-        jdbc.update("DELETE FROM motoristas WHERE perfil IN ('GESTOR','OPERADOR')");
+        jdbc.update("DELETE FROM motoristas WHERE perfil IN ('GESTOR','OPERADOR','VISUALIZADOR')");
         jdbc.execute("ALTER TABLE motoristas DROP CONSTRAINT motoristas_perfil_check");
         jdbc.execute("ALTER TABLE motoristas ADD CONSTRAINT motoristas_perfil_check CHECK (perfil IN ('ADMIN','MOTORISTA'))");
         var admin = contas.get(Perfil.ADMIN);

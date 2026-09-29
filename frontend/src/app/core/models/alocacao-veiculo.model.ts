@@ -6,6 +6,14 @@ export type TipoEventoAlocacaoVeiculo =
   | 'ATUALIZACAO_DADOS'
   | 'ENCERRAMENTO';
 
+export type TipoEventoVagaAdministrativa =
+  | 'CRIACAO'
+  | 'ATUALIZACAO_DADOS'
+  | 'OCUPACAO'
+  | 'LIBERACAO'
+  | 'DESATIVACAO'
+  | 'REATIVACAO';
+
 export interface AlocacaoVeiculo {
   id: number;
   numeroControle: number;
@@ -22,6 +30,27 @@ export interface AlocacaoVeiculo {
   ativa: boolean;
   criadaEm: string;
   encerradaEm: string | null;
+  vagaAdministrativaId: number | null;
+  statusVaga: StatusVagaAdministrativa | null;
+}
+
+export type StatusVagaAdministrativa = 'LIVRE' | 'OCUPADA' | 'DESATIVADA';
+
+export interface VagaAdministrativa {
+  id: number;
+  numeroControle: number;
+  secretariaOrgao: string;
+  setor: string;
+  limiteAutorizado: string;
+  documentoReferencia: string | null;
+  observacao: string | null;
+  status: StatusVagaAdministrativa;
+  criadaEm: string;
+  encerradaEm: string | null;
+  alocacaoAtivaId: number | null;
+  placaAtual: string | null;
+  modeloAtual: string | null;
+  responsavelAtual: string | null;
 }
 
 export interface HistoricoAlocacaoVeiculo {
@@ -40,6 +69,20 @@ export interface HistoricoAlocacaoVeiculo {
   administradorNome: string;
 }
 
+export interface HistoricoVagaAdministrativa {
+  id: number;
+  tipo: TipoEventoVagaAdministrativa;
+  placaAnterior: string | null;
+  placaNova: string | null;
+  responsavelAnterior: string | null;
+  responsavelNovo: string | null;
+  dadosAnteriores: string | null;
+  dadosNovos: string | null;
+  observacao: string | null;
+  dataHora: string;
+  administradorNome: string;
+}
+
 export interface CriarAlocacaoVeiculoPayload {
   placa: string;
   modelo: string;
@@ -51,6 +94,7 @@ export interface CriarAlocacaoVeiculoPayload {
   documentoReferencia: string | null;
   linkConsulta: string | null;
   observacao: string | null;
+  vagaAdministrativaId?: number | null;
 }
 
 export interface AtualizarDadosAlocacaoVeiculoPayload {
@@ -61,3 +105,13 @@ export interface AtualizarDadosAlocacaoVeiculoPayload {
   linkConsulta: string | null;
   observacao: string | null;
 }
+
+export interface CriarVagaAdministrativaPayload {
+  secretariaOrgao: string;
+  setor: string;
+  limiteAutorizado: string;
+  documentoReferencia: string | null;
+  observacao: string | null;
+}
+
+export type AtualizarVagaAdministrativaPayload = CriarVagaAdministrativaPayload;

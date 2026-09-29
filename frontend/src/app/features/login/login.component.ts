@@ -72,12 +72,16 @@ export class LoginComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (res) => {
-          if (res.perfil !== 'MOTORISTA') {
+          if (!res.motoristaOperacional) {
             this.authService.logout();
-            this.snackBar.open('Este login nao e de motorista. Use a area administrativa.', 'Fechar', { duration: 3500 });
+            this.snackBar.open('Este login nao esta habilitado como motorista.', 'Fechar', { duration: 3500 });
             return;
           }
           this.authService.saveRememberedAccess('motorista', { login: normalizedLogin }, lembrarAcesso);
+          if (res.deveAlterarSenha) {
+            this.router.navigate(['/alterar-senha-inicial']);
+            return;
+          }
           this.router.navigate(['/inicio']);
         },
         error: (err: HttpErrorResponse) => {

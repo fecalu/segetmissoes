@@ -8,6 +8,7 @@ public record TrocarVeiculoAlocacaoRequest(
         @NotBlank @Size(max = 10) String placa,
         @NotBlank @Size(max = 180) String modelo,
         @Size(max = 120) String marca,
+        @Size(max = 500) String linkConsulta,
         @NotBlank @Size(max = 500) String motivo
 ) {
 }

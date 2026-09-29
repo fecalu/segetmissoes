@@ -2,9 +2,9 @@
   <mat-card class="card-shell stats-shell">
     <header class="stats-header">
       <div>
-        <p class="eyebrow">Administracao</p>
-        <h2>Estatisticas de Missoes</h2>
-        <p class="subtitle">Analise de produtividade e tempo em missao por motorista.</p>
+        <p class="eyebrow">Administração</p>
+        <h2>Estatísticas de Missões</h2>
+        <p class="subtitle">Indicadores separados por tipo de deslocamento para evitar comparações injustas.</p>
       </div>
       <button mat-stroked-button color="primary" type="button" (click)="voltar()">Voltar</button>
     </header>
@@ -21,7 +21,7 @@
       </mat-form-field>
 
       <button mat-flat-button color="primary" class="submit-btn">
-        Atualizar estatisticas
+        Atualizar estatísticas
       </button>
     </form>
 
@@ -30,62 +30,92 @@
     </div>
 
     <section *ngIf="!loading && stats as s" class="stats-content">
+      <div class="rule-note">
+        <strong>Regra aplicada:</strong>
+        entram apenas missões finalizadas, consideradas pela data de saída. Se atravessar o dia, o tempo contado para estatística vai até 23:59 do dia de início.
+      </div>
+
       <div class="kpi-grid">
         <article class="kpi-card">
           <h3>{{ s.totalMissoes }}</h3>
-          <p>Total de missoes</p>
+          <p>Total geral</p>
+        </article>
+        <article class="kpi-card">
+          <h3>{{ s.totalMissoesUrbanas }}</h3>
+          <p>Missões urbanas</p>
+        </article>
+        <article class="kpi-card">
+          <h3>{{ s.totalViagens }}</h3>
+          <p>Viagens</p>
         </article>
         <article class="kpi-card">
           <h3>{{ formatHoras(s.totalHorasMissao) }}</h3>
-          <p>Tempo total em missao</p>
-        </article>
-        <article class="kpi-card">
-          <h3>{{ s.rankingPorMissoes.length }}</h3>
-          <p>Motoristas com missoes</p>
+          <p>Tempo geral</p>
         </article>
       </div>
 
-      <div class="panels-grid" *ngIf="s.rankingPorMissoes.length; else semDados">
-        <mat-card class="panel-card">
-          <h3>Ranking por quantidade de missoes</h3>
-          <div class="rank-list">
-            <article class="rank-row" *ngFor="let item of s.rankingPorMissoes; let i = index">
-              <div class="rank-top">
-                <span class="position">#{{ i + 1 }}</span>
-                <strong>{{ item.motoristaNome }}</strong>
-                <span>{{ item.quantidadeMissoes }} missoes</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill bar-blue" [style.width]="barraMissoes(item)"></div>
-              </div>
-            </article>
-          </div>
-        </mat-card>
+      <div class="stats-groups" *ngIf="s.totalMissoes; else semDados">
+        <section class="stats-group" *ngFor="let grupo of grupos()" [class.travel-group]="grupo.tipoDeslocamento === 'VIAGEM'">
+          <header class="group-title">
+            <div>
+              <p>{{ grupo.tipoDeslocamento === 'VIAGEM' ? 'Deslocamentos longos' : 'Rotina urbana' }}</p>
+              <h3>{{ grupo.titulo }}</h3>
+            </div>
+            <div class="group-kpis">
+              <span><strong>{{ grupo.totalMissoes }}</strong> registros</span>
+              <span><strong>{{ formatHoras(grupo.totalHorasMissao) }}</strong> total</span>
+            </div>
+          </header>
 
-        <mat-card class="panel-card">
-          <h3>Ranking por tempo total em missao</h3>
-          <div class="rank-list">
-            <article class="rank-row" *ngFor="let item of s.rankingPorTempo; let i = index">
-              <div class="rank-top">
-                <span class="position">#{{ i + 1 }}</span>
-                <strong>{{ item.motoristaNome }}</strong>
-                <span>{{ formatHoras(item.tempoTotalHoras) }}</span>
+          <div class="panels-grid" *ngIf="grupo.totalMissoes; else grupoSemDados">
+            <mat-card class="panel-card">
+              <h3>Ranking por quantidade</h3>
+              <div class="rank-list">
+                <article class="rank-row" *ngFor="let item of grupo.rankingPorMissoes; let i = index">
+                  <div class="rank-top">
+                    <span class="position">#{{ i + 1 }}</span>
+                    <strong>{{ item.motoristaNome }}</strong>
+                    <span>{{ item.quantidadeMissoes }} {{ item.quantidadeMissoes === 1 ? 'missão' : 'missões' }}</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill bar-blue" [style.width]="barraMissoes(item, grupo)"></div>
+                  </div>
+                </article>
               </div>
-              <div class="bar-track">
-                <div class="bar-fill bar-green" [style.width]="barraHoras(item)"></div>
+            </mat-card>
+
+            <mat-card class="panel-card">
+              <h3>Ranking por tempo</h3>
+              <div class="rank-list">
+                <article class="rank-row" *ngFor="let item of grupo.rankingPorTempo; let i = index">
+                  <div class="rank-top">
+                    <span class="position">#{{ i + 1 }}</span>
+                    <strong>{{ item.motoristaNome }}</strong>
+                    <span>{{ formatHoras(item.tempoTotalHoras) }}</span>
+                  </div>
+                  <div class="bar-track">
+                    <div class="bar-fill" [class.bar-green]="grupo.tipoDeslocamento !== 'VIAGEM'" [class.bar-orange]="grupo.tipoDeslocamento === 'VIAGEM'" [style.width]="barraHoras(item, grupo)"></div>
+                  </div>
+                </article>
               </div>
-            </article>
+            </mat-card>
           </div>
-        </mat-card>
+
+          <ng-template #grupoSemDados>
+            <article class="empty-card compact-empty">
+              <h3>Nenhum registro neste grupo</h3>
+              <p>Não há missão finalizada desse tipo no período selecionado.</p>
+            </article>
+          </ng-template>
+        </section>
       </div>
 
       <ng-template #semDados>
         <article class="empty-card">
-          <h3>Nenhuma missao concluida</h3>
-          <p>Nao ha pares SAIDA/CHEGADA no periodo selecionado.</p>
+          <h3>Nenhuma missão concluída</h3>
+          <p>Não há missões finalizadas no período selecionado.</p>
         </article>
       </ng-template>
     </section>
   </mat-card>
 </section>
-
