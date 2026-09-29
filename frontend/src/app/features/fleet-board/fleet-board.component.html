@@ -108,7 +108,11 @@
           <p>Visão em linhas, parecida com o mapa manual do setor.</p>
         </div>
         <div class="daily-map-actions">
-          <span>{{ dailyMapDateLabel() }}</span>
+          <div class="daily-map-date-nav" aria-label="Navegar entre datas do mapa diário">
+            <button type="button" aria-label="Dia anterior" title="Dia anterior" [disabled]="loadingDailyMap" (click)="changeDailyMapDate(-1)">&lt;</button>
+            <span class="daily-map-date">{{ dailyMapDateLabel() }}</span>
+            <button type="button" aria-label="Próximo dia" title="Próximo dia" [disabled]="loadingDailyMap || !canGoToNextDailyMap()" (click)="changeDailyMapDate(1)">&gt;</button>
+          </div>
           <button type="button" class="button button-primary" [disabled]="loadingDailyMap" (click)="createMission.emit()">Registrar saída</button>
           <button type="button" class="button button-secondary" [disabled]="loadingDailyMap" (click)="viewChange.emit('MAPA')">Atualizar</button>
           <button type="button" class="button button-secondary" [disabled]="loadingDailyMap || !dailyMissions.length" (click)="printDailyReport.emit()">Imprimir mapa</button>

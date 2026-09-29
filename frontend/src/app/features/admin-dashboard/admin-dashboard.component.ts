@@ -613,6 +613,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (view === 'MAPA') this.carregarMapaDiario(false);
   }
 
+  alterarDataMapaDiario(data: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data > this.hojeIso() || data === this.dataMapaDiario) return;
+    this.dataMapaDiario = data;
+    this.carregarMapaDiario();
+  }
+
   carregarMapaDiario(showError = true): void {
     const exibeLoading = showError || this.missoesMapaDiario.length === 0;
     if (exibeLoading) {
