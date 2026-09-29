@@ -32,7 +32,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleIntegrity(Exception ex, HttpServletRequest req) {
+    public ResponseEntity<ApiErrorResponse> handleIntegrity(
+            org.springframework.dao.DataIntegrityViolationException ex,
+            HttpServletRequest req
+    ) {
+        Throwable causa = ex;
+        while (causa.getCause() != null && causa.getCause() != causa) {
+            causa = causa.getCause();
+        }
+        log.error("Falha de integridade em {} {}. Causa final: {}: {}",
+                req.getMethod(), req.getRequestURI(), causa.getClass().getSimpleName(), causa.getMessage(), ex);
         return build(HttpStatus.CONFLICT, "Este registro possui vinculos ou dados duplicados. Preserve o historico e revise os dados.", List.of(), req.getRequestURI());
     }
 

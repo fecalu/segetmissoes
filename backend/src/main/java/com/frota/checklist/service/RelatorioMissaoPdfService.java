@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -68,7 +69,7 @@ public class RelatorioMissaoPdfService {
         long emAndamento = total - finalizadas;
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4.rotate(), 26, 26, 48, 42);
+            Document document = new Document(PageSize.A4.rotate(), 26, 26, 34, 42);
             PdfWriter writer = PdfWriter.getInstance(document, outputStream);
             writer.setPageEvent(new FooterPageEvent());
 
@@ -94,16 +95,18 @@ public class RelatorioMissaoPdfService {
             long finalizadas,
             long emAndamento
     ) throws DocumentException {
-        PdfPTable top = new PdfPTable(new float[]{1.3f, 4.7f});
+        PdfPTable top = new PdfPTable(new float[]{0.55f, 5.45f});
         top.setWidthPercentage(100);
-        top.setSpacingAfter(6);
+        top.setSpacingAfter(4);
 
         PdfPCell logoCell = new PdfPCell();
         logoCell.setBorder(Rectangle.NO_BORDER);
         logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
         Image logo = carregarLogo();
         if (logo != null) {
-            logo.scaleToFit(130, 56);
+            logo.scaleToFit(38, 38);
+            logo.setAlignment(Element.ALIGN_CENTER);
             logoCell.addElement(logo);
         }
         top.addCell(logoCell);
@@ -111,43 +114,41 @@ public class RelatorioMissaoPdfService {
         PdfPCell textCell = new PdfPCell();
         textCell.setBorder(Rectangle.NO_BORDER);
         textCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        textCell.addElement(new Paragraph("SEGET", font(15, Font.BOLD, BLUE)));
-        textCell.addElement(new Paragraph("Servicos Gerais e Transportes", font(11, Font.NORMAL, TEXT)));
-        textCell.addElement(new Paragraph("RELATORIO DIARIO DE MISSOES", font(13, Font.BOLD, TEXT)));
+        textCell.addElement(new Paragraph("SEGET - Relatorio diario de missoes", font(13, Font.BOLD, BLUE)));
+        textCell.addElement(new Paragraph("Servicos Gerais e Transportes", font(9, Font.NORMAL, TEXT)));
         top.addCell(textCell);
         document.add(top);
 
-        Paragraph data = new Paragraph("Missões com saída em: " + dataRelatorio.format(DATE_FORMATTER), font(10, Font.BOLD, TEXT));
+        Paragraph data = new Paragraph(
+                "Data: " + dataRelatorio.format(DATE_FORMATTER)
+                        + "  |  Gerado em: " + LocalDateTime.now().format(DATE_TIME_FORMATTER),
+                font(8.8f, Font.BOLD, TEXT)
+        );
         data.setSpacingAfter(2);
         document.add(data);
 
         Paragraph criterio = new Paragraph(
-                "Critério: a missão pertence à data da saída. Início e fim exibem data e hora para identificar retornos em outro dia.",
-                font(8.5f, Font.NORMAL, new Color(71, 85, 105))
+                "Criterio: a missao pertence a data da saida. Inicio e fim exibem data e hora para identificar retornos em outro dia.",
+                font(7.8f, Font.NORMAL, new Color(71, 85, 105))
         );
         criterio.setSpacingAfter(4);
         document.add(criterio);
 
-        Paragraph geradoEm = new Paragraph("Gerado em: " + LocalDateTime.now().format(DATE_TIME_FORMATTER), font(9, Font.NORMAL, new Color(71, 85, 105)));
-        geradoEm.setSpacingAfter(8);
-        document.add(geradoEm);
-
-        PdfPTable resumo = new PdfPTable(3);
+        PdfPTable resumo = new PdfPTable(1);
         resumo.setWidthPercentage(100);
-        resumo.setWidths(new float[]{1f, 1f, 1f});
-        resumo.setSpacingAfter(12);
-        resumo.addCell(buildResumoCell("Total de missões", String.valueOf(total)));
-        resumo.addCell(buildResumoCell("Finalizadas", String.valueOf(finalizadas)));
-        resumo.addCell(buildResumoCell("Em andamento", String.valueOf(emAndamento)));
+        resumo.setSpacingAfter(8);
+        resumo.addCell(buildResumoCell(
+                "Total: " + total + "   |   Finalizadas: " + finalizadas + "   |   Em andamento: " + emAndamento
+        ));
         document.add(resumo);
     }
 
-    private PdfPCell buildResumoCell(String titulo, String valor) {
+    private PdfPCell buildResumoCell(String texto) {
         PdfPCell cell = new PdfPCell();
         cell.setBorderColor(BORDER);
         cell.setBackgroundColor(LIGHT_BLUE);
-        cell.setPadding(10);
-        cell.setPhrase(new Phrase(titulo + "\n" + valor, font(11, Font.BOLD, BLUE)));
+        cell.setPadding(5);
+        cell.setPhrase(new Phrase(texto, font(8.8f, Font.BOLD, BLUE)));
         return cell;
     }
 
@@ -174,11 +175,11 @@ public class RelatorioMissaoPdfService {
             for (Missao missao : missoes) {
                 adicionarBodyTabela(
                         tabela,
-                        missao.getVeiculo().getPlaca()
-                                + " - "
-                                + missao.getVeiculo().getMarca()
-                                + " "
-                                + missao.getVeiculo().getModelo()
+                        descricaoVeiculo(
+                                missao.getVeiculo().getPlaca(),
+                                missao.getVeiculo().getMarca(),
+                                missao.getVeiculo().getModelo()
+                        )
                 );
                 adicionarBodyTabela(tabela, missao.getMotorista().getNome());
                 adicionarBodyTabela(tabela, valorOuTraco(missao.getLocalDestino()));
@@ -218,23 +219,10 @@ public class RelatorioMissaoPdfService {
     }
 
     private void adicionarAssinatura(Document document) throws DocumentException {
-        Paragraph conferencia = new Paragraph("Conferência do relatório", font(10, Font.BOLD, TEXT));
-        conferencia.setSpacingBefore(18);
-        conferencia.setSpacingAfter(4);
-        document.add(conferencia);
-
-        Paragraph declaracao = new Paragraph(
-                "Declaro que conferi as informações apresentadas neste relatório e que estão de acordo com os registros do sistema.",
-                font(8.5f, Font.NORMAL, TEXT)
-        );
-        declaracao.setSpacingAfter(16);
-        document.add(declaracao);
-
-        PdfPTable assinatura = new PdfPTable(new float[]{1f, 1f});
+        PdfPTable assinatura = new PdfPTable(1);
         assinatura.setWidthPercentage(100);
-        assinatura.setSpacingBefore(4);
-        assinatura.addCell(celulaAssinatura("Responsável pela conferência"));
-        assinatura.addCell(celulaAssinatura("Data e assinatura"));
+        assinatura.setSpacingBefore(28);
+        assinatura.addCell(celulaAssinatura("Assinatura do responsável pela conferência"));
         document.add(assinatura);
     }
 
@@ -253,6 +241,21 @@ public class RelatorioMissaoPdfService {
             return "-";
         }
         return value;
+    }
+
+    private String descricaoVeiculo(String placa, String marca, String modelo) {
+        List<String> partes = new ArrayList<>();
+        if (marca != null && !marca.isBlank()) {
+            partes.add(marca.trim());
+        }
+        if (modelo != null && !modelo.isBlank()) {
+            partes.add(modelo.trim());
+        }
+        String descricao = String.join(" ", partes);
+        if (descricao.isBlank()) {
+            return valorOuTraco(placa);
+        }
+        return valorOuTraco(placa) + " - " + descricao;
     }
 
     private Image carregarLogo() {

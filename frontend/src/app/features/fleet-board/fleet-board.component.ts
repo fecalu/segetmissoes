@@ -3,6 +3,8 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AppIconComponent } from '../../shared/ui/app-icon.component';
+import { ProtectedImageDirective } from '../../shared/ui/protected-image.directive';
+import { LocalOperacionalResponse } from '../../core/models/operational-location.model';
 import { Veiculo } from '../../core/models/veiculo.model';
 import { MissaoResponse } from '../../core/models/missao.model';
 import { FleetCard, FleetColumn, PainelCategoria } from './fleet-board.model';
@@ -18,7 +20,7 @@ interface DailyMissionGroup {
 
 @Component({
   selector: 'app-fleet-board',
-  imports: [CommonModule, FormsModule, DragDropModule, AppIconComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, AppIconComponent, ProtectedImageDirective],
   templateUrl: './fleet-board.component.html',
   styleUrl: './fleet-board.component.css'
 })
@@ -32,7 +34,8 @@ export class FleetBoardComponent {
   @Input() dailyMapDate = '';
   @Input() loadingDailyMap = false;
   @Input() dailyMapError = false;
-  @Input() operationalLocations: string[] = [];
+  @Input() operationalLocations: LocalOperacionalResponse[] = [];
+  @Input() readOnly = false;
   @Output() refresh = new EventEmitter<void>();
   @Output() history = new EventEmitter<Veiculo>();
   @Output() move = new EventEmitter<{ event: CdkDragDrop<FleetCard[]>; category: PainelCategoria }>();
@@ -43,6 +46,7 @@ export class FleetBoardComponent {
   @Output() viewChange = new EventEmitter<OperacaoView>();
   @Output() editMission = new EventEmitter<MissaoResponse>();
   @Output() finishMission = new EventEmitter<MissaoResponse>();
+  @Output() undoMission = new EventEmitter<MissaoResponse>();
   @Output() createMission = new EventEmitter<void>();
   @Output() printDailyReport = new EventEmitter<void>();
   @Output() dailyMapDateChange = new EventEmitter<string>();
@@ -96,19 +100,33 @@ export class FleetBoardComponent {
   }
 
   moveTo(vehicle: Veiculo, category: PainelCategoria): void {
+    if (this.readOnly) return;
     this.movingVehicleId = null;
     this.moveVehicle.emit({ vehicle, category });
   }
 
+  editMissionData(mission: MissaoResponse | null): void {
+    if (!mission) return;
+    this.movingVehicleId = null;
+    this.editMission.emit(mission);
+  }
+
+  correctAdministrativeMission(mission: MissaoResponse | null): void {
+    if (!mission) return;
+    this.movingVehicleId = null;
+    this.undoMission.emit(mission);
+  }
+
   setOperationalLocation(vehicle: Veiculo, location: string | null): void {
+    if (this.readOnly) return;
     this.locationVehicleId = null;
     this.movingVehicleId = null;
     this.locationChange.emit({ vehicle, location });
   }
 
-  locationColorClass(location: string | null): string {
-    const normalized = this.normalize(location || 'sem-local');
-    return `location-${normalized || 'sem-local'}`;
+  locationColor(location: string | null): string {
+    const found = this.operationalLocations.find(item => item.nome === location);
+    return found?.cor || '#edf1f6';
   }
 
   moveDestinations(source: PainelCategoria, card: FleetCard): FleetColumn[] {
@@ -121,11 +139,15 @@ export class FleetBoardComponent {
 
   visibleCards(column: FleetColumn): FleetCard[] {
     const query = this.normalize(this.search);
-    return !query ? column.cards : column.cards.filter(card => this.normalize(`${card.vehicle.placa} ${card.vehicle.marca} ${card.vehicle.modelo} ${card.driver || ''}`).includes(query));
+    return !query ? column.cards : column.cards.filter(card => this.normalize(`${card.vehicle.placa} ${card.vehicle.marca || ''} ${card.vehicle.modelo} ${card.driver || ''}`).includes(query));
+  }
+
+  vehicleModel(vehicle: Pick<Veiculo, 'marca' | 'modelo'>): string {
+    return [vehicle.marca, vehicle.modelo].filter(Boolean).join(' ');
   }
 
   missionVehicle(mission: MissaoResponse): string {
-    return `${mission.veiculoPlaca} - ${mission.veiculoMarca} ${mission.veiculoModelo}`.trim();
+    return `${mission.veiculoPlaca} - ${[mission.veiculoMarca, mission.veiculoModelo].filter(Boolean).join(' ')}`;
   }
 
   missionContext(value: string | null): string {

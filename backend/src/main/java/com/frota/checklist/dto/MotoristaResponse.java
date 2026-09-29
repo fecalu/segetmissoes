@@ -8,6 +8,9 @@ public record MotoristaResponse(
         String login,
         String cpf,
         Perfil perfil,
-        boolean acessoHabilitado
+        boolean acessoHabilitado,
+        boolean deveAlterarSenha,
+        boolean cadastroCompleto,
+        boolean motoristaOperacional
 ) {
 }

@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +68,7 @@ public class AdminVeiculoService {
     private final VeiculoStatusResolver veiculoStatusResolver;
     private final ConfiguracaoRotuloStatusVeiculoService configuracaoRotuloStatusVeiculoService;
     private final MissaoService missaoService;
+    private final FileStorageService fileStorageService;
     private final PasswordEncoder passwordEncoder;
 
     public List<VeiculoResponse> listar(String buscaPlaca) {
@@ -94,7 +96,9 @@ public class AdminVeiculoService {
         Veiculo veiculo = new Veiculo();
         veiculo.setPlaca(placa);
         veiculo.setModelo(request.modelo().trim());
-        veiculo.setMarca(request.marca().trim());
+        veiculo.setMarca(normalizarTextoOpcional(request.marca()));
+        veiculo.setCnpj(normalizarCnpj(request.cnpj()));
+        veiculo.setRenavam(normalizarRenavam(request.renavam()));
         veiculo.setDesativado(false);
         veiculo.setStatusAdministrativo(StatusVeiculo.AGUARDANDO_REALOCACAO);
 
@@ -113,8 +117,31 @@ public class AdminVeiculoService {
 
         veiculo.setPlaca(placa);
         veiculo.setModelo(request.modelo().trim());
-        veiculo.setMarca(request.marca().trim());
+        veiculo.setMarca(normalizarTextoOpcional(request.marca()));
+        veiculo.setCnpj(normalizarCnpj(request.cnpj()));
+        veiculo.setRenavam(normalizarRenavam(request.renavam()));
 
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
+    public VeiculoResponse atualizarImagem(Long id, MultipartFile imagem) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+
+        String caminho = fileStorageService.salvarImagemVeiculo(imagem, veiculo.getId(), veiculo.getPlaca());
+        veiculo.setImagemCaminho(caminho);
+        return toResponse(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional
+    public VeiculoResponse removerImagem(Long id) {
+        autorizacao.exigir(Permissao.VEICULO_GERIR);
+        Veiculo veiculo = veiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+
+        veiculo.setImagemCaminho(null);
         return toResponse(veiculoRepository.save(veiculo));
     }
 
@@ -256,7 +283,7 @@ public class AdminVeiculoService {
             justificativaAbertura = "Viagem registrada manualmente pela administracao.";
         }
 
-        if (motoristaViagem.getPerfil() != Perfil.MOTORISTA) throw new BusinessException("Selecione um motorista valido");
+        if (!motoristaViagem.isAcessoHabilitado() || !motoristaViagem.isMotoristaOperacional()) throw new BusinessException("Selecione um motorista valido");
         missaoService.abrirRegistroAdministrativo(
                 administrador,
                 motoristaViagem,
@@ -562,6 +589,30 @@ public class AdminVeiculoService {
         return valor.trim();
     }
 
+    private String normalizarCnpj(String valor) {
+        String normalizado = normalizarDigitosOpcional(valor);
+        if (normalizado != null && normalizado.length() != 14) {
+            throw new BusinessException("CNPJ deve conter 14 digitos");
+        }
+        return normalizado;
+    }
+
+    private String normalizarRenavam(String valor) {
+        String normalizado = normalizarDigitosOpcional(valor);
+        if (normalizado != null && normalizado.length() > 20) {
+            throw new BusinessException("RENAVAM deve ter no maximo 20 digitos");
+        }
+        return normalizado;
+    }
+
+    private String normalizarDigitosOpcional(String valor) {
+        if (valor == null || valor.trim().isBlank()) {
+            return null;
+        }
+        String normalizado = valor.replaceAll("\\D", "");
+        return normalizado.isBlank() ? null : normalizado;
+    }
+
     private VeiculoResponse toResponse(Veiculo veiculo) {
         Map<StatusVeiculo, String> rotulos = configuracaoRotuloStatusVeiculoService.mapaRotulosAtuais();
         return toResponse(
@@ -603,7 +654,10 @@ public class AdminVeiculoService {
                 veiculo.getPlaca(),
                 veiculo.getModelo(),
                 veiculo.getMarca(),
+                veiculo.getCnpj(),
+                veiculo.getRenavam(),
                 veiculo.getLocalizacaoOperacional(),
+                veiculo.getImagemCaminho(),
                 Boolean.TRUE.equals(veiculo.getDesativado()),
                 snapshot.statusAtual(),
                 statusAutomaticoEfetivo,

@@ -65,7 +65,7 @@
                 {{ statusLabel(veiculo.statusAtual, veiculo.statusAtualRotulo) }}
               </span>
             </header>
-            <p>{{ veiculo.marca }} {{ veiculo.modelo }}</p>
+            <p>{{ veiculo.marca ? (veiculo.marca + ' ' + veiculo.modelo) : veiculo.modelo }}</p>
             <p><strong>Motorista atual:</strong> {{ veiculo.motoristaAtualNome || '-' }}</p>
           </article>
         </div>

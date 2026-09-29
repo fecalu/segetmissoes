@@ -1,9 +1,11 @@
 package com.frota.checklist.service;
 
 import com.frota.checklist.dto.EstatisticasMissoesResponse;
+import com.frota.checklist.dto.EstatisticasGrupoMissoesResponse;
 import com.frota.checklist.dto.MissaoMotoristaStatsResponse;
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.StatusMissao;
+import com.frota.checklist.entity.TipoDeslocamentoMissao;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.repository.MissaoRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +37,9 @@ public class EstatisticasMissoesService {
         LocalDateTime fim = dataFinal.atTime(23, 59, 59);
 
         List<Missao> registros = missaoRepository.buscarParaRelatorio(inicio, fim);
-        Map<Long, AcumuladorMotorista> agregados = new HashMap<>();
+        Map<Long, AcumuladorMotorista> agregadosGeral = new HashMap<>();
+        Map<Long, AcumuladorMotorista> agregadosUrbanos = new HashMap<>();
+        Map<Long, AcumuladorMotorista> agregadosViagens = new HashMap<>();
 
         for (Missao missao : registros) {
             if (missao.getStatus() != StatusMissao.FINALIZADA || missao.getDataHoraFim() == null) {
@@ -46,41 +50,44 @@ public class EstatisticasMissoesService {
                 continue;
             }
 
-            long duracaoSegundos = Duration.between(missao.getDataHoraInicio(), missao.getDataHoraFim()).getSeconds();
-            Long motoristaId = missao.getMotorista().getId();
-            AcumuladorMotorista acumulador = agregados.computeIfAbsent(
-                    motoristaId,
-                    id -> new AcumuladorMotorista(motoristaId, missao.getMotorista().getNome())
-            );
-            acumulador.incrementar(duracaoSegundos);
+            long duracaoSegundos = duracaoConsideradaNoDiaDeInicio(missao);
+            if (duracaoSegundos <= 0) {
+                continue;
+            }
+
+            incrementar(agregadosGeral, missao, duracaoSegundos);
+            if (tipoDeslocamento(missao) == TipoDeslocamentoMissao.VIAGEM) {
+                incrementar(agregadosViagens, missao, duracaoSegundos);
+            } else {
+                incrementar(agregadosUrbanos, missao, duracaoSegundos);
+            }
         }
 
-        List<MissaoMotoristaStatsResponse> base = agregados.values().stream()
-                .map(this::toResponse)
-                .toList();
-
-        List<MissaoMotoristaStatsResponse> rankingPorMissoes = new ArrayList<>(base);
-        rankingPorMissoes.sort(
-                Comparator.comparingLong(MissaoMotoristaStatsResponse::quantidadeMissoes).reversed()
-                        .thenComparing(MissaoMotoristaStatsResponse::motoristaNome)
+        EstatisticasGrupoMissoesResponse missoesUrbanas = criarGrupo(
+                TipoDeslocamentoMissao.NA_CIDADE,
+                "Missões urbanas",
+                agregadosUrbanos
         );
-
-        List<MissaoMotoristaStatsResponse> rankingPorTempo = new ArrayList<>(base);
-        rankingPorTempo.sort(
-                Comparator.comparingLong(MissaoMotoristaStatsResponse::tempoTotalSegundos).reversed()
-                        .thenComparing(MissaoMotoristaStatsResponse::motoristaNome)
+        EstatisticasGrupoMissoesResponse viagens = criarGrupo(
+                TipoDeslocamentoMissao.VIAGEM,
+                "Viagens",
+                agregadosViagens
         );
-
-        long totalMissoes = base.stream().mapToLong(MissaoMotoristaStatsResponse::quantidadeMissoes).sum();
-        long totalSegundos = base.stream().mapToLong(MissaoMotoristaStatsResponse::tempoTotalSegundos).sum();
+        EstatisticasGrupoMissoesResponse geral = criarGrupo(null, "Geral", agregadosGeral);
 
         return new EstatisticasMissoesResponse(
                 dataInicial,
                 dataFinal,
-                totalMissoes,
-                horasArredondadas(totalSegundos),
-                rankingPorMissoes,
-                rankingPorTempo
+                geral.totalMissoes(),
+                geral.totalHorasMissao(),
+                missoesUrbanas.totalMissoes(),
+                missoesUrbanas.totalHorasMissao(),
+                viagens.totalMissoes(),
+                viagens.totalHorasMissao(),
+                geral.rankingPorMissoes(),
+                geral.rankingPorTempo(),
+                missoesUrbanas,
+                viagens
         );
     }
 
@@ -101,6 +108,61 @@ public class EstatisticasMissoesService {
                 acumulador.tempoTotalSegundos(),
                 horasArredondadas(acumulador.tempoTotalSegundos())
         );
+    }
+
+    private EstatisticasGrupoMissoesResponse criarGrupo(
+            TipoDeslocamentoMissao tipo,
+            String titulo,
+            Map<Long, AcumuladorMotorista> agregados
+    ) {
+        List<MissaoMotoristaStatsResponse> base = agregados.values().stream()
+                .map(this::toResponse)
+                .toList();
+
+        List<MissaoMotoristaStatsResponse> rankingPorMissoes = new ArrayList<>(base);
+        rankingPorMissoes.sort(
+                Comparator.comparingLong(MissaoMotoristaStatsResponse::quantidadeMissoes).reversed()
+                        .thenComparing(MissaoMotoristaStatsResponse::motoristaNome)
+        );
+
+        List<MissaoMotoristaStatsResponse> rankingPorTempo = new ArrayList<>(base);
+        rankingPorTempo.sort(
+                Comparator.comparingLong(MissaoMotoristaStatsResponse::tempoTotalSegundos).reversed()
+                        .thenComparing(MissaoMotoristaStatsResponse::motoristaNome)
+        );
+
+        long totalMissoes = base.stream().mapToLong(MissaoMotoristaStatsResponse::quantidadeMissoes).sum();
+        long totalSegundos = base.stream().mapToLong(MissaoMotoristaStatsResponse::tempoTotalSegundos).sum();
+
+        return new EstatisticasGrupoMissoesResponse(
+                tipo,
+                titulo,
+                totalMissoes,
+                horasArredondadas(totalSegundos),
+                rankingPorMissoes,
+                rankingPorTempo
+        );
+    }
+
+    private void incrementar(Map<Long, AcumuladorMotorista> agregados, Missao missao, long duracaoSegundos) {
+        Long motoristaId = missao.getMotorista().getId();
+        AcumuladorMotorista acumulador = agregados.computeIfAbsent(
+                motoristaId,
+                id -> new AcumuladorMotorista(motoristaId, missao.getMotorista().getNome())
+        );
+        acumulador.incrementar(duracaoSegundos);
+    }
+
+    private TipoDeslocamentoMissao tipoDeslocamento(Missao missao) {
+        return missao.getTipoDeslocamento() == null ? TipoDeslocamentoMissao.NA_CIDADE : missao.getTipoDeslocamento();
+    }
+
+    private long duracaoConsideradaNoDiaDeInicio(Missao missao) {
+        LocalDateTime limiteDiaInicio = missao.getDataHoraInicio().toLocalDate().plusDays(1).atStartOfDay();
+        LocalDateTime fimConsiderado = missao.getDataHoraFim().isAfter(limiteDiaInicio)
+                ? limiteDiaInicio
+                : missao.getDataHoraFim();
+        return Duration.between(missao.getDataHoraInicio(), fimConsiderado).getSeconds();
     }
 
     private double horasArredondadas(long segundos) {

@@ -35,6 +35,8 @@ security:
 
 app:
   demo-data-enabled: ${APP_DEMO_DATA_ENABLED:false}
+  official-users-seed-enabled: ${APP_OFFICIAL_USERS_SEED_ENABLED:true}
+  initial-user-password: ${APP_INITIAL_USER_PASSWORD:123456}
   timezone: ${APP_TIMEZONE:America/Sao_Paulo}
   legacy-time-fix:
     enabled: ${APP_LEGACY_TIME_FIX_ENABLED:false}
