@@ -17,6 +17,7 @@ public enum Perfil {
             case GESTOR -> Set.of(Permissao.FROTA_CONSULTAR, Permissao.FROTA_OPERAR,
                     Permissao.VEICULO_GERIR, Permissao.VEICULO_LIBERAR, Permissao.MISSAO_REGISTRAR,
                     Permissao.MISSAO_COMPLEMENTAR, Permissao.MISSAO_CORRIGIR, Permissao.MISSAO_ENCERRAR_EXCECAO,
+                    Permissao.MISSAO_CORRIGIR_MOTORISTA_FINALIZADA,
                     Permissao.VISTORIA_CONSULTAR, Permissao.VISTORIA_REGISTRAR, Permissao.VISTORIA_CORRIGIR, Permissao.MOTORISTA_GERIR,
                     Permissao.ALOCACAO_CONSULTAR, Permissao.ALOCACAO_GERIR,
                     Permissao.RELATORIO_EXPORTAR, Permissao.ESTATISTICA_CONSULTAR);

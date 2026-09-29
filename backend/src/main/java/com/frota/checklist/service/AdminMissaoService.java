@@ -264,6 +264,53 @@ public class AdminMissaoService {
     }
 
     @Transactional
+    public MissaoResponse corrigirMotoristaMissaoFinalizada(
+            Long missaoId,
+            Long administradorId,
+            Long motoristaId,
+            String justificativa
+    ) {
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_CORRIGIR_MOTORISTA_FINALIZADA);
+        if (missao.getStatus() != StatusMissao.FINALIZADA) {
+            throw new BusinessException("Somente missoes finalizadas podem ter o motorista corrigido por este fluxo");
+        }
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO
+                && missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+            throw new BusinessException("Somente missoes registradas pela administracao podem ter o motorista corrigido por este fluxo");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
+            throw new BusinessException("Informe uma justificativa com pelo menos 10 caracteres");
+        }
+
+        Motorista novoMotorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+        if (!novoMotorista.isMotoristaOperacional()) {
+            throw new BusinessException("Selecione um usuario cadastrado como motorista");
+        }
+        if (Objects.equals(missao.getMotorista().getId(), novoMotorista.getId())) {
+            throw new BusinessException("Selecione um motorista diferente do atual");
+        }
+
+        missaoAuditoriaService.registrarAlteracaoCampo(
+                missao,
+                administrador,
+                "motorista",
+                formatarMotoristaAuditoria(missao.getMotorista()),
+                formatarMotoristaAuditoria(novoMotorista),
+                "Correcao de motorista em missao finalizada. Justificativa: %s".formatted(justificativaNormalizada)
+        );
+        missao.setMotorista(novoMotorista);
+        return toResponse(missaoRepository.save(missao));
+    }
+
+    @Transactional
     public MissaoResponse ajustarHorario(
             Long missaoId,
             Long administradorId,

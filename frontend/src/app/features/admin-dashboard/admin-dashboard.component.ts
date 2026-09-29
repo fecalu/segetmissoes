@@ -158,6 +158,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   salvandoLocaisOperacionais = false;
   salvandoContraparteVistoria = false;
   salvandoHorarioMissao = false;
+  salvandoCorrecaoMotoristaMissao = false;
   salvandoEdicaoMissaoManual = false;
 
   editingMotoristaId: number | null = null;
@@ -458,7 +459,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       setorSolicitante: [''],
       solicitanteNome: [''],
       dataHoraInicio: [this.agoraDateTimeLocal(), [Validators.required]],
-      dataHoraFim: [this.agoraDateTimeLocal()]
+      dataHoraFim: [this.agoraDateTimeLocal()],
+      motoristaCorrecaoId: [0],
+      justificativaCorrecaoMotorista: ['', [Validators.maxLength(700)]]
     });
 
     this.missaoEdicaoManualForm = this.fb.nonNullable.group({
@@ -3116,7 +3119,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       setorSolicitante: missao.setorSolicitante || '',
       solicitanteNome: missao.solicitanteNome || '',
       dataHoraInicio: this.toDateTimeLocalValue(missao.dataHoraInicio),
-      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal()
+      dataHoraFim: missao.dataHoraFim ? this.toDateTimeLocalValue(missao.dataHoraFim) : this.agoraDateTimeLocal(),
+      motoristaCorrecaoId: missao.motoristaId,
+      justificativaCorrecaoMotorista: ''
     });
     if (!this.auth.can('MISSAO_CORRIGIR') && missao.status !== 'ATIVA') {
       for (const campo of ['localDestino', 'setorSolicitante', 'solicitanteNome'] as const) {
@@ -3143,7 +3148,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       setorSolicitante: '',
       solicitanteNome: '',
       dataHoraInicio: this.agoraDateTimeLocal(),
-      dataHoraFim: this.agoraDateTimeLocal()
+      dataHoraFim: this.agoraDateTimeLocal(),
+      motoristaCorrecaoId: 0,
+      justificativaCorrecaoMotorista: ''
     });
     for (const control of Object.values(this.missaoDadosForm.controls)) control.enable({ emitEvent: false });
   }
@@ -3232,6 +3239,45 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.selectedMissaoAuditoria = updated;
       this.abrirAuditoriaMissao(updated);
     }
+  }
+
+  podeCorrigirMotoristaFinalizada(missao: MissaoResponse): boolean {
+    return this.auth.can('MISSAO_CORRIGIR_MOTORISTA_FINALIZADA')
+      && missao.status === 'FINALIZADA'
+      && (missao.origemAbertura === 'REGISTRO_ADMINISTRATIVO' || missao.origemAbertura === 'CONTINGENCIA_ADMIN');
+  }
+
+  salvarCorrecaoMotoristaMissao(): void {
+    const missao = this.selectedMissaoDadosAdmin;
+    if (!missao || !this.podeCorrigirMotoristaFinalizada(missao)) return;
+
+    const { motoristaCorrecaoId, justificativaCorrecaoMotorista } = this.missaoDadosForm.getRawValue();
+    const justificativa = justificativaCorrecaoMotorista.trim();
+    if (!motoristaCorrecaoId || motoristaCorrecaoId === missao.motoristaId) {
+      this.snackBar.open('Selecione o motorista correto, diferente do atual.', 'Fechar', { duration: 2800 });
+      return;
+    }
+    if (justificativa.length < 10) {
+      this.snackBar.open('Informe uma justificativa com pelo menos 10 caracteres.', 'Fechar', { duration: 2800 });
+      return;
+    }
+
+    this.salvandoCorrecaoMotoristaMissao = true;
+    this.adminService.corrigirMotoristaMissaoFinalizada(missao.id, {
+      motoristaId: motoristaCorrecaoId,
+      justificativa
+    })
+      .pipe(finalize(() => (this.salvandoCorrecaoMotoristaMissao = false)))
+      .subscribe({
+        next: updated => {
+          this.aplicarMissaoAtualizada(updated);
+          this.selectedMissaoDadosAdmin = updated;
+          this.missaoDadosForm.patchValue({ motoristaCorrecaoId: updated.motoristaId, justificativaCorrecaoMotorista: '' });
+          this.buscarMissoes();
+          this.snackBar.open('Motorista da missão corrigido e registrado na auditoria.', 'Fechar', { duration: 3200 });
+        },
+        error: err => this.snackBar.open(err.error?.message || 'Falha ao corrigir o motorista da missão.', 'Fechar', { duration: 3200 })
+      });
   }
 
   podeEditarMissaoManual(missao: MissaoResponse): boolean {
@@ -3396,6 +3442,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   tituloAuditoriaMissao(item: AuditoriaMissaoResponse): string {
+    if (item.acao === 'ATUALIZACAO_DADOS_ADMINISTRATIVOS' && item.campoAlterado === 'motorista') {
+      return 'MOTORISTA DA MISSAO CORRIGIDO';
+    }
     if (item.acao === 'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
       && (item.campoAlterado === 'dataHoraInicio' || item.campoAlterado === 'dataHoraFim')) {
       return 'HORARIO DA MISSAO AJUSTADO';

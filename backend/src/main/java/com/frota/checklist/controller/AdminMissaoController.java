@@ -6,6 +6,7 @@ import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
 import com.frota.checklist.dto.CriarRegistroAdministrativoMissaoRequest;
 import com.frota.checklist.dto.CorrigirSaidaMissaoAdminRequest;
+import com.frota.checklist.dto.CorrigirMotoristaMissaoFinalizadaRequest;
 import com.frota.checklist.dto.DesfazerMissaoAdminRequest;
 import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
@@ -84,6 +85,20 @@ public class AdminMissaoController {
                 request.justificativa()
         );
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/corrigir-motorista")
+    public ResponseEntity<MissaoResponse> corrigirMotoristaMissaoFinalizada(
+            @PathVariable Long id,
+            @Valid @RequestBody CorrigirMotoristaMissaoFinalizadaRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.corrigirMotoristaMissaoFinalizada(
+                id,
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.justificativa()
+        ));
     }
 
     @PostMapping("/contingencias")

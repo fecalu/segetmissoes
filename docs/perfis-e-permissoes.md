@@ -68,6 +68,7 @@ valendo. As condicoes especificas do Operador sao detalhadas na secao seguinte.
 | Registrar viagem, uso externo e seu retorno | Sim | Sim | Sim, conforme situacao | Nao | Pelo proprio fluxo existente |
 | Preencher destino, setor e solicitante | Sim | Sim | Sim, com limites em registros finalizados | Nao | Nao |
 | Corrigir motorista, veiculo ou horarios ja registrados | Sim, com justificativa | Sim, com justificativa | Nao | Nao | Nao |
+| Corrigir motorista de missao administrativa finalizada | Sim, com justificativa | Sim, com justificativa | Nao | Nao | Nao |
 | Criar contingencia ou encerrar excepcionalmente uma missao | Sim, com justificativa | Sim, com justificativa | Nao | Nao | Excecoes do proprio fluxo atual |
 | Corrigir somente a situacao entre Disponivel e Patio | Sim | Sim | Sim, com confirmacao e motivo | Nao | Nao |
 | Bloquear, desbloquear e autorizar liberacao apos oficina/manutencao | Sim | Sim | Nao | Nao | Nao |
@@ -107,6 +108,11 @@ e nao cria uma conta para o responsavel informado naquele registro.
 - Pode editar destino, setor e solicitante enquanto a missao estiver ativa.
   Depois de finalizada, pode preencher campos ainda vazios; substituir ou
   apagar valores ja registrados exige Gestor ou Administrador e justificativa.
+- Corrigir o motorista de uma missao administrativa finalizada exige a permissao
+  `MISSAO_CORRIGIR_MOTORISTA_FINALIZADA`, concedida inicialmente a ADMIN e GESTOR.
+  Para liberar a mesma acao a outro perfil futuramente, basta incluir essa
+  permissao na matriz de `Perfil.permissoes()`, sem conceder as demais permissoes
+  de correcao de missao.
 - As missoes e os veiculos visiveis abrangem a operacao do setor. Esta versao
   nao introduz restricao por secretaria, organizacao ou proprietario do registro.
 

@@ -296,6 +296,13 @@ export class AdminService {
     return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/corrigir-saida`, payload);
   }
 
+  corrigirMotoristaMissaoFinalizada(
+    missaoId: number,
+    payload: { motoristaId: number; justificativa: string }
+  ): Observable<MissaoResponse> {
+    return this.http.patch<MissaoResponse>(`${this.missaoUrl}/${missaoId}/corrigir-motorista`, payload);
+  }
+
   ajustarHorarioMissao(
     missaoId: number,
     payload: AjustarHorarioMissaoPayload

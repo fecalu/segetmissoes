@@ -927,6 +927,28 @@
     <p><strong>{{ selectedMissaoDadosAdmin.tipoDeslocamento === 'VIAGEM' ? 'Status da viagem:' : 'Status dos dados:' }}</strong> {{ labelStatusDocumentalMissao(selectedMissaoDadosAdmin) }}</p>
 
     <form [formGroup]="missaoDadosForm" class="form-grid">
+      <ng-container *ngIf="podeCorrigirMotoristaFinalizada(selectedMissaoDadosAdmin)">
+        <h4 class="form-section-title full-width">Corrigir motorista</h4>
+        <p class="form-section-helper full-width">Use se o motorista foi identificado incorretamente. A correção mantém o veículo e os horários e fica registrada na auditoria.</p>
+        <mat-form-field appearance="outline">
+          <mat-label>Motorista correto</mat-label>
+          <mat-select formControlName="motoristaCorrecaoId">
+            <mat-option *ngFor="let motorista of motoristasElegiveisMissao()" [value]="motorista.id">{{ motorista.nome }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Justificativa da correção</mat-label>
+          <textarea matInput rows="2" maxlength="700" formControlName="justificativaCorrecaoMotorista"></textarea>
+        </mat-form-field>
+        <div class="row-actions full-width">
+          <button mat-flat-button color="primary" type="button"
+            [disabled]="salvandoCorrecaoMotoristaMissao || missaoDadosForm.getRawValue().motoristaCorrecaoId === selectedMissaoDadosAdmin.motoristaId || missaoDadosForm.getRawValue().justificativaCorrecaoMotorista.trim().length < 10"
+            (click)="salvarCorrecaoMotoristaMissao()">
+            {{ salvandoCorrecaoMotoristaMissao ? 'Salvando...' : 'Salvar correção do motorista' }}
+          </button>
+        </div>
+      </ng-container>
+
       <h4 class="form-section-title">Dados administrativos</h4>
       <mat-form-field appearance="outline">
         <mat-label>{{ labelCampoContextoMissao(selectedMissaoDadosAdmin) }}</mat-label>
