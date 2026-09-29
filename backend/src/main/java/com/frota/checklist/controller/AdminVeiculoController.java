@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -55,6 +56,19 @@ public class AdminVeiculoController {
     @PutMapping("/{id}")
     public ResponseEntity<VeiculoResponse> editar(@PathVariable Long id, @Valid @RequestBody AdminVeiculoRequest request) {
         return ResponseEntity.ok(adminVeiculoService.editar(id, request));
+    }
+
+    @PostMapping("/{id}/imagem")
+    public ResponseEntity<VeiculoResponse> atualizarImagem(
+            @PathVariable Long id,
+            @RequestParam("imagem") MultipartFile imagem
+    ) {
+        return ResponseEntity.ok(adminVeiculoService.atualizarImagem(id, imagem));
+    }
+
+    @DeleteMapping("/{id}/imagem")
+    public ResponseEntity<VeiculoResponse> removerImagem(@PathVariable Long id) {
+        return ResponseEntity.ok(adminVeiculoService.removerImagem(id));
     }
 
     @PatchMapping("/{id}/status-administrativo")

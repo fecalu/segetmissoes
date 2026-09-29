@@ -4,12 +4,12 @@ import com.frota.checklist.security.AutorizacaoService;
 import com.frota.checklist.security.Permissao;
 import com.frota.checklist.dto.AuditoriaMissaoResponse;
 import com.frota.checklist.dto.MissaoResponse;
+import com.frota.checklist.entity.AcaoAuditoriaMissao;
 import com.frota.checklist.entity.Missao;
 import com.frota.checklist.entity.MotivoExcecaoMissao;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.OrigemAberturaMissao;
 import com.frota.checklist.entity.OrigemEncerramentoMissao;
-import com.frota.checklist.entity.Perfil;
 import com.frota.checklist.entity.StatusDocumentalMissao;
 import com.frota.checklist.entity.StatusMissao;
 import com.frota.checklist.entity.StatusVeiculo;
@@ -38,6 +38,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Function;
 
 @Service
@@ -84,6 +85,8 @@ public class AdminMissaoService {
             }
             if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
+            } else {
+                predicates.add(cb.notEqual(root.get("status"), StatusMissao.CANCELADA));
             }
             if (origemAbertura != null) {
                 predicates.add(cb.equal(root.get("origemAbertura"), origemAbertura));
@@ -261,6 +264,53 @@ public class AdminMissaoService {
     }
 
     @Transactional
+    public MissaoResponse corrigirMotoristaMissaoFinalizada(
+            Long missaoId,
+            Long administradorId,
+            Long motoristaId,
+            String justificativa
+    ) {
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_CORRIGIR_MOTORISTA_FINALIZADA);
+        if (missao.getStatus() != StatusMissao.FINALIZADA) {
+            throw new BusinessException("Somente missoes finalizadas podem ter o motorista corrigido por este fluxo");
+        }
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO
+                && missao.getOrigemAbertura() != OrigemAberturaMissao.CONTINGENCIA_ADMIN) {
+            throw new BusinessException("Somente missoes registradas pela administracao podem ter o motorista corrigido por este fluxo");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 10) {
+            throw new BusinessException("Informe uma justificativa com pelo menos 10 caracteres");
+        }
+
+        Motorista novoMotorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+        if (!novoMotorista.isMotoristaOperacional()) {
+            throw new BusinessException("Selecione um usuario cadastrado como motorista");
+        }
+        if (Objects.equals(missao.getMotorista().getId(), novoMotorista.getId())) {
+            throw new BusinessException("Selecione um motorista diferente do atual");
+        }
+
+        missaoAuditoriaService.registrarAlteracaoCampo(
+                missao,
+                administrador,
+                "motorista",
+                formatarMotoristaAuditoria(missao.getMotorista()),
+                formatarMotoristaAuditoria(novoMotorista),
+                "Correcao de motorista em missao finalizada. Justificativa: %s".formatted(justificativaNormalizada)
+        );
+        missao.setMotorista(novoMotorista);
+        return toResponse(missaoRepository.save(missao));
+    }
+
+    @Transactional
     public MissaoResponse ajustarHorario(
             Long missaoId,
             Long administradorId,
@@ -401,9 +451,7 @@ public class AdminMissaoService {
         if (permiteReatribuicao && !missao.getMotorista().getId().equals(motoristaId)) {
             Motorista novoMotorista = motoristaRepository.findById(motoristaId)
                     .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-            if (novoMotorista.getPerfil() != Perfil.MOTORISTA) {
-                throw new BusinessException("Selecione um motorista valido para a missao");
-            }
+            validarMotoristaOperacional(novoMotorista);
             missaoService.buscarMissaoAtivaPorMotorista(novoMotorista.getId())
                     .filter(ativa -> !ativa.getId().equals(missao.getId()))
                     .ifPresent(ativa -> {
@@ -600,9 +648,7 @@ public class AdminMissaoService {
 
         Motorista motorista = motoristaRepository.findById(motoristaId)
                 .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
-        if (motorista.getPerfil() != Perfil.MOTORISTA) {
-            throw new BusinessException("Selecione um motorista valido para a missao");
-        }
+        validarMotoristaOperacional(motorista);
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
                 .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
         if (Boolean.TRUE.equals(veiculo.getDesativado())) {
@@ -672,6 +718,156 @@ public class AdminMissaoService {
         aplicarDestinoAdministrativoDeRetorno(finalizada, destinoNormalizado, administradorId);
 
         return toResponse(finalizada);
+    }
+
+    @Transactional
+    public MissaoResponse desfazerRegistroAdministrativo(
+            Long missaoId,
+            Long administradorId,
+            String justificativa
+    ) {
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_REGISTRAR);
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
+            throw new BusinessException("Somente saidas registradas pelo administrativo podem ser desfeitas por este fluxo");
+        }
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            throw new BusinessException("Somente missoes em andamento podem ser desfeitas");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 4) {
+            throw new BusinessException("Informe uma justificativa com pelo menos 4 caracteres");
+        }
+
+        missao.setStatus(StatusMissao.CANCELADA);
+        missao.setDataHoraFim(null);
+        missao.setOrigemEncerramento(null);
+
+        Veiculo veiculo = missao.getVeiculo();
+        restaurarOrigemAdministrativaDoVeiculo(missao, veiculo);
+        veiculoRepository.save(veiculo);
+
+        Missao salva = missaoRepository.save(missao);
+        missaoAuditoriaService.registrar(
+                salva,
+                AcaoAuditoriaMissao.CANCELAMENTO_REGISTRO_ADMINISTRATIVO,
+                StatusMissao.ATIVA,
+                StatusMissao.CANCELADA,
+                administrador,
+                "Saida administrativa desfeita. Justificativa: %s".formatted(justificativaNormalizada)
+        );
+        return toResponse(salva);
+    }
+
+    @Transactional
+    public MissaoResponse corrigirSaidaAdministrativa(
+            Long missaoId,
+            Long administradorId,
+            Long motoristaId,
+            Long veiculoId,
+            String justificativa,
+            boolean confirmarTroca
+    ) {
+        Missao missao = missaoRepository.buscarParaAtualizacao(missaoId)
+                .orElseThrow(() -> new NotFoundException("Missao nao encontrada"));
+        Motorista administrador = motoristaRepository.findById(administradorId)
+                .orElseThrow(() -> new NotFoundException("Administrador nao encontrado"));
+
+        autorizacao.exigir(administrador.getId(), Permissao.MISSAO_CORRIGIR);
+        if (missao.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO) {
+            throw new BusinessException("Somente saidas registradas pelo administrativo podem ser corrigidas por este fluxo");
+        }
+        if (missao.getStatus() != StatusMissao.ATIVA) {
+            throw new BusinessException("Somente missoes em andamento podem ter motorista ou veiculo corrigidos");
+        }
+
+        String justificativaNormalizada = trimToNull(justificativa);
+        if (justificativaNormalizada == null || justificativaNormalizada.length() < 4) {
+            throw new BusinessException("Informe uma justificativa com pelo menos 4 caracteres");
+        }
+
+        Motorista novoMotorista = motoristaRepository.findById(motoristaId)
+                .orElseThrow(() -> new NotFoundException("Motorista nao encontrado"));
+        validarMotoristaOperacional(novoMotorista);
+
+        Veiculo novoVeiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new NotFoundException("Veiculo nao encontrado"));
+        if (Boolean.TRUE.equals(novoVeiculo.getDesativado())) {
+            throw new BusinessException("Veiculo desativado nao pode receber missao");
+        }
+
+        boolean alteraMotorista = !Objects.equals(missao.getMotorista().getId(), novoMotorista.getId());
+        boolean alteraVeiculo = !Objects.equals(missao.getVeiculo().getId(), novoVeiculo.getId());
+        if (!alteraMotorista && !alteraVeiculo) {
+            return toResponse(missao);
+        }
+
+        Missao conflitoMotorista = alteraMotorista
+                ? missaoService.buscarMissaoAtivaPorMotorista(novoMotorista.getId())
+                .filter(ativa -> !ativa.getId().equals(missao.getId()))
+                .orElse(null)
+                : null;
+        Missao conflitoVeiculo = alteraVeiculo
+                ? missaoService.buscarMissaoAtivaPorVeiculo(novoVeiculo.getId())
+                .filter(ativa -> !ativa.getId().equals(missao.getId()))
+                .orElse(null)
+                : null;
+
+        Long idConflitoMotorista = conflitoMotorista == null ? null : conflitoMotorista.getId();
+        Long idConflitoVeiculo = conflitoVeiculo == null ? null : conflitoVeiculo.getId();
+        if (idConflitoMotorista != null && idConflitoVeiculo != null && !idConflitoMotorista.equals(idConflitoVeiculo)) {
+            throw new BusinessException("A correcao envolve mais de uma missao em conflito. Corrija uma informacao por vez");
+        }
+
+        Missao missaoConflitante = null;
+        Long idConflitante = idConflitoMotorista != null ? idConflitoMotorista : idConflitoVeiculo;
+        if (idConflitante != null) {
+            if (!confirmarTroca) {
+                throw new BusinessException("Motorista ou veiculo ja esta em outra missao ativa. Confirme a troca entre as missoes");
+            }
+            missaoConflitante = missaoRepository.buscarParaAtualizacao(idConflitante)
+                    .orElseThrow(() -> new NotFoundException("Missao em conflito nao encontrada"));
+            if (missaoConflitante.getOrigemAbertura() != OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO
+                    || missaoConflitante.getStatus() != StatusMissao.ATIVA) {
+                throw new BusinessException("A missao em conflito nao pode ser trocada por este fluxo");
+            }
+        }
+
+        String detalhe = "Saida administrativa corrigida. Justificativa: %s".formatted(justificativaNormalizada);
+        if (alteraMotorista) {
+            Motorista motoristaAnterior = missao.getMotorista();
+            if (missaoConflitante != null && Objects.equals(missaoConflitante.getMotorista().getId(), novoMotorista.getId())) {
+                registrarTrocaMotorista(missao, missaoConflitante, administrador, motoristaAnterior, novoMotorista, detalhe);
+            } else {
+                registrarAlteracaoTextoComDetalhe(missao, administrador, "motorista", formatarMotoristaAuditoria(motoristaAnterior), formatarMotoristaAuditoria(novoMotorista), justificativaNormalizada);
+                missao.setMotorista(novoMotorista);
+            }
+        }
+
+        if (alteraVeiculo) {
+            Veiculo veiculoAnterior = missao.getVeiculo();
+            if (missaoConflitante != null && Objects.equals(missaoConflitante.getVeiculo().getId(), novoVeiculo.getId())) {
+                registrarTrocaVeiculo(missao, missaoConflitante, administrador, veiculoAnterior, novoVeiculo, detalhe);
+            } else {
+                validarVeiculoLivreParaCorrecao(novoVeiculo);
+                restaurarOrigemAdministrativaDoVeiculo(missao, veiculoAnterior);
+                registrarOrigemAdministrativaDoVeiculo(missao, novoVeiculo);
+                liberarVeiculoParaMissaoAdministrativa(novoVeiculo);
+                registrarAlteracaoTextoComDetalhe(missao, administrador, "veiculo", formatarVeiculoAuditoria(veiculoAnterior), formatarVeiculoAuditoria(novoVeiculo), justificativaNormalizada);
+                missao.setVeiculo(novoVeiculo);
+                veiculoRepository.save(veiculoAnterior);
+            }
+        }
+
+        if (missaoConflitante != null) {
+            missaoRepository.save(missaoConflitante);
+        }
+        return toResponse(missaoRepository.save(missao));
     }
 
     @Transactional
@@ -854,6 +1050,65 @@ public class AdminMissaoService {
         veiculo.setLocalizacaoOperacional(null);
     }
 
+    private void validarVeiculoLivreParaCorrecao(Veiculo veiculo) {
+        StatusVeiculo statusAdministrativo = StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo());
+        if (statusAdministrativo != null && !statusAdministrativo.permiteInicioMissaoAdministrativa()) {
+            throw new BusinessException("Veiculo indisponivel para a correcao. Status atual: " + statusAdministrativo);
+        }
+    }
+
+    private void registrarTrocaMotorista(
+            Missao missao,
+            Missao missaoConflitante,
+            Motorista administrador,
+            Motorista motoristaAnterior,
+            Motorista novoMotorista,
+            String detalhe
+    ) {
+        Motorista motoristaConflitanteAnterior = missaoConflitante.getMotorista();
+        missaoAuditoriaService.registrarAlteracaoCampo(missao, administrador, "motorista",
+                formatarMotoristaAuditoria(motoristaAnterior), formatarMotoristaAuditoria(novoMotorista), detalhe);
+        missaoAuditoriaService.registrarAlteracaoCampo(missaoConflitante, administrador, "motorista",
+                formatarMotoristaAuditoria(motoristaConflitanteAnterior), formatarMotoristaAuditoria(motoristaAnterior),
+                detalhe + " Troca vinculada a missao #" + missao.getId() + ".");
+        missao.setMotorista(novoMotorista);
+        missaoConflitante.setMotorista(motoristaAnterior);
+    }
+
+    private void registrarTrocaVeiculo(
+            Missao missao,
+            Missao missaoConflitante,
+            Motorista administrador,
+            Veiculo veiculoAnterior,
+            Veiculo novoVeiculo,
+            String detalhe
+    ) {
+        Veiculo veiculoConflitanteAnterior = missaoConflitante.getVeiculo();
+        StatusVeiculo statusAnteriorMissao = missao.getStatusAdministrativoAnterior();
+        String localizacaoAnteriorMissao = missao.getLocalizacaoOperacionalAnterior();
+        missaoAuditoriaService.registrarAlteracaoCampo(missao, administrador, "veiculo",
+                formatarVeiculoAuditoria(veiculoAnterior), formatarVeiculoAuditoria(novoVeiculo), detalhe);
+        missaoAuditoriaService.registrarAlteracaoCampo(missaoConflitante, administrador, "veiculo",
+                formatarVeiculoAuditoria(veiculoConflitanteAnterior), formatarVeiculoAuditoria(veiculoAnterior),
+                detalhe + " Troca vinculada a missao #" + missao.getId() + ".");
+        missao.setVeiculo(novoVeiculo);
+        missaoConflitante.setVeiculo(veiculoAnterior);
+        missao.setStatusAdministrativoAnterior(missaoConflitante.getStatusAdministrativoAnterior());
+        missao.setLocalizacaoOperacionalAnterior(missaoConflitante.getLocalizacaoOperacionalAnterior());
+        missaoConflitante.setStatusAdministrativoAnterior(statusAnteriorMissao);
+        missaoConflitante.setLocalizacaoOperacionalAnterior(localizacaoAnteriorMissao);
+    }
+
+    private void registrarOrigemAdministrativaDoVeiculo(Missao missao, Veiculo veiculo) {
+        missao.setStatusAdministrativoAnterior(StatusVeiculo.normalizarStatusAdministrativo(veiculo.getStatusAdministrativo()));
+        missao.setLocalizacaoOperacionalAnterior(trimToNull(veiculo.getLocalizacaoOperacional()));
+    }
+
+    private void restaurarOrigemAdministrativaDoVeiculo(Missao missao, Veiculo veiculo) {
+        veiculo.setStatusAdministrativo(missao.getStatusAdministrativoAnterior());
+        veiculo.setLocalizacaoOperacional(missao.getLocalizacaoOperacionalAnterior());
+    }
+
     private String formatarMotoristaAuditoria(Motorista motorista) {
         return motorista == null ? "(vazio)" : motorista.getNome();
     }
@@ -900,5 +1155,11 @@ public class AdminMissaoService {
                 cb.isNotNull(root.get(campo)),
                 cb.notEqual(cb.trim(root.<String>get(campo)), "")
         );
+    }
+
+    private void validarMotoristaOperacional(Motorista motorista) {
+        if (!motorista.isAcessoHabilitado() || !motorista.isMotoristaOperacional()) {
+            throw new BusinessException("Selecione um motorista valido para a missao");
+        }
     }
 }

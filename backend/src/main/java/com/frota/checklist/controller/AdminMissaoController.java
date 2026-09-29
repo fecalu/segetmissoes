@@ -5,6 +5,9 @@ import com.frota.checklist.dto.AjustarHorarioMissaoAdminRequest;
 import com.frota.checklist.dto.AtualizarDadosAdministrativosMissaoRequest;
 import com.frota.checklist.dto.CriarMissaoContingenciaAdminRequest;
 import com.frota.checklist.dto.CriarRegistroAdministrativoMissaoRequest;
+import com.frota.checklist.dto.CorrigirSaidaMissaoAdminRequest;
+import com.frota.checklist.dto.CorrigirMotoristaMissaoFinalizadaRequest;
+import com.frota.checklist.dto.DesfazerMissaoAdminRequest;
 import com.frota.checklist.dto.EditarMissaoManualAdminRequest;
 import com.frota.checklist.dto.EncerrarMissaoPendenteAdminRequest;
 import com.frota.checklist.dto.MissaoResponse;
@@ -84,6 +87,20 @@ public class AdminMissaoController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{id}/corrigir-motorista")
+    public ResponseEntity<MissaoResponse> corrigirMotoristaMissaoFinalizada(
+            @PathVariable Long id,
+            @Valid @RequestBody CorrigirMotoristaMissaoFinalizadaRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.corrigirMotoristaMissaoFinalizada(
+                id,
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.justificativa()
+        ));
+    }
+
     @PostMapping("/contingencias")
     public ResponseEntity<MissaoResponse> criarContingencia(
             @Valid @RequestBody CriarMissaoContingenciaAdminRequest request,
@@ -132,6 +149,35 @@ public class AdminMissaoController {
                 userDetails.getMotoristaId(),
                 request.dataHoraFim(),
                 request.statusAdministrativoDestino()
+        ));
+    }
+
+    @PatchMapping("/{id}/desfazer")
+    public ResponseEntity<MissaoResponse> desfazerRegistroAdministrativo(
+            @PathVariable Long id,
+            @Valid @RequestBody DesfazerMissaoAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.desfazerRegistroAdministrativo(
+                id,
+                userDetails.getMotoristaId(),
+                request.justificativa()
+        ));
+    }
+
+    @PatchMapping("/{id}/corrigir-saida")
+    public ResponseEntity<MissaoResponse> corrigirSaidaAdministrativa(
+            @PathVariable Long id,
+            @Valid @RequestBody CorrigirSaidaMissaoAdminRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(adminMissaoService.corrigirSaidaAdministrativa(
+                id,
+                userDetails.getMotoristaId(),
+                request.motoristaId(),
+                request.veiculoId(),
+                request.justificativa(),
+                Boolean.TRUE.equals(request.confirmarTroca())
         ));
     }
 

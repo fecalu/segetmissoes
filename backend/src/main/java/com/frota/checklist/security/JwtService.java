@@ -32,6 +32,7 @@ public class JwtService {
                         "motoristaId", userDetails.getMotoristaId(),
                         "nome", userDetails.getNome(),
                         "perfil", userDetails.getPerfil().name(),
+                        "motoristaOperacional", userDetails.isMotoristaOperacional(),
                         "versaoAcesso", userDetails.getVersaoAcesso()
                 ))
                 .subject(userDetails.getUsername())

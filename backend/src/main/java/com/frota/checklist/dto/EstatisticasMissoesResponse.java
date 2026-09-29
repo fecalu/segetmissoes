@@ -8,7 +8,13 @@ public record EstatisticasMissoesResponse(
         LocalDate dataFinal,
         long totalMissoes,
         double totalHorasMissao,
+        long totalMissoesUrbanas,
+        double totalHorasMissaoUrbana,
+        long totalViagens,
+        double totalHorasViagem,
         List<MissaoMotoristaStatsResponse> rankingPorMissoes,
-        List<MissaoMotoristaStatsResponse> rankingPorTempo
+        List<MissaoMotoristaStatsResponse> rankingPorTempo,
+        EstatisticasGrupoMissoesResponse missoesUrbanas,
+        EstatisticasGrupoMissoesResponse viagens
 ) {
 }

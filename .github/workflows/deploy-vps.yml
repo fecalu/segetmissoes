@@ -34,13 +34,23 @@ jobs:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
           DEPLOY_REF: ${{ inputs.ref }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 "${VPS_USER}@${VPS_HOST}" "
-            set -e
-            cd '${VPS_APP_DIR:-/opt/segetmissoes}'
-            git fetch --all --prune
-            git checkout '${DEPLOY_REF}'
-            git pull --ff-only || true
+          printf -v remote_command 'bash -s -- %q %q' "${VPS_APP_DIR:-/opt/segetmissoes}" "$DEPLOY_REF"
+          ssh -i ~/.ssh/id_ed25519 "${VPS_USER}@${VPS_HOST}" "$remote_command" <<'REMOTE'
+            set -euo pipefail
+            cd "$1"
+            requested_ref="$2"
+            test -z "$(git status --porcelain)" || { echo 'Deploy recusado: checkout da VPS possui alteracoes locais.'; exit 1; }
+            git fetch origin --prune
+            if git show-ref --verify --quiet "refs/remotes/origin/$requested_ref"; then
+              requested_ref="refs/remotes/origin/$requested_ref"
+            fi
+            target_commit=$(git rev-parse --verify --end-of-options "${requested_ref}^{commit}")
+            if ! git merge-base --is-ancestor HEAD "$target_commit"; then
+              echo 'Deploy recusado: a versao solicitada nao contem todos os commits atualmente publicados.'
+              exit 1
+            fi
+            git checkout --detach "$target_commit"
             docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-            docker image prune -f
             docker compose -f docker-compose.prod.yml --env-file .env ps
-          "
+            printf 'Published commit: %s\n' "$target_commit"
+          REMOTE

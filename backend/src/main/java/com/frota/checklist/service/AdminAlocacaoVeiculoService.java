@@ -10,14 +10,20 @@ import com.frota.checklist.dto.TrocarResponsavelAlocacaoRequest;
 import com.frota.checklist.dto.TrocarVeiculoAlocacaoRequest;
 import com.frota.checklist.entity.AlocacaoVeiculo;
 import com.frota.checklist.entity.HistoricoAlocacaoVeiculo;
+import com.frota.checklist.entity.HistoricoVagaAdministrativa;
 import com.frota.checklist.entity.Motorista;
 import com.frota.checklist.entity.Perfil;
+import com.frota.checklist.entity.StatusVagaAdministrativa;
 import com.frota.checklist.entity.TipoEventoAlocacaoVeiculo;
+import com.frota.checklist.entity.TipoEventoVagaAdministrativa;
+import com.frota.checklist.entity.VagaAdministrativa;
 import com.frota.checklist.exception.BusinessException;
 import com.frota.checklist.exception.NotFoundException;
 import com.frota.checklist.repository.AlocacaoVeiculoRepository;
 import com.frota.checklist.repository.HistoricoAlocacaoVeiculoRepository;
+import com.frota.checklist.repository.HistoricoVagaAdministrativaRepository;
 import com.frota.checklist.repository.MotoristaRepository;
+import com.frota.checklist.repository.VagaAdministrativaRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -35,7 +41,9 @@ public class AdminAlocacaoVeiculoService {
 
     private final AlocacaoVeiculoRepository alocacaoRepository;
     private final HistoricoAlocacaoVeiculoRepository historicoRepository;
+    private final HistoricoVagaAdministrativaRepository historicoVagaRepository;
     private final MotoristaRepository motoristaRepository;
+    private final VagaAdministrativaRepository vagaRepository;
 
     @Transactional
     public List<AlocacaoVeiculoResponse> listar(String busca, Boolean incluirEncerradas) {
@@ -56,23 +64,31 @@ public class AdminAlocacaoVeiculoService {
         }
 
         AlocacaoVeiculo alocacao = new AlocacaoVeiculo();
-        alocacao.setNumeroControle(proximoNumeroControle());
+        VagaAdministrativa vaga = resolverVagaParaNovaAlocacao(request);
+        alocacao.setVagaAdministrativa(vaga);
+        alocacao.setNumeroControle(vaga.getNumeroControle());
         alocacao.setPlaca(placa);
         alocacao.setModelo(obrigatorio(request.modelo()));
         alocacao.setMarca(opcional(request.marca()));
         alocacao.setResponsavelNome(obrigatorio(request.responsavelNome()));
-        alocacao.setSecretariaOrgao(obrigatorio(request.secretariaOrgao()));
-        alocacao.setSetor(obrigatorio(request.setor()));
-        alocacao.setLimiteAutorizado(obrigatorio(request.limiteAutorizado()));
-        alocacao.setDocumentoReferencia(opcional(request.documentoReferencia()));
+        alocacao.setSecretariaOrgao(vaga.getSecretariaOrgao());
+        alocacao.setSetor(vaga.getSetor());
+        alocacao.setLimiteAutorizado(vaga.getLimiteAutorizado());
+        alocacao.setDocumentoReferencia(vaga.getDocumentoReferencia());
         alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
-        alocacao.setObservacao(opcional(request.observacao()));
+        alocacao.setObservacao(vaga.getObservacao());
         alocacao.setAtiva(true);
         alocacao.setCriadaEm(LocalDateTime.now());
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
 
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.CRIACAO,
                 null, placa, null, salva.getResponsavelNome(), null, salva.getLimiteAutorizado(), salva.getObservacao());
+        if (request.vagaAdministrativaId() == null) {
+            registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.CRIACAO,
+                    null, null, null, null, null, resumoDados(salva), "Vaga administrativa criada junto com a alocação.");
+        }
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                null, placa, null, salva.getResponsavelNome(), null, resumoDados(salva), salva.getObservacao());
         return toResponse(salva);
     }
 
@@ -88,12 +104,15 @@ public class AdminAlocacaoVeiculoService {
         alocacao.setDocumentoReferencia(opcional(request.documentoReferencia()));
         alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
         alocacao.setObservacao(opcional(request.observacao()));
+        sincronizarVaga(alocacao, StatusVagaAdministrativa.OCUPADA);
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         String depois = resumoDados(salva);
         if (!antes.equals(depois)) {
             registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.ATUALIZACAO_DADOS,
                     salva.getPlaca(), salva.getPlaca(), null, null, limiteAnterior, salva.getLimiteAutorizado(),
                     "Dados atualizados v2: " + antes + " -> " + depois);
+            registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.ATUALIZACAO_DADOS,
+                    null, null, null, null, antes, depois, "Dados administrativos da vaga atualizados.");
         }
         return toResponse(salva);
     }
@@ -113,9 +132,13 @@ public class AdminAlocacaoVeiculoService {
         alocacao.setPlaca(novaPlaca);
         alocacao.setModelo(obrigatorio(request.modelo()));
         alocacao.setMarca(opcional(request.marca()));
+        alocacao.setLinkConsulta(validarLinkConsulta(request.linkConsulta()));
+        sincronizarVaga(alocacao, StatusVagaAdministrativa.OCUPADA);
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.TROCA_VEICULO,
                 anterior, novaPlaca, null, null, null, null, obrigatorio(request.motivo()));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                anterior, novaPlaca, null, salva.getResponsavelNome(), null, null, obrigatorio(request.motivo()));
         return toResponse(salva);
     }
 
@@ -129,9 +152,12 @@ public class AdminAlocacaoVeiculoService {
         }
         String anterior = alocacao.getResponsavelNome();
         alocacao.setResponsavelNome(novoResponsavel);
+        sincronizarVaga(alocacao, StatusVagaAdministrativa.OCUPADA);
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.TROCA_RESPONSAVEL,
                 null, null, anterior, novoResponsavel, null, null, obrigatorio(request.motivo()));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.OCUPACAO,
+                salva.getPlaca(), salva.getPlaca(), anterior, novoResponsavel, null, null, obrigatorio(request.motivo()));
         return toResponse(salva);
     }
 
@@ -141,9 +167,12 @@ public class AdminAlocacaoVeiculoService {
         AlocacaoVeiculo alocacao = buscarAtiva(id);
         alocacao.setAtiva(false);
         alocacao.setEncerradaEm(LocalDateTime.now());
+        sincronizarVaga(alocacao, StatusVagaAdministrativa.LIVRE);
         AlocacaoVeiculo salva = alocacaoRepository.save(alocacao);
         registrarHistorico(salva, administrador, TipoEventoAlocacaoVeiculo.ENCERRAMENTO,
                 salva.getPlaca(), null, salva.getResponsavelNome(), null, salva.getLimiteAutorizado(), null, obrigatorio(motivo));
+        registrarHistoricoVaga(salva.getVagaAdministrativa(), administrador, TipoEventoVagaAdministrativa.LIBERACAO,
+                salva.getPlaca(), null, salva.getResponsavelNome(), null, resumoDados(salva), null, obrigatorio(motivo));
         return toResponse(salva);
     }
 
@@ -180,6 +209,28 @@ public class AdminAlocacaoVeiculoService {
         historicoRepository.save(evento);
     }
 
+    private void registrarHistoricoVaga(VagaAdministrativa vaga, Motorista administrador, TipoEventoVagaAdministrativa tipo,
+                                        String placaAnterior, String placaNova, String responsavelAnterior,
+                                        String responsavelNovo, String dadosAnteriores, String dadosNovos,
+                                        String observacao) {
+        if (vaga == null) {
+            return;
+        }
+        HistoricoVagaAdministrativa evento = new HistoricoVagaAdministrativa();
+        evento.setVagaAdministrativa(vaga);
+        evento.setAdministrador(administrador);
+        evento.setTipo(tipo);
+        evento.setPlacaAnterior(placaAnterior);
+        evento.setPlacaNova(placaNova);
+        evento.setResponsavelAnterior(responsavelAnterior);
+        evento.setResponsavelNovo(responsavelNovo);
+        evento.setDadosAnteriores(dadosAnteriores);
+        evento.setDadosNovos(dadosNovos);
+        evento.setObservacao(opcional(observacao));
+        evento.setDataHora(LocalDateTime.now());
+        historicoVagaRepository.save(evento);
+    }
+
     private AlocacaoVeiculo buscarAtiva(Long id) {
         AlocacaoVeiculo alocacao = alocacaoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Alocação não encontrada"));
@@ -197,9 +248,13 @@ public class AdminAlocacaoVeiculoService {
     }
 
     private Integer proximoNumeroControle() {
-        return alocacaoRepository.findAll(Sort.by(Sort.Direction.DESC, "numeroControle")).stream()
+        int ultimoAlocacao = alocacaoRepository.findAll(Sort.by(Sort.Direction.DESC, "numeroControle")).stream()
                 .map(AlocacaoVeiculo::getNumeroControle)
-                .findFirst().orElse(0) + 1;
+                .findFirst().orElse(0);
+        int ultimaVaga = vagaRepository.findTopByOrderByNumeroControleDesc()
+                .map(VagaAdministrativa::getNumeroControle)
+                .orElse(0);
+        return Math.max(ultimoAlocacao, ultimaVaga) + 1;
     }
 
     private boolean correspondeBusca(AlocacaoVeiculo alocacao, String filtro) {
@@ -240,10 +295,62 @@ public class AdminAlocacaoVeiculoService {
                 + "|" + opcional(alocacao.getDocumentoReferencia()) + "|" + opcional(alocacao.getLinkConsulta())
                 + "|" + opcional(alocacao.getObservacao());
     }
+
+    private VagaAdministrativa resolverVagaParaNovaAlocacao(CriarAlocacaoVeiculoRequest request) {
+        if (request.vagaAdministrativaId() != null) {
+            VagaAdministrativa vaga = vagaRepository.findById(request.vagaAdministrativaId())
+                    .orElseThrow(() -> new NotFoundException("Vaga administrativa nao encontrada"));
+            if (vaga.getStatus() == StatusVagaAdministrativa.DESATIVADA) {
+                throw new BusinessException("Nao e possivel ocupar uma vaga desativada.");
+            }
+            if (vaga.getStatus() == StatusVagaAdministrativa.OCUPADA
+                    || alocacaoRepository.findByVagaAdministrativaIdAndAtivaTrue(vaga.getId()).isPresent()) {
+                throw new BusinessException("Esta vaga ja esta ocupada.");
+            }
+            vaga.setStatus(StatusVagaAdministrativa.OCUPADA);
+            return vagaRepository.save(vaga);
+        }
+        Integer numeroControle = proximoNumeroControle();
+        return criarVagaParaNovaAlocacao(request, numeroControle);
+    }
+
+    private VagaAdministrativa criarVagaParaNovaAlocacao(CriarAlocacaoVeiculoRequest request, Integer numeroControle) {
+        VagaAdministrativa vaga = new VagaAdministrativa();
+        vaga.setNumeroControle(numeroControle);
+        vaga.setSecretariaOrgao(obrigatorio(request.secretariaOrgao()));
+        vaga.setSetor(obrigatorio(request.setor()));
+        vaga.setLimiteAutorizado(obrigatorio(request.limiteAutorizado()));
+        vaga.setDocumentoReferencia(opcional(request.documentoReferencia()));
+        vaga.setObservacao(opcional(request.observacao()));
+        vaga.setStatus(StatusVagaAdministrativa.OCUPADA);
+        vaga.setCriadaEm(LocalDateTime.now());
+        return vagaRepository.save(vaga);
+    }
+
+    private void sincronizarVaga(AlocacaoVeiculo alocacao, StatusVagaAdministrativa status) {
+        VagaAdministrativa vaga = alocacao.getVagaAdministrativa();
+        if (vaga == null) {
+            return;
+        }
+        vaga.setSecretariaOrgao(alocacao.getSecretariaOrgao());
+        vaga.setSetor(alocacao.getSetor());
+        vaga.setLimiteAutorizado(alocacao.getLimiteAutorizado());
+        vaga.setDocumentoReferencia(opcional(alocacao.getDocumentoReferencia()));
+        vaga.setObservacao(opcional(alocacao.getObservacao()));
+        vaga.setStatus(status);
+        if (status == StatusVagaAdministrativa.LIVRE) {
+            vaga.setEncerradaEm(null);
+        }
+        vagaRepository.save(vaga);
+    }
+
     private AlocacaoVeiculoResponse toResponse(AlocacaoVeiculo alocacao) {
+        VagaAdministrativa vaga = alocacao.getVagaAdministrativa();
         return new AlocacaoVeiculoResponse(alocacao.getId(), alocacao.getNumeroControle(), alocacao.getPlaca(),
                 alocacao.getModelo(), alocacao.getMarca(), alocacao.getResponsavelNome(), alocacao.getSecretariaOrgao(),
                 alocacao.getSetor(), alocacao.getLimiteAutorizado(), alocacao.getDocumentoReferencia(), alocacao.getLinkConsulta(), alocacao.getObservacao(),
-                alocacao.getAtiva(), alocacao.getCriadaEm(), alocacao.getEncerradaEm());
+                alocacao.getAtiva(), alocacao.getCriadaEm(), alocacao.getEncerradaEm(),
+                vaga == null ? null : vaga.getId(),
+                vaga == null ? null : vaga.getStatus().name());
     }
 }

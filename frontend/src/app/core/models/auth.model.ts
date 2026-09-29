@@ -3,16 +3,17 @@ export interface LoginRequest {
   senha: string;
 }
 
-export type Perfil = 'ADMIN' | 'GESTOR' | 'OPERADOR' | 'MOTORISTA';
+export type Perfil = 'ADMIN' | 'GESTOR' | 'OPERADOR' | 'VISUALIZADOR' | 'MOTORISTA';
 
 export type Permissao = 'FROTA_CONSULTAR' | 'FROTA_OPERAR' | 'VEICULO_GERIR' | 'VEICULO_LIBERAR'
   | 'CADASTRO_EXCLUIR' | 'MISSAO_REGISTRAR' | 'MISSAO_COMPLEMENTAR' | 'MISSAO_CORRIGIR'
-  | 'MISSAO_ENCERRAR_EXCECAO' | 'VISTORIA_CONSULTAR' | 'VISTORIA_CORRIGIR' | 'MOTORISTA_GERIR'
+  | 'MISSAO_CORRIGIR_MOTORISTA_FINALIZADA' | 'MISSAO_ENCERRAR_EXCECAO'
+  | 'VISTORIA_CONSULTAR' | 'VISTORIA_REGISTRAR' | 'VISTORIA_CORRIGIR' | 'MOTORISTA_GERIR'
   | 'ALOCACAO_CONSULTAR' | 'ALOCACAO_GERIR' | 'RELATORIO_EXPORTAR' | 'ESTATISTICA_CONSULTAR'
   | 'CONFIGURACAO_GERIR' | 'ACESSO_GERIR';
 
 export const PERFIL_LABELS: Record<Perfil, string> = {
-  ADMIN: 'Administrador', GESTOR: 'Gestor', OPERADOR: 'Operador', MOTORISTA: 'Motorista'
+  ADMIN: 'Administrador', GESTOR: 'Gestor', OPERADOR: 'Operador', VISUALIZADOR: 'Visualizador', MOTORISTA: 'Motorista'
 };
 
 export interface SessaoResponse {
@@ -20,6 +21,9 @@ export interface SessaoResponse {
   nome: string;
   perfil: Perfil;
   permissoes: Permissao[];
+  deveAlterarSenha: boolean;
+  cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }
 
 export interface LoginResponse {
@@ -27,4 +31,7 @@ export interface LoginResponse {
   motoristaId: number;
   nome: string;
   perfil: Perfil;
+  deveAlterarSenha: boolean;
+  cadastroCompleto: boolean;
+  motoristaOperacional: boolean;
 }

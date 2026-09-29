@@ -13,6 +13,7 @@ export interface FleetCard {
   manual: boolean;
   moving: boolean;
   allowedDestinations: PainelCategoria[];
+  canUndoMission: boolean;
   details: Array<{ label: string; value: string | null }>;
 }
 
