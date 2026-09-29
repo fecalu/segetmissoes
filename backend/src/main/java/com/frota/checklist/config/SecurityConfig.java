@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/admin/missoes/*/dados-administrativos").hasAuthority("MISSAO_COMPLEMENTAR")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/missoes/*/edicao-manual").hasAuthority("MISSAO_CORRIGIR")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/missoes/*/horario", "/api/admin/missoes/*/corrigir-saida").hasAuthority("MISSAO_CORRIGIR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/admin/missoes/*/corrigir-motorista").hasAuthority("MISSAO_CORRIGIR_MOTORISTA_FINALIZADA")
                         .requestMatchers(HttpMethod.POST, "/api/admin/missoes/contingencias").hasAuthority("MISSAO_ENCERRAR_EXCECAO")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/missoes/*/encerrar-pendente", "/api/admin/missoes/excecoes/*/encerrar").hasAuthority("MISSAO_ENCERRAR_EXCECAO")
                         .requestMatchers(HttpMethod.POST, "/api/admin/veiculos").hasAuthority("VEICULO_GERIR")
