@@ -37,6 +37,8 @@ class PerfisIntegrationTest {
         properties.add("spring.datasource.url", () -> System.getenv("RBAC_TEST_DB_URL"));
         properties.add("spring.datasource.username", () -> System.getenv("RBAC_TEST_DB_USER"));
         properties.add("spring.datasource.password", () -> System.getenv("RBAC_TEST_DB_PASSWORD"));
+        properties.add("spring.flyway.locations", () -> "classpath:db/test-baseline,classpath:db/migration");
+        properties.add("app.official-users-seed-enabled", () -> "false");
     }
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -210,7 +212,7 @@ class PerfisIntegrationTest {
     }
 
     @Test void migracaoPreservaContaAoExpandirRestricaoAntiga() throws Exception {
-        jdbc.update("DELETE FROM motoristas WHERE perfil IN ('GESTOR','OPERADOR')");
+        jdbc.update("DELETE FROM motoristas WHERE perfil IN ('GESTOR','OPERADOR','VISUALIZADOR')");
         jdbc.execute("ALTER TABLE motoristas DROP CONSTRAINT motoristas_perfil_check");
         jdbc.execute("ALTER TABLE motoristas ADD CONSTRAINT motoristas_perfil_check CHECK (perfil IN ('ADMIN','MOTORISTA'))");
         var admin = contas.get(Perfil.ADMIN);
