@@ -45,6 +45,7 @@ export class FleetBoardComponent {
   @Output() finishMission = new EventEmitter<MissaoResponse>();
   @Output() createMission = new EventEmitter<void>();
   @Output() printDailyReport = new EventEmitter<void>();
+  @Output() dailyMapDateChange = new EventEmitter<string>();
   search = '';
   movingVehicleId: number | null = null;
   locationVehicleId: number | null = null;
@@ -134,6 +135,27 @@ export class FleetBoardComponent {
   dailyMapDateLabel(): string {
     const [year, month, day] = this.dailyMapDate.split('-');
     return year && month && day ? `${day}/${month}/${year}` : 'Hoje';
+  }
+
+  canGoToNextDailyMap(): boolean {
+    return !!this.dailyMapDate && this.dailyMapDate < this.todayIso();
+  }
+
+  changeDailyMapDate(days: -1 | 1): void {
+    if (!this.dailyMapDate || this.loadingDailyMap) return;
+    const [year, month, day] = this.dailyMapDate.split('-').map(Number);
+    if (!year || !month || !day) return;
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    const nextDate = [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, '0'), String(date.getUTCDate()).padStart(2, '0')].join('-');
+    if (nextDate > this.todayIso()) return;
+    this.dailyMapDateChange.emit(nextDate);
+  }
+
+  private todayIso(): string {
+    const today = new Date();
+    return [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
   }
 
   missionTime(value: string | null, reference?: string): string {

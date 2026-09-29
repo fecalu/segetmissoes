@@ -8,6 +8,7 @@
     [missionError]="erroAtualizacaoMissoes"
     [dailyMissions]="missoesMapaDiario"
     [dailyMapDate]="dataMapaDiario"
+    (dailyMapDateChange)="alterarDataMapaDiario($event)"
     [loadingDailyMap]="loadingMapaDiario"
     [dailyMapError]="erroMapaDiario"
     (refresh)="atualizarPainelOperacional()"
