@@ -58,6 +58,7 @@ class PerfisIntegrationTest {
             Motorista u = new Motorista();
             u.setLogin("teste-" + perfil); u.setNome("Teste " + perfil); u.setCpf(String.format("%011d", perfil.ordinal() + 1));
             u.setPerfil(perfil); u.setSenha(encoder.encode("SenhaSoParaTestes123"));
+            u.setMotoristaOperacional(perfil == Perfil.MOTORISTA);
             contas.put(perfil, usuarios.saveAndFlush(u));
         }
     }
