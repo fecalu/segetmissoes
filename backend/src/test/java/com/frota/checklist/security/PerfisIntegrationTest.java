@@ -49,6 +49,7 @@ class PerfisIntegrationTest {
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
     @Autowired JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired DataInitializer initializer;
     final Map<Perfil, Motorista> contas = new EnumMap<>(Perfil.class);
 
@@ -71,6 +72,20 @@ class PerfisIntegrationTest {
         mvc.perform(get("/api/admin/motoristas").with(principal)).andExpect(status().is(perfil == Perfil.ADMIN || perfil == Perfil.GESTOR ? 200 : 403));
         mvc.perform(get("/api/admin/motoristas/opcoes").with(principal)).andExpect(status().is(perfil == Perfil.MOTORISTA ? 403 : 200));
         mvc.perform(get("/api/admin/rota-nao-cadastrada").with(principal)).andExpect(status().isForbidden());
+    }
+
+    @Test void consultaMissoesReconheceCanceladasPersistidas() throws Exception {
+        Missao cancelada = missao(OrigemAberturaMissao.REGISTRO_ADMINISTRATIVO, StatusMissao.CANCELADA);
+        Long id = cancelada.getId();
+        entityManager.clear();
+
+        executar(get("/api/admin/missoes").param("status", "CANCELADA"), Perfil.GESTOR, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(id))
+                .andExpect(jsonPath("$[0].status").value("CANCELADA"));
+        executar(get("/api/admin/missoes"), Perfil.GESTOR, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test void endpointsSensiveisBloqueiamOperadorAntesDoController() throws Exception {
