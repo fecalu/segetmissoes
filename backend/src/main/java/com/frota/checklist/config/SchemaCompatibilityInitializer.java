@@ -307,6 +307,8 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
 
     private void atualizarConstraintsAuditoriaMissao() {
         executarSilencioso("alter table auditoria_missoes drop constraint if exists auditoria_missoes_acao_check");
+        executarSilencioso("alter table auditoria_missoes drop constraint if exists auditoria_missoes_status_anterior_check");
+        executarSilencioso("alter table auditoria_missoes drop constraint if exists auditoria_missoes_status_novo_check");
         executarSilencioso("""
                 alter table auditoria_missoes
                 add constraint auditoria_missoes_acao_check
@@ -324,6 +326,16 @@ public class SchemaCompatibilityInitializer implements CommandLineRunner {
                     'CANCELAMENTO_REGISTRO_ADMINISTRATIVO',
                     'ATUALIZACAO_DADOS_ADMINISTRATIVOS'
                 ))
+                """);
+        executarSilencioso("""
+                alter table auditoria_missoes
+                add constraint auditoria_missoes_status_anterior_check
+                check (status_anterior is null or status_anterior in ('ATIVA', 'FINALIZADA', 'CANCELADA'))
+                """);
+        executarSilencioso("""
+                alter table auditoria_missoes
+                add constraint auditoria_missoes_status_novo_check
+                check (status_novo is null or status_novo in ('ATIVA', 'FINALIZADA', 'CANCELADA'))
                 """);
     }
 
